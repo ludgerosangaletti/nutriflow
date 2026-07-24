@@ -45,6 +45,7 @@ export default async function AdminClients() {
                 <th>WhatsApp</th>
                 <th>Plano</th>
                 <th>Status</th>
+                <th>Anamnese</th>
                 <th>Ação</th>
               </tr>
             </thead>
@@ -60,6 +61,16 @@ export default async function AdminClients() {
                       : "Pendente"}
                   </td>
                   <td>
+                    {client.formStatus === "submitted" ? (
+                      <Link
+                        className="admin-response-link"
+                        href={`/admin/clientes/${encodeURIComponent(client.email)}`}
+                      >
+                        Ver respostas
+                      </Link>
+                    ) : client.formStatus === "draft" ? "Em preenchimento" : "Não iniciada"}
+                  </td>
+                  <td>
                     <ApprovalButton
                       email={client.email}
                       approved={client.paymentStatus === "approved"}
@@ -68,7 +79,7 @@ export default async function AdminClients() {
                 </tr>
               ))}
               {!rows.length ? (
-                <tr><td colSpan={5}>Nenhum cadastro recebido até o momento.</td></tr>
+                <tr><td colSpan={6}>Nenhum cadastro recebido até o momento.</td></tr>
               ) : null}
             </tbody>
           </table>

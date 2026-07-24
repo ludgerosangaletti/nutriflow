@@ -16,3 +16,19 @@ export const clients = sqliteTable(
   },
   (table) => [uniqueIndex("clients_email_unique").on(table.email)],
 );
+
+export const anamneses = sqliteTable(
+  "anamneses",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    clientEmail: text("client_email").notNull(),
+    answersJson: text("answers_json").notNull().default("{}"),
+    status: text("status").notNull().default("draft"),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    submittedAt: text("submitted_at"),
+  },
+  (table) => [
+    uniqueIndex("anamneses_client_email_unique").on(table.clientEmail),
+  ],
+);
