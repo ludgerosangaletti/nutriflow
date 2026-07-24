@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import type { PlanId } from "../plans";
+import { signupErrorMessage, withAuthTimeout } from "../supabase/auth-timeout";
 import { createClient } from "../supabase/client";
 
 export default function CadastroForm({
@@ -16,34 +17,39 @@ export default function CadastroForm({
   const [accepted, setAccepted] = useState(false);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [slow, setSlow] = useState(false);
   const [sent, setSent] = useState(false);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSaving(true);
+    setSlow(false);
     setError("");
 
     const supabase = createClient();
     const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(`/pagamento?plano=${plan}`)}`;
-    const { error: signupError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: redirectTo,
-        data: { name, whatsapp, plan },
-      },
-    });
-    if (signupError) {
-      setError(
-        signupError.message.toLowerCase().includes("already")
-          ? "Este e-mail já possui uma conta. Entre para continuar."
-          : "Não foi possível criar a conta. Confira os dados e tente novamente.",
+    const slowTimer = setTimeout(() => setSlow(true), 8_000);
+    try {
+      const { error: signupError } = await withAuthTimeout(
+        supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            emailRedirectTo: redirectTo,
+            data: { name, whatsapp, plan },
+          },
+        }),
       );
+      if (signupError) throw signupError;
+      setSent(true);
+    } catch (signupFailure) {
+      console.error("Falha no cadastro Supabase:", signupFailure);
+      setError(signupErrorMessage(signupFailure));
+    } finally {
+      clearTimeout(slowTimer);
+      setSlow(false);
       setSaving(false);
-      return;
     }
-    setSaving(false);
-    setSent(true);
   }
 
   if (sent) {
@@ -117,6 +123,12 @@ export default function CadastroForm({
         </span>
       </label>
       {error ? <p className="form-error">{error}</p> : null}
+      {slow ? (
+        <p className="auth-message">
+          A comunicação está demorando mais que o normal. Aguarde; esta
+          tentativa será encerrada automaticamente.
+        </p>
+      ) : null}
       <button className="checkout-button" disabled={!accepted || saving}>
         {saving ? "Criando sua conta..." : "Criar conta e confirmar e-mail"}
       </button>
