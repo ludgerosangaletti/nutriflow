@@ -125,7 +125,7 @@ export default function Home() {
           <a href="#autoridade">Sobre</a>
           <a href="#comprar">Planos</a>
           <a href="#faq">Dúvidas</a>
-          <a href="/area-cliente">Área do cliente</a>
+          <a href="/area-cliente">Área do paciente</a>
         </nav>
 
         <a

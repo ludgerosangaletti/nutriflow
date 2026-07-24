@@ -19,7 +19,7 @@ export default async function LoginPage({
       <Link className="portal-brand" href="/">Ludgero Sangaletti</Link>
       <section className="auth-layout">
         <div className="portal-copy">
-          <p className="section-kicker">Área do cliente</p>
+          <p className="section-kicker">Área do paciente</p>
           <h1>Entre na sua conta.</h1>
           <p>Acesse seu pagamento, acompanhe a liberação e preencha sua anamnese.</p>
         </div>

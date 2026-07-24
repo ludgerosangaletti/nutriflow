@@ -26,7 +26,7 @@ export default async function ClientArea() {
       </header>
       {!client ? (
         <section className="empty-state">
-          <p className="section-kicker">Área do cliente</p>
+          <p className="section-kicker">Área do paciente</p>
           <h1>Seu cadastro ainda não foi iniciado.</h1>
           <p>Escolha um plano para começar a consultoria.</p>
           <Link className="button button-dark" href="/#comprar">Conhecer os planos</Link>
@@ -35,7 +35,7 @@ export default async function ClientArea() {
         <section className="dashboard">
           <div className="dashboard-heading">
             <div>
-              <p className="section-kicker">Área do cliente</p>
+              <p className="section-kicker">Área do paciente</p>
               <h1>Olá, {client.name.split(" ")[0]}.</h1>
               <p>Acompanhe aqui as próximas etapas da sua consultoria.</p>
             </div>

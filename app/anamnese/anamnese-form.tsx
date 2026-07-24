@@ -76,7 +76,7 @@ export default function AnamneseForm({
           Ludgero poderá acessar as informações e iniciar a elaboração da sua
           estratégia alimentar.
         </p>
-        <a className="button button-dark" href="/area-cliente">Voltar à área do cliente</a>
+        <a className="button button-dark" href="/area-cliente">Voltar à área do paciente</a>
       </section>
     );
   }
@@ -84,7 +84,7 @@ export default function AnamneseForm({
   return (
     <div className="anamnesis-layout">
       <aside className="anamnesis-sidebar">
-        <a className="portal-brand" href="/area-cliente">Área do cliente</a>
+        <a className="portal-brand" href="/area-cliente">Área do paciente</a>
         <p>Progresso da anamnese</p>
         <div className="progress-meter"><i style={{ width: `${progress}%` }} /></div>
         <strong>{progress}%</strong>
