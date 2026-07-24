@@ -124,6 +124,7 @@ export default function Home() {
           <a href="#autoridade">Sobre</a>
           <a href="#comprar">Planos</a>
           <a href="#faq">Dúvidas</a>
+          <a href="/area-cliente">Área do cliente</a>
         </nav>
 
         <a
@@ -349,9 +350,9 @@ export default function Home() {
             <h2>Escolha o tempo que seu resultado precisa.</h2>
           </div>
           <p>
-            Selecione o plano que melhor combina com o seu momento. Na próxima
-            etapa, você revisa os dados e conclui o pagamento com segurança no
-            ambiente da TON.
+            Selecione o plano que melhor combina com o seu momento. Primeiro
+            faremos um cadastro breve; depois você conclui o pagamento com
+            segurança no ambiente da TON.
           </p>
         </div>
 

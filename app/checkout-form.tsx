@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 const plans = [
   {
@@ -10,7 +10,6 @@ const plans = [
     installments: "1x de R$ 250",
     total: "R$ 250 no total",
     note: "Para começar com um ciclo mais curto",
-    link: "https://payment-link-v3.ton.com.br/pl_5VonzbGe0jE21ov9SqupBJQK8Llvg7rN",
   },
   {
     id: "bimestral",
@@ -19,7 +18,6 @@ const plans = [
     installments: "2x de R$ 200",
     total: "R$ 400 no total",
     note: "Mais tempo para aplicar e ajustar",
-    link: "https://payment-link-v3.ton.com.br/pl_Rxzyl05wgJ7mrWdkcBFxVDaMjeoqkYnp",
   },
   {
     id: "trimestral",
@@ -29,27 +27,18 @@ const plans = [
     total: "R$ 540 no total",
     note: "Melhor equilíbrio entre tempo e investimento",
     badge: "Mais escolhido",
-    link: "https://payment-link-v3.ton.com.br/pl_v67KDy2kAnbQNEOhzoHw5lxoBZVjgM9L",
   },
 ] as const;
 
 export default function CheckoutForm() {
   const [selectedPlan, setSelectedPlan] = useState("trimestral");
-  const [accepted, setAccepted] = useState(false);
-
   const currentPlan = useMemo(
     () => plans.find((plan) => plan.id === selectedPlan) ?? plans[2],
     [selectedPlan],
   );
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!accepted) return;
-    window.location.assign(currentPlan.link);
-  }
-
   return (
-    <form className="checkout-form" onSubmit={handleSubmit}>
+    <div className="checkout-form">
       <fieldset>
         <legend className="sr-only">Escolha o plano da consultoria online</legend>
         <div className="plans-grid">
@@ -89,25 +78,20 @@ export default function CheckoutForm() {
           <small>{currentPlan.total}</small>
         </div>
 
-        <label className="checkout-consent">
-          <input
-            type="checkbox"
-            checked={accepted}
-            onChange={(event) => setAccepted(event.target.checked)}
-            required
-          />
+        <div className="checkout-consent flow-notice">
+          <span className="flow-number">1</span>
           <span>
-            Entendi que serei redirecionado ao ambiente seguro da TON para
-            preencher meus dados e concluir o pagamento.
+            Primeiro você fará um cadastro breve. Depois será direcionado ao
+            pagamento seguro da TON.
           </span>
-        </label>
+        </div>
 
-        <button className="checkout-button" type="submit" disabled={!accepted}>
-          Ir para o pagamento seguro
+        <a className="checkout-button" href={`/cadastro?plano=${currentPlan.id}`}>
+          Continuar para o cadastro
           <svg aria-hidden="true" viewBox="0 0 24 24" className="icon">
             <path d="M7 17 17 7M8 7h9v9" />
           </svg>
-        </button>
+        </a>
 
         <div className="payment-trust">
           <span>
@@ -121,6 +105,6 @@ export default function CheckoutForm() {
           <span>Você revisa antes de pagar</span>
         </div>
       </div>
-    </form>
+    </div>
   );
 }
