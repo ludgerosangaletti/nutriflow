@@ -1815,27 +1815,79 @@ button:disabled {
   align-self: center;
 }
 
+.authority-portrait {
+  border-radius: 28px;
+  height: clamp(390px, 38vw, 540px);
+  margin-bottom: 12px;
+  overflow: hidden;
+  position: relative;
+}
+
+.authority-portrait::after {
+  background: linear-gradient(180deg, transparent 48%, rgba(0, 0, 0, 0.86) 100%);
+  content: "";
+  inset: 0;
+  pointer-events: none;
+  position: absolute;
+}
+
+.authority-portrait > img {
+  object-fit: cover;
+  object-position: center 37%;
+}
+
+.portrait-caption {
+  bottom: 26px;
+  color: white;
+  display: grid;
+  gap: 5px;
+  left: 28px;
+  max-width: 280px;
+  position: absolute;
+  z-index: 2;
+}
+
+.portrait-caption span {
+  color: var(--lime);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.portrait-caption strong {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 22px;
+  font-weight: 400;
+  line-height: 1.15;
+}
+
 .rating-card {
   background: var(--lime);
   border-radius: 26px;
   color: var(--ink);
-  padding: 34px;
-  transform: rotate(-1deg);
+  padding: 22px 24px;
+  position: absolute;
+  right: 18px;
+  top: 18px;
+  transform: rotate(1deg);
+  width: min(62%, 330px);
+  z-index: 2;
 }
 
 .rating-number {
   display: block;
   font-family: Georgia, "Times New Roman", serif;
-  font-size: clamp(60px, 7vw, 92px);
+  font-size: clamp(42px, 4.6vw, 66px);
   font-style: italic;
   letter-spacing: -0.07em;
   line-height: 0.9;
 }
 
 .rating-card p {
-  font-size: 16px;
+  font-size: 13px;
   line-height: 1.4;
-  margin: 22px 0 8px;
+  margin: 14px 0 7px;
   max-width: 310px;
 }
 
@@ -2420,6 +2472,10 @@ footer p,
     width: 100%;
   }
 
+  .authority-portrait {
+    height: clamp(420px, 75vw, 580px);
+  }
+
   .faq-intro {
     position: static;
   }
@@ -2561,7 +2617,24 @@ footer p,
   }
 
   .rating-card {
-    padding: 26px 22px;
+    padding: 18px;
+    right: 12px;
+    top: 12px;
+    width: min(72%, 290px);
+  }
+
+  .authority-portrait {
+    height: 470px;
+  }
+
+  .portrait-caption {
+    bottom: 22px;
+    left: 20px;
+    max-width: 240px;
+  }
+
+  .portrait-caption strong {
+    font-size: 20px;
   }
 
   .proof-grid {

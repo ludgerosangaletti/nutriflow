@@ -299,10 +299,22 @@ export default function Home() {
         </div>
 
         <div className="authority-proof">
-          <div className="rating-card">
-            <span className="rating-number">96–100%</span>
-            <p>de avaliações classificadas como <strong>“Ótimo”</strong></p>
-            <small>Avaliações internas recentes de atendimento</small>
+          <div className="authority-portrait">
+            <Image
+              src="/ludgero-consultorio.jpeg"
+              alt="Ludgero Sangaletti em seu consultório"
+              fill
+              sizes="(max-width: 900px) 90vw, 42vw"
+            />
+            <div className="portrait-caption">
+              <span>Atendimento próximo</span>
+              <strong>Estratégia feita por quem escuta você.</strong>
+            </div>
+            <div className="rating-card">
+              <span className="rating-number">96–100%</span>
+              <p>de avaliações classificadas como <strong>“Ótimo”</strong></p>
+              <small>Avaliações internas recentes de atendimento</small>
+            </div>
           </div>
           <div className="proof-grid">
             <div>
