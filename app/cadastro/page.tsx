@@ -18,7 +18,7 @@ export default async function CadastroPage({
 
   return (
     <main className="portal-shell">
-      <Link className="portal-brand" href="/">LS · Ludgero Sangaletti</Link>
+      <Link className="portal-brand" href="/">Ludgero Sangaletti</Link>
       <section className="portal-grid">
         <div className="portal-copy">
           <p className="section-kicker">Etapa 2 de 4</p>

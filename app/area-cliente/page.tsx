@@ -19,7 +19,7 @@ export default async function ClientArea() {
   return (
     <main className="portal-shell">
       <header className="portal-header">
-        <Link className="portal-brand" href="/">LS · Ludgero Sangaletti</Link>
+        <Link className="portal-brand" href="/">Ludgero Sangaletti</Link>
         <a href={chatGPTSignOutPath("/")}>Sair</a>
       </header>
       {!client ? (

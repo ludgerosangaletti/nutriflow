@@ -62,9 +62,13 @@ button:disabled {
 
 .brand-mark {
   align-items: center;
-  background: var(--ink);
+  background-color: var(--ink);
+  background-image: url("/logo-ludgero.png");
+  background-position: center -19px;
+  background-repeat: no-repeat;
+  background-size: 140px auto;
   border-radius: 50%;
-  color: var(--lime);
+  color: transparent;
   display: inline-flex;
   font-family: var(--font-geist-sans), Arial, sans-serif;
   font-size: 17px;
@@ -1128,17 +1132,23 @@ button:disabled {
 }
 
 .portal-brand::before {
-  background: var(--lime);
+  background-color: #050505;
+  background-image: url("/logo-ludgero.png");
+  background-position: center -14px;
+  background-repeat: no-repeat;
+  background-size: 104px auto;
+  border-radius: 8px;
   content: "";
   display: inline-block;
-  height: 28px;
+  flex: 0 0 34px;
+  height: 34px;
   margin-right: 12px;
-  transform: skewX(-20deg);
-  width: 7px;
+  transform: none;
+  width: 34px;
 }
 
 .anamnesis-sidebar .portal-brand::before {
-  box-shadow: 7px 0 0 rgba(255, 234, 0, 0.35);
+  box-shadow: 0 0 0 1px rgba(255, 234, 0, 0.32);
 }
 
 .anamnesis-form input:not([type="checkbox"]),

@@ -28,7 +28,7 @@ export default async function AdminClients() {
   return (
     <main className="portal-shell">
       <header className="portal-header">
-        <Link className="portal-brand" href="/">LS · Gestão da consultoria</Link>
+        <Link className="portal-brand" href="/">Gestão da consultoria</Link>
         <a href="/area-cliente">Minha área</a>
       </header>
       <section className="admin-panel">

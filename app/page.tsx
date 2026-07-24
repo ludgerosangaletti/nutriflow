@@ -113,7 +113,7 @@ export default function Home() {
     <main>
       <header className="site-header">
         <a className="brand" href="#inicio" aria-label="Ir para o início">
-          <span className="brand-mark">LS</span>
+          <span className="brand-mark" aria-hidden="true" />
           <span className="brand-copy">
             <strong>Ludgero Sangaletti</strong>
             <small>Nutrição clínica &amp; esportiva</small>
@@ -391,7 +391,7 @@ export default function Home() {
 
       <footer>
         <a className="brand" href="#inicio" aria-label="Voltar ao início">
-          <span className="brand-mark">LS</span>
+          <span className="brand-mark" aria-hidden="true" />
           <span className="brand-copy">
             <strong>Ludgero Sangaletti</strong>
             <small>Nutrição clínica &amp; esportiva</small>

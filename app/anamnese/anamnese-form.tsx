@@ -84,7 +84,7 @@ export default function AnamneseForm({
   return (
     <div className="anamnesis-layout">
       <aside className="anamnesis-sidebar">
-        <a className="portal-brand" href="/area-cliente">LS · Área do cliente</a>
+        <a className="portal-brand" href="/area-cliente">Área do cliente</a>
         <p>Progresso da anamnese</p>
         <div className="progress-meter"><i style={{ width: `${progress}%` }} /></div>
         <strong>{progress}%</strong>
