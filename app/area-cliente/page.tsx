@@ -2,25 +2,27 @@ import { eq } from "drizzle-orm";
 import Link from "next/link";
 import { getDb } from "../../db";
 import { clients } from "../../db/schema";
-import { chatGPTSignOutPath, requireChatGPTUser } from "../chatgpt-auth";
 import { isPlanId, plans } from "../plans";
+import { requirePatient } from "../supabase/server";
 
 export const dynamic = "force-dynamic";
 
 export default async function ClientArea() {
-  const user = await requireChatGPTUser("/area-cliente");
+  const user = await requirePatient("/area-cliente");
   const db = getDb();
   const [client] = await db
     .select()
     .from(clients)
-    .where(eq(clients.email, user.email))
+    .where(eq(clients.authUserId, user.id))
     .limit(1);
 
   return (
     <main className="portal-shell">
       <header className="portal-header">
         <Link className="portal-brand" href="/">Ludgero Sangaletti</Link>
-        <a href={chatGPTSignOutPath("/")}>Sair</a>
+        <form action="/auth/sair" method="post">
+          <button className="auth-signout" type="submit">Sair</button>
+        </form>
       </header>
       {!client ? (
         <section className="empty-state">

@@ -1,19 +1,19 @@
 import { and, eq } from "drizzle-orm";
 import { getDb } from "../../db";
 import { anamneses, clients } from "../../db/schema";
-import { requireChatGPTUser } from "../chatgpt-auth";
+import { requirePatient } from "../supabase/server";
 import type { Answers } from "./questions";
 import AnamneseForm from "./anamnese-form";
 
 export const dynamic = "force-dynamic";
 
 export default async function AnamnesePage() {
-  const user = await requireChatGPTUser("/anamnese");
+  const user = await requirePatient("/anamnese");
   const db = getDb();
   const [client] = await db
     .select()
     .from(clients)
-    .where(and(eq(clients.email, user.email), eq(clients.paymentStatus, "approved")))
+    .where(and(eq(clients.authUserId, user.id), eq(clients.paymentStatus, "approved")))
     .limit(1);
 
   if (!client) {
@@ -31,7 +31,7 @@ export default async function AnamnesePage() {
   const [record] = await db
     .select()
     .from(anamneses)
-    .where(eq(anamneses.clientEmail, user.email))
+    .where(eq(anamneses.clientEmail, client.email))
     .limit(1);
 
   let answers: Answers = {};

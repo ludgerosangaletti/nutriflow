@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { requireChatGPTUser } from "../chatgpt-auth";
 import { isPlanId, plans } from "../plans";
 import CadastroForm from "./cadastro-form";
 
@@ -13,7 +12,6 @@ export default async function CadastroPage({
   const params = await searchParams;
   const selected = params.plano ?? "trimestral";
   const planId = isPlanId(selected) ? selected : "trimestral";
-  const user = await requireChatGPTUser(`/cadastro?plano=${planId}`);
   const plan = plans[planId];
 
   return (
@@ -43,8 +41,6 @@ export default async function CadastroPage({
           </div>
           <CadastroForm
             plan={planId}
-            defaultName={user.fullName ?? ""}
-            email={user.email}
           />
         </div>
       </section>

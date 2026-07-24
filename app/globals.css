@@ -2640,6 +2640,66 @@ footer p,
   }
 }
 
+.auth-layout {
+  align-items: start;
+  display: grid;
+  gap: clamp(32px, 7vw, 92px);
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 480px);
+  margin: clamp(70px, 10vh, 120px) auto 0;
+  max-width: 1080px;
+}
+
+.auth-signout {
+  background: transparent;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  padding: 0;
+}
+
+.auth-success {
+  text-align: center;
+}
+
+.auth-success-icon {
+  align-items: center;
+  background: var(--lime);
+  border-radius: 50%;
+  color: #090909;
+  display: inline-flex;
+  font-size: 24px;
+  height: 52px;
+  justify-content: center;
+  width: 52px;
+}
+
+.auth-success h2 {
+  font-size: 30px;
+  margin: 18px 0 10px;
+}
+
+.auth-message {
+  background: #f3f3f0;
+  border-radius: 10px;
+  line-height: 1.55;
+  padding: 14px;
+}
+
+.inline-auth-link {
+  color: #111;
+  font-weight: 750;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+@media (max-width: 760px) {
+  .auth-layout {
+    grid-template-columns: 1fr;
+    margin-top: 48px;
+  }
+}
+
 /* Final brand priority */
 .site-header {
   background: rgba(255, 255, 255, 0.94);

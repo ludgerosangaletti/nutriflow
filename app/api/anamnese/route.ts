@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { getDb } from "../../../db";
 import { anamneses, clients } from "../../../db/schema";
-import { getChatGPTUser } from "../../chatgpt-auth";
+import { getPatientUser } from "../../supabase/server";
 import { sections, type Answers } from "../../anamnese/questions";
 
 const allowedFields = new Set(
@@ -18,14 +18,14 @@ function cleanAnswers(input: unknown): Answers {
 }
 
 export async function PUT(request: Request) {
-  const user = await getChatGPTUser();
+  const user = await getPatientUser();
   if (!user) return Response.json({ error: "Faça login." }, { status: 401 });
 
   const db = getDb();
   const [client] = await db
     .select()
     .from(clients)
-    .where(and(eq(clients.email, user.email), eq(clients.paymentStatus, "approved")))
+    .where(and(eq(clients.authUserId, user.id), eq(clients.paymentStatus, "approved")))
     .limit(1);
   if (!client) {
     return Response.json({ error: "Acesso ainda não liberado." }, { status: 403 });
@@ -50,7 +50,7 @@ export async function PUT(request: Request) {
   const [existing] = await db
     .select()
     .from(anamneses)
-    .where(eq(anamneses.clientEmail, user.email))
+    .where(eq(anamneses.clientEmail, client.email))
     .limit(1);
   const now = new Date().toISOString();
   const status = payload.submit ? "submitted" : "draft";
@@ -64,10 +64,10 @@ export async function PUT(request: Request) {
         updatedAt: now,
         submittedAt: payload.submit ? now : existing.submittedAt,
       })
-      .where(eq(anamneses.clientEmail, user.email));
+      .where(eq(anamneses.clientEmail, client.email));
   } else {
     await db.insert(anamneses).values({
-      clientEmail: user.email,
+      clientEmail: client.email,
       answersJson: JSON.stringify(answers),
       status,
       submittedAt: payload.submit ? now : null,
@@ -77,7 +77,7 @@ export async function PUT(request: Request) {
   await db
     .update(clients)
     .set({ formStatus: status, updatedAt: now })
-    .where(eq(clients.email, user.email));
+    .where(eq(clients.authUserId, user.id));
 
   return Response.json({ ok: true, status, savedAt: now });
 }
