@@ -1,0 +1,403 @@
+{
+  "version": "0.4",
+  "title": "Landing Page — Ludgero Sangaletti",
+  "type": "page",
+  "page_settings": {
+    "hide_title": "yes",
+    "background_background": "classic",
+    "background_color": "#F4F0E7"
+  },
+  "content": [
+    {
+      "id": "a10f001",
+      "elType": "container",
+      "isInner": false,
+      "settings": {
+        "_css_classes": "ls-hero",
+        "content_width": "boxed",
+        "flex_direction": "row",
+        "flex_align_items": "center",
+        "flex_gap": {"unit": "px", "size": 70}
+      },
+      "elements": [
+        {
+          "id": "a10f002",
+          "elType": "container",
+          "isInner": true,
+          "settings": {
+            "width": {"unit": "%", "size": 58},
+            "flex_direction": "column"
+          },
+          "elements": [
+            {
+              "id": "a10f003",
+              "elType": "widget",
+              "widgetType": "text-editor",
+              "settings": {
+                "_css_classes": "ls-kicker",
+                "editor": "<p>● CONSULTORIA NUTRICIONAL PERSONALIZADA</p>"
+              },
+              "elements": []
+            },
+            {
+              "id": "a10f004",
+              "elType": "widget",
+              "widgetType": "heading",
+              "settings": {
+                "title": "Sua alimentação deve acompanhar a <em>vida que você quer viver.</em>",
+                "header_size": "h1"
+              },
+              "elements": []
+            },
+            {
+              "id": "a10f005",
+              "elType": "widget",
+              "widgetType": "text-editor",
+              "settings": {
+                "_css_classes": "ls-hero-copy",
+                "editor": "<p>Estratégia nutricional baseada em evidências, construída para a sua rotina e ajustada com você — para transformar intenção em resultado consistente.</p>"
+              },
+              "elements": []
+            },
+            {
+              "id": "a10f006",
+              "elType": "widget",
+              "widgetType": "button",
+              "settings": {
+                "_css_classes": "ls-primary-button",
+                "text": "Quero conhecer a consultoria ↗",
+                "link": {
+                  "url": "https://wa.me/55SEUNUMERO?text=Ol%C3%A1%2C%20Ludgero%21%20Conheci%20sua%20consultoria%20pela%20landing%20page.",
+                  "is_external": "on",
+                  "nofollow": "on"
+                }
+              },
+              "elements": []
+            },
+            {
+              "id": "a10f007",
+              "elType": "widget",
+              "widgetType": "icon-list",
+              "settings": {
+                "icon_list": [
+                  {"_id": "h101", "text": "Emagrecimento", "selected_icon": {"value": "fas fa-check", "library": "fa-solid"}},
+                  {"_id": "h102", "text": "Saúde e bem-estar", "selected_icon": {"value": "fas fa-check", "library": "fa-solid"}},
+                  {"_id": "h103", "text": "Performance esportiva", "selected_icon": {"value": "fas fa-check", "library": "fa-solid"}}
+                ]
+              },
+              "elements": []
+            }
+          ]
+        },
+        {
+          "id": "a10f008",
+          "elType": "container",
+          "isInner": true,
+          "settings": {
+            "_css_classes": "ls-evolution-card",
+            "width": {"unit": "%", "size": 42},
+            "flex_direction": "column"
+          },
+          "elements": [
+            {
+              "id": "a10f009",
+              "elType": "widget",
+              "widgetType": "text-editor",
+              "settings": {
+                "_css_classes": "ls-kicker",
+                "editor": "<p>SUA EVOLUÇÃO · EM ACOMPANHAMENTO</p>"
+              },
+              "elements": []
+            },
+            {
+              "id": "a10f010",
+              "elType": "widget",
+              "widgetType": "heading",
+              "settings": {
+                "title": "Um plano que não fica parado.",
+                "header_size": "h2"
+              },
+              "elements": []
+            },
+            {
+              "id": "a10f011",
+              "elType": "widget",
+              "widgetType": "text-editor",
+              "settings": {
+                "editor": "<p>Cada etapa considera sua resposta, seus desafios e o que cabe de verdade na sua semana.</p><p><strong>01 · Entender</strong><br>Contexto, rotina e objetivo</p><p><strong>02 · Estruturar</strong><br>Estratégia sob medida</p><p><strong>03 · Evoluir</strong><br>Ajustes com acompanhamento</p>"
+              },
+              "elements": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "b20f001",
+      "elType": "container",
+      "isInner": false,
+      "settings": {
+        "_css_classes": "ls-trust",
+        "content_width": "boxed",
+        "flex_direction": "row",
+        "flex_justify_content": "center",
+        "flex_gap": {"unit": "px", "size": 24}
+      },
+      "elements": [
+        {
+          "id": "b20f002",
+          "elType": "widget",
+          "widgetType": "text-editor",
+          "settings": {
+            "editor": "<p>CRN-8 11719 · NUTRIÇÃO CLÍNICA · NUTRIÇÃO ESPORTIVA · PRESENCIAL EM GUARAPUAVA + ONLINE</p>"
+          },
+          "elements": []
+        }
+      ]
+    },
+    {
+      "id": "c30f001",
+      "elType": "container",
+      "isInner": false,
+      "settings": {
+        "_css_classes": "ls-benefits",
+        "content_width": "boxed",
+        "flex_direction": "column",
+        "flex_gap": {"unit": "px", "size": 18}
+      },
+      "elements": [
+        {
+          "id": "c30f002",
+          "elType": "container",
+          "isInner": true,
+          "settings": {
+            "_css_classes": "ls-section-title",
+            "flex_direction": "column"
+          },
+          "elements": [
+            {
+              "id": "c30f003",
+              "elType": "widget",
+              "widgetType": "text-editor",
+              "settings": {
+                "_css_classes": "ls-kicker",
+                "editor": "<p>● O QUE MUDA COM ACOMPANHAMENTO</p>"
+              },
+              "elements": []
+            },
+            {
+              "id": "c30f004",
+              "elType": "widget",
+              "widgetType": "heading",
+              "settings": {
+                "title": "Menos regras soltas.<br>Mais direção.",
+                "header_size": "h2"
+              },
+              "elements": []
+            },
+            {
+              "id": "c30f005",
+              "elType": "widget",
+              "widgetType": "text-editor",
+              "settings": {
+                "editor": "<p>A consultoria organiza o que realmente importa para que suas decisões sejam mais simples, intencionais e consistentes.</p>"
+              },
+              "elements": []
+            }
+          ]
+        },
+        {
+          "id": "c30f006",
+          "elType": "container",
+          "isInner": true,
+          "settings": {
+            "flex_direction": "row",
+            "flex_gap": {"unit": "px", "size": 14}
+          },
+          "elements": [
+            {
+              "id": "c30f007",
+              "elType": "container",
+              "isInner": true,
+              "settings": {"_css_classes": "ls-benefit-card", "width": {"unit": "%", "size": 25}},
+              "elements": [
+                {"id": "c30f008", "elType": "widget", "widgetType": "heading", "settings": {"title": "Estratégia feita para você", "header_size": "h3"}, "elements": []},
+                {"id": "c30f009", "elType": "widget", "widgetType": "text-editor", "settings": {"editor": "<p>Nada de copiar dietas prontas. Sua rotina, preferências, histórico e objetivo definem o caminho.</p>"}, "elements": []}
+              ]
+            },
+            {
+              "id": "c30f010",
+              "elType": "container",
+              "isInner": true,
+              "settings": {"_css_classes": "ls-benefit-card", "width": {"unit": "%", "size": 25}},
+              "elements": [
+                {"id": "c30f011", "elType": "widget", "widgetType": "heading", "settings": {"title": "Clareza para agir", "header_size": "h3"}, "elements": []},
+                {"id": "c30f012", "elType": "widget", "widgetType": "text-editor", "settings": {"editor": "<p>Você entende o que fazer, por que fazer e como adaptar o plano aos dias que não saem como o previsto.</p>"}, "elements": []}
+              ]
+            },
+            {
+              "id": "c30f013",
+              "elType": "container",
+              "isInner": true,
+              "settings": {"_css_classes": "ls-benefit-card", "width": {"unit": "%", "size": 25}},
+              "elements": [
+                {"id": "c30f014", "elType": "widget", "widgetType": "heading", "settings": {"title": "Ajustes com contexto", "header_size": "h3"}, "elements": []},
+                {"id": "c30f015", "elType": "widget", "widgetType": "text-editor", "settings": {"editor": "<p>O acompanhamento transforma sinais do seu corpo e sua evolução em decisões práticas — sem achismo.</p>"}, "elements": []}
+              ]
+            },
+            {
+              "id": "c30f016",
+              "elType": "container",
+              "isInner": true,
+              "settings": {"_css_classes": "ls-benefit-card", "width": {"unit": "%", "size": 25}},
+              "elements": [
+                {"id": "c30f017", "elType": "widget", "widgetType": "heading", "settings": {"title": "Resultado sustentável", "header_size": "h3"}, "elements": []},
+                {"id": "c30f018", "elType": "widget", "widgetType": "text-editor", "settings": {"editor": "<p>O objetivo não é depender para sempre de um cardápio, mas construir consistência e autonomia.</p>"}, "elements": []}
+              ]
+            }
+          ]
+        },
+        {
+          "id": "c30f019",
+          "elType": "container",
+          "isInner": true,
+          "settings": {
+            "_css_classes": "ls-method",
+            "flex_direction": "row",
+            "flex_gap": {"unit": "px", "size": 28}
+          },
+          "elements": [
+            {"id": "c30f020", "elType": "widget", "widgetType": "heading", "settings": {"title": "Um processo simples, sem ser superficial.", "header_size": "h3"}, "elements": []},
+            {"id": "c30f021", "elType": "widget", "widgetType": "text-editor", "settings": {"editor": "<p><strong>1 · Avaliação completa</strong><br>Entendemos o ponto de partida e definimos prioridades.</p>"}, "elements": []},
+            {"id": "c30f022", "elType": "widget", "widgetType": "text-editor", "settings": {"editor": "<p><strong>2 · Estratégia individual</strong><br>Você recebe um plano pensado para sua rotina real.</p>"}, "elements": []},
+            {"id": "c30f023", "elType": "widget", "widgetType": "text-editor", "settings": {"editor": "<p><strong>3 · Acompanhamento e ajustes</strong><br>A evolução orienta as próximas decisões.</p>"}, "elements": []}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "d40f001",
+      "elType": "container",
+      "isInner": false,
+      "settings": {
+        "_css_classes": "ls-authority",
+        "content_width": "boxed",
+        "flex_direction": "row",
+        "flex_align_items": "center",
+        "flex_gap": {"unit": "px", "size": 80}
+      },
+      "elements": [
+        {
+          "id": "d40f002",
+          "elType": "container",
+          "isInner": true,
+          "settings": {"width": {"unit": "%", "size": 55}, "flex_direction": "column"},
+          "elements": [
+            {"id": "d40f003", "elType": "widget", "widgetType": "text-editor", "settings": {"_css_classes": "ls-kicker", "editor": "<p>● EXPERIÊNCIA QUE ORIENTA</p>"}, "elements": []},
+            {"id": "d40f004", "elType": "widget", "widgetType": "heading", "settings": {"title": "Ciência no raciocínio.<br>Escuta na condução.", "header_size": "h2"}, "elements": []},
+            {"id": "d40f005", "elType": "widget", "widgetType": "text-editor", "settings": {"_css_classes": "ls-authority-copy", "editor": "<p>Sou Ludgero Sangaletti, nutricionista clínico e esportivo. Meu trabalho une conhecimento técnico, leitura individual e acompanhamento próximo para criar estratégias que façam sentido dentro e fora do consultório.</p>"}, "elements": []},
+            {"id": "d40f006", "elType": "widget", "widgetType": "icon-list", "settings": {"icon_list": [
+              {"_id": "a401", "text": "Especialização em Nutrição Clínica", "selected_icon": {"value": "fas fa-check", "library": "fa-solid"}},
+              {"_id": "a402", "text": "Especialização em Nutrição no Esporte e Atividade Física", "selected_icon": {"value": "fas fa-check", "library": "fa-solid"}},
+              {"_id": "a403", "text": "Experiência clínica, esportiva e multiprofissional", "selected_icon": {"value": "fas fa-check", "library": "fa-solid"}},
+              {"_id": "a404", "text": "Atuação em educação em saúde e palestras", "selected_icon": {"value": "fas fa-check", "library": "fa-solid"}}
+            ]}, "elements": []},
+            {"id": "d40f007", "elType": "widget", "widgetType": "button", "settings": {"_css_classes": "ls-secondary-button", "text": "Conversar sobre meu objetivo ↗", "link": {"url": "https://wa.me/55SEUNUMERO?text=Ol%C3%A1%2C%20Ludgero%21%20Quero%20conversar%20sobre%20meu%20objetivo.", "is_external": "on", "nofollow": "on"}}, "elements": []}
+          ]
+        },
+        {
+          "id": "d40f008",
+          "elType": "container",
+          "isInner": true,
+          "settings": {"_css_classes": "ls-rating", "width": {"unit": "%", "size": 45}, "flex_direction": "column"},
+          "elements": [
+            {"id": "d40f009", "elType": "widget", "widgetType": "heading", "settings": {"title": "96–100%", "header_size": "div"}, "elements": []},
+            {"id": "d40f010", "elType": "widget", "widgetType": "text-editor", "settings": {"editor": "<p>de avaliações classificadas como <strong>“Ótimo”</strong></p><p><small>AVALIAÇÕES INTERNAS RECENTES DE ATENDIMENTO</small></p>"}, "elements": []},
+            {"id": "d40f011", "elType": "widget", "widgetType": "text-editor", "settings": {"editor": "<p><strong>Clínica</strong> · Saúde, sintomas e composição corporal</p><p><strong>Esporte</strong> · Corrida, musculação e performance</p><p><strong>Humano</strong> · Estratégia adaptada à rotina e preferências</p><p><strong>Presencial + online</strong> · O mesmo cuidado, onde você estiver</p>"}, "elements": []}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "e50f001",
+      "elType": "container",
+      "isInner": false,
+      "settings": {
+        "_css_classes": "ls-faq",
+        "content_width": "boxed",
+        "flex_direction": "row",
+        "flex_gap": {"unit": "px", "size": 80}
+      },
+      "elements": [
+        {
+          "id": "e50f002",
+          "elType": "container",
+          "isInner": true,
+          "settings": {"_css_classes": "ls-section-title", "width": {"unit": "%", "size": 40}, "flex_direction": "column"},
+          "elements": [
+            {"id": "e50f003", "elType": "widget", "widgetType": "text-editor", "settings": {"_css_classes": "ls-kicker", "editor": "<p>● PERGUNTAS FREQUENTES</p>"}, "elements": []},
+            {"id": "e50f004", "elType": "widget", "widgetType": "heading", "settings": {"title": "O que você precisa saber antes de começar.", "header_size": "h2"}, "elements": []},
+            {"id": "e50f005", "elType": "widget", "widgetType": "text-editor", "settings": {"editor": "<p>Se sua dúvida não estiver aqui, a primeira conversa serve justamente para entender se a consultoria faz sentido para o seu momento.</p>"}, "elements": []}
+          ]
+        },
+        {
+          "id": "e50f006",
+          "elType": "container",
+          "isInner": true,
+          "settings": {"width": {"unit": "%", "size": 60}},
+          "elements": [
+            {
+              "id": "e50f007",
+              "elType": "widget",
+              "widgetType": "accordion",
+              "settings": {
+                "tabs": [
+                  {"_id": "faq01", "tab_title": "A consultoria é presencial ou online?", "tab_content": "As duas modalidades estão disponíveis. O atendimento presencial acontece em Guarapuava e a consultoria online permite o mesmo raciocínio individualizado, com organização e acompanhamento à distância."},
+                  {"_id": "faq02", "tab_title": "Preciso seguir uma dieta rígida?", "tab_content": "Não. A estratégia orienta suas escolhas sem ignorar preferências, rotina social e imprevistos. O plano precisa ser tecnicamente adequado e possível de executar."},
+                  {"_id": "faq03", "tab_title": "Serve para emagrecimento e performance?", "tab_content": "Sim. A condução é personalizada para objetivos clínicos, composição corporal, saúde, corrida, musculação e outras demandas esportivas."},
+                  {"_id": "faq04", "tab_title": "O que acontece na primeira consulta?", "tab_content": "Conversamos sobre histórico, rotina, sintomas, alimentação, treino e objetivos. A partir da avaliação, são definidas prioridades e uma estratégia aplicável ao seu momento."},
+                  {"_id": "faq05", "tab_title": "Em quanto tempo começo a ver resultados?", "tab_content": "A velocidade varia conforme objetivo, condição inicial, adesão e resposta individual. Trabalhamos com metas realistas, indicadores claros e ajustes consistentes."},
+                  {"_id": "faq06", "tab_title": "Vou precisar usar suplementos?", "tab_content": "Somente quando houver indicação e benefício real. Suplementos entram como complemento da estratégia, nunca como substitutos de uma alimentação bem estruturada."}
+                ]
+              },
+              "elements": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "f60f001",
+      "elType": "container",
+      "isInner": false,
+      "settings": {
+        "_css_classes": "ls-final-cta",
+        "content_width": "boxed",
+        "flex_direction": "column",
+        "flex_align_items": "center"
+      },
+      "elements": [
+        {"id": "f60f002", "elType": "widget", "widgetType": "text-editor", "settings": {"_css_classes": "ls-kicker", "editor": "<p>● SEU PRÓXIMO PASSO</p>"}, "elements": []},
+        {"id": "f60f003", "elType": "widget", "widgetType": "heading", "settings": {"title": "Você não precisa de mais uma tentativa. Precisa de uma estratégia.", "header_size": "h2"}, "elements": []},
+        {"id": "f60f004", "elType": "widget", "widgetType": "text-editor", "settings": {"_css_classes": "ls-hero-copy", "editor": "<p>Conte brevemente seu objetivo e descubra como a consultoria pode transformar informação em um plano possível para você.</p>"}, "elements": []},
+        {"id": "f60f005", "elType": "widget", "widgetType": "button", "settings": {"_css_classes": "ls-primary-button", "text": "Quero conversar no WhatsApp ↗", "link": {"url": "https://wa.me/55SEUNUMERO?text=Ol%C3%A1%2C%20Ludgero%21%20Conheci%20sua%20consultoria%20pela%20landing%20page.", "is_external": "on", "nofollow": "on"}}, "elements": []},
+        {"id": "f60f006", "elType": "widget", "widgetType": "text-editor", "settings": {"editor": "<p><small>ATENDIMENTO PRESENCIAL EM GUARAPUAVA E CONSULTORIA ONLINE.</small></p>"}, "elements": []}
+      ]
+    },
+    {
+      "id": "f70f001",
+      "elType": "container",
+      "isInner": false,
+      "settings": {
+        "_css_classes": "ls-footer",
+        "content_width": "boxed",
+        "flex_direction": "row",
+        "flex_justify_content": "space-between"
+      },
+      "elements": [
+        {"id": "f70f002", "elType": "widget", "widgetType": "text-editor", "settings": {"editor": "<p><strong>LS · Ludgero Sangaletti</strong><br>Nutrição clínica &amp; esportiva</p>"}, "elements": []},
+        {"id": "f70f003", "elType": "widget", "widgetType": "text-editor", "settings": {"editor": "<p>CRN-8 11719 · Atendimento nutricional individualizado</p>"}, "elements": []}
+      ]
+    }
+  ]
+}
