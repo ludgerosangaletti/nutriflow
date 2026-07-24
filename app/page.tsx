@@ -1,6 +1,4 @@
-const whatsappMessage =
-  "Olá, Ludgero! Conheci sua consultoria pela landing page e gostaria de conversar sobre meu objetivo.";
-const whatsappHref = `https://wa.me/?text=${encodeURIComponent(whatsappMessage)}`;
+import CheckoutForm from "./checkout-form";
 
 const ArrowUpRight = () => (
   <svg aria-hidden="true" viewBox="0 0 24 24" className="icon">
@@ -102,6 +100,11 @@ const faqItems = [
     answer:
       "Somente quando houver indicação e benefício real. Suplementos entram como complemento da estratégia, nunca como substitutos de uma alimentação bem estruturada.",
   },
+  {
+    question: "Como funciona o pagamento da consultoria online?",
+    answer:
+      "Você escolhe o plano na própria página e segue para o ambiente seguro da TON, onde poderá revisar a cobrança, preencher seus dados e concluir por Pix ou cartão. O site não recebe nem armazena os dados do seu cartão.",
+  },
 ];
 
 export default function Home() {
@@ -119,14 +122,13 @@ export default function Home() {
         <nav className="header-nav" aria-label="Navegação principal">
           <a href="#beneficios">Benefícios</a>
           <a href="#autoridade">Sobre</a>
+          <a href="#comprar">Planos</a>
           <a href="#faq">Dúvidas</a>
         </nav>
 
         <a
           className="button button-small button-dark"
-          href={whatsappHref}
-          target="_blank"
-          rel="noreferrer"
+          href="#comprar"
         >
           Quero começar
           <ArrowUpRight />
@@ -154,9 +156,7 @@ export default function Home() {
           <div className="hero-actions">
             <a
               className="button button-lime"
-              href={whatsappHref}
-              target="_blank"
-              rel="noreferrer"
+              href="#comprar"
             >
               Quero conhecer a consultoria
               <ArrowUpRight />
@@ -308,11 +308,9 @@ export default function Home() {
 
           <a
             className="button button-outline"
-            href={whatsappHref}
-            target="_blank"
-            rel="noreferrer"
+            href="#comprar"
           >
-            Conversar sobre meu objetivo
+            Escolher meu plano
             <ArrowUpRight />
           </a>
         </div>
@@ -342,6 +340,22 @@ export default function Home() {
             </div>
           </div>
         </div>
+      </section>
+
+      <section className="checkout-section" id="comprar">
+        <div className="checkout-heading">
+          <div>
+            <p className="section-kicker">Consultoria online</p>
+            <h2>Escolha o tempo que seu resultado precisa.</h2>
+          </div>
+          <p>
+            Selecione o plano que melhor combina com o seu momento. Na próxima
+            etapa, você revisa os dados e conclui o pagamento com segurança no
+            ambiente da TON.
+          </p>
+        </div>
+
+        <CheckoutForm />
       </section>
 
       <section className="faq-section" id="faq">
@@ -379,11 +393,9 @@ export default function Home() {
         <div className="cta-actions">
           <a
             className="button button-lime"
-            href={whatsappHref}
-            target="_blank"
-            rel="noreferrer"
+            href="#comprar"
           >
-            Quero conversar no WhatsApp
+            Escolher meu plano
             <ArrowUpRight />
           </a>
           <a href="#faq" className="text-link">
