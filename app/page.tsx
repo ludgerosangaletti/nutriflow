@@ -1,3 +1,4 @@
+import Image from "next/image";
 import CheckoutForm from "./checkout-form";
 
 const ArrowUpRight = () => (
@@ -137,6 +138,8 @@ export default function Home() {
       </header>
 
       <section className="hero" id="inicio">
+        <div className="hero-stripe hero-stripe-one" />
+        <div className="hero-stripe hero-stripe-two" />
         <div className="hero-orbit hero-orbit-one" />
         <div className="hero-orbit hero-orbit-two" />
 
@@ -175,49 +178,28 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="hero-visual" aria-label="Acompanhamento que evolui com você">
-          <div className="progress-card">
-            <div className="progress-card-top">
-              <span className="mini-label">Sua evolução</span>
-              <span className="status-pill">Em acompanhamento</span>
-            </div>
-            <h2>Um plano que não fica parado.</h2>
-            <p>
-              Cada etapa considera sua resposta, seus desafios e o que cabe de
-              verdade na sua semana.
-            </p>
-
-            <div className="progress-path">
-              <div className="progress-line" />
-              <div className="progress-step is-done">
-                <span>01</span>
-                <div>
-                  <strong>Entender</strong>
-                  <small>Contexto, rotina e objetivo</small>
-                </div>
-              </div>
-              <div className="progress-step is-current">
-                <span>02</span>
-                <div>
-                  <strong>Estruturar</strong>
-                  <small>Estratégia sob medida</small>
-                </div>
-              </div>
-              <div className="progress-step">
-                <span>03</span>
-                <div>
-                  <strong>Evoluir</strong>
-                  <small>Ajustes com acompanhamento</small>
-                </div>
-              </div>
+        <div className="hero-visual" aria-label="Team Ludgero Sangaletti">
+          <div className="logo-stage">
+            <Image
+              src="/logo-ludgero.png"
+              alt="Team Ludgero Sangaletti — Alimentação e Performance"
+              width={500}
+              height={500}
+              priority
+            />
+          </div>
+          <div className="floating-note floating-note-top">
+            <span className="note-icon">01</span>
+            <div>
+              <small>Primeiro passo</small>
+              <strong>Entender sua realidade</strong>
             </div>
           </div>
-
           <div className="floating-note">
             <span className="note-icon">↗</span>
             <div>
-              <small>Foco do processo</small>
-              <strong>Consistência sustentável</strong>
+              <small>Estratégia individual</small>
+              <strong>Alimentação + performance</strong>
             </div>
           </div>
         </div>
