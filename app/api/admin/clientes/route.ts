@@ -1,16 +1,11 @@
 import { eq } from "drizzle-orm";
-import { env } from "cloudflare:workers";
 import { getDb } from "../../../../db";
 import { clients } from "../../../../db/schema";
-import { getChatGPTUser } from "../../../chatgpt-auth";
+import { getAdminUser } from "../../../supabase/server";
 
 export async function PATCH(request: Request) {
-  const user = await getChatGPTUser();
-  if (
-    !user ||
-    !env.ADMIN_EMAIL ||
-    user.email.toLowerCase() !== env.ADMIN_EMAIL.toLowerCase()
-  ) {
+  const user = await getAdminUser();
+  if (!user) {
     return Response.json({ error: "Não autorizado." }, { status: 403 });
   }
 

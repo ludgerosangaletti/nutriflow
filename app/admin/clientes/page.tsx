@@ -1,24 +1,14 @@
 import { desc } from "drizzle-orm";
-import { env } from "cloudflare:workers";
 import Link from "next/link";
 import { getDb } from "../../../db";
 import { clients } from "../../../db/schema";
-import { requireChatGPTUser } from "../../chatgpt-auth";
+import { requireAdmin } from "../../supabase/server";
 import ApprovalButton from "./approval-button";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminClients() {
-  const user = await requireChatGPTUser("/admin/clientes");
-  if (!env.ADMIN_EMAIL || user.email.toLowerCase() !== env.ADMIN_EMAIL.toLowerCase()) {
-    return (
-      <main className="portal-shell">
-        <section className="empty-state">
-          <h1>Acesso não autorizado.</h1>
-        </section>
-      </main>
-    );
-  }
+  await requireAdmin("/admin/clientes");
 
   const rows = await getDb()
     .select()
@@ -29,7 +19,9 @@ export default async function AdminClients() {
     <main className="portal-shell">
       <header className="portal-header">
         <Link className="portal-brand" href="/">Gestão da consultoria</Link>
-        <a href="/area-cliente">Minha área</a>
+        <form action="/auth/sair" method="post">
+          <button className="auth-signout" type="submit">Sair</button>
+        </form>
       </header>
       <section className="admin-panel">
         <p className="section-kicker">Gestão de clientes</p>

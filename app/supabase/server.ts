@@ -1,4 +1,5 @@
 import { createServerClient } from "@supabase/ssr";
+import { env } from "cloudflare:workers";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
@@ -37,5 +38,25 @@ export async function getPatientUser() {
 export async function requirePatient(returnTo: string) {
   const user = await getPatientUser();
   if (!user) redirect(`/entrar?next=${encodeURIComponent(returnTo)}`);
+  return user;
+}
+
+export function isAdminEmail(email?: string | null) {
+  return Boolean(
+    email &&
+      env.ADMIN_EMAIL &&
+      email.toLowerCase() === env.ADMIN_EMAIL.toLowerCase(),
+  );
+}
+
+export async function getAdminUser() {
+  const user = await getPatientUser();
+  return isAdminEmail(user?.email) ? user : null;
+}
+
+export async function requireAdmin(returnTo: string) {
+  const user = await getPatientUser();
+  if (!user) redirect(`/admin/entrar?next=${encodeURIComponent(returnTo)}`);
+  if (!isAdminEmail(user.email)) redirect("/admin/nao-autorizado");
   return user;
 }

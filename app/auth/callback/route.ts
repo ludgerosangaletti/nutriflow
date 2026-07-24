@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { getDb } from "../../../db";
 import { clients } from "../../../db/schema";
 import { isPlanId } from "../../plans";
-import { createClient } from "../../supabase/server";
+import { createClient, isAdminEmail } from "../../supabase/server";
 
 function safeNext(value: string | null) {
   return value?.startsWith("/") && !value.startsWith("//")
@@ -22,6 +22,10 @@ export async function GET(request: Request) {
   const user = data.user;
   if (error || !user?.email) {
     return NextResponse.redirect(new URL("/entrar?erro=confirmacao", url.origin));
+  }
+
+  if (isAdminEmail(user.email)) {
+    return NextResponse.redirect(new URL(next, url.origin));
   }
 
   const name = String(user.user_metadata.name ?? "").trim();

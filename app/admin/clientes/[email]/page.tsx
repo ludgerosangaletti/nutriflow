@@ -1,9 +1,8 @@
 import { and, eq } from "drizzle-orm";
-import { env } from "cloudflare:workers";
 import Link from "next/link";
 import { getDb } from "../../../../db";
 import { anamneses, clients } from "../../../../db/schema";
-import { requireChatGPTUser } from "../../../chatgpt-auth";
+import { requireAdmin } from "../../../supabase/server";
 import { fieldLabels, sections, type Answers } from "../../../anamnese/questions";
 
 export const dynamic = "force-dynamic";
@@ -13,10 +12,7 @@ export default async function ClientAnswers({
 }: {
   params: Promise<{ email: string }>;
 }) {
-  const user = await requireChatGPTUser("/admin/clientes");
-  if (!env.ADMIN_EMAIL || user.email.toLowerCase() !== env.ADMIN_EMAIL.toLowerCase()) {
-    return <main className="portal-shell"><section className="empty-state"><h1>Acesso não autorizado.</h1></section></main>;
-  }
+  await requireAdmin("/admin/clientes");
 
   const email = decodeURIComponent((await params).email);
   const db = getDb();
