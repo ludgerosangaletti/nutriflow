@@ -433,6 +433,75 @@ button:disabled {
   margin-top: 18px;
 }
 
+.admin-panel {
+  margin: 0 auto;
+  max-width: 1160px;
+}
+
+.admin-panel h1 {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(42px, 6vw, 72px);
+  font-weight: 400;
+  letter-spacing: -0.05em;
+  margin: 18px 0;
+}
+
+.admin-panel > p:not(.section-kicker) {
+  color: #5c756d;
+}
+
+.admin-table-wrap {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  margin-top: 36px;
+  overflow-x: auto;
+}
+
+.admin-table {
+  border-collapse: collapse;
+  min-width: 760px;
+  width: 100%;
+}
+
+.admin-table th,
+.admin-table td {
+  border-bottom: 1px solid var(--line);
+  padding: 18px;
+  text-align: left;
+}
+
+.admin-table th {
+  color: #61766f;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.admin-table td {
+  font-size: 13px;
+}
+
+.admin-table td strong,
+.admin-table td small {
+  display: block;
+}
+
+.admin-table td small {
+  color: #718079;
+  margin-top: 4px;
+}
+
+.admin-action {
+  background: var(--ink);
+  border: 0;
+  border-radius: 999px;
+  color: white;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 10px 14px;
+}
+
 @media (max-width: 850px) {
   .portal-grid,
   .dashboard-grid {

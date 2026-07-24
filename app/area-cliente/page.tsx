@@ -1,4 +1,5 @@
 import { eq } from "drizzle-orm";
+import { env } from "cloudflare:workers";
 import Link from "next/link";
 import { getDb } from "../../db";
 import { clients } from "../../db/schema";
@@ -62,10 +63,24 @@ export default async function ClientArea() {
               {client.paymentStatus === "approved" ? (
                 <>
                   <strong>Preencher a anamnese</strong>
-                  <p>O formulário será disponibilizado aqui após a configuração do Google Forms.</p>
-                  <button className="button button-dark" disabled>
-                    Formulário em configuração
-                  </button>
+                  <p>
+                    Responda com atenção. Suas informações serão usadas para a
+                    elaboração da estratégia alimentar.
+                  </p>
+                  {env.GOOGLE_FORM_URL ? (
+                    <a
+                      className="button button-dark"
+                      href={env.GOOGLE_FORM_URL}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      Abrir formulário de anamnese
+                    </a>
+                  ) : (
+                    <button className="button button-dark" disabled>
+                      Formulário em configuração
+                    </button>
+                  )}
                 </>
               ) : (
                 <>

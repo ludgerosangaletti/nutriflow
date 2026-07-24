@@ -10,6 +10,7 @@ const plans = [
     installments: "1x de R$ 250",
     total: "R$ 250 no total",
     note: "Para começar com um ciclo mais curto",
+    badge: undefined,
   },
   {
     id: "bimestral",
@@ -18,6 +19,7 @@ const plans = [
     installments: "2x de R$ 200",
     total: "R$ 400 no total",
     note: "Mais tempo para aplicar e ajustar",
+    badge: undefined,
   },
   {
     id: "trimestral",
