@@ -310,11 +310,11 @@ export default function Home() {
               <span>Atendimento próximo</span>
               <strong>Estratégia feita por quem escuta você.</strong>
             </div>
-            <div className="rating-card">
-              <span className="rating-number">96–100%</span>
-              <p>de avaliações classificadas como <strong>“Ótimo”</strong></p>
-              <small>Avaliações internas recentes de atendimento</small>
-            </div>
+          </div>
+          <div className="rating-card">
+            <span className="rating-number">100%</span>
+            <p>de avaliações positivas no <strong>Google</strong></p>
+            <small>Experiências reais de pacientes atendidos</small>
           </div>
           <div className="proof-grid">
             <div>
