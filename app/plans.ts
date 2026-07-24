@@ -2,26 +2,26 @@ export const plans = {
   mensal: {
     id: "mensal",
     name: "Mensal",
-    price: "1x de R$ 250",
-    total: "R$ 250 no total",
+    price: "R$ 250",
+    total: "Pix ou cartão em até 12x*",
     paymentUrl:
-      "https://payment-link-v3.ton.com.br/pl_5VonzbGe0jE21ov9SqupBJQK8Llvg7rN",
+      "https://payment-link-v3.ton.com.br/pl_vz8BGjkoZdn48Z7FWmF8R9yKqpeDQl6a",
   },
   bimestral: {
     id: "bimestral",
     name: "Bimestral",
-    price: "2x de R$ 200",
-    total: "R$ 400 no total",
+    price: "R$ 450",
+    total: "Pix ou cartão em até 12x*",
     paymentUrl:
-      "https://payment-link-v3.ton.com.br/pl_Rxzyl05wgJ7mrWdkcBFxVDaMjeoqkYnp",
+      "https://payment-link-v3.ton.com.br/pl_EnKgmNWV0j6QeXKHkfXvB2OLG5JX7dMy",
   },
   trimestral: {
     id: "trimestral",
     name: "Trimestral",
-    price: "3x de R$ 180",
-    total: "R$ 540 no total",
+    price: "R$ 600",
+    total: "Pix ou cartão em até 12x*",
     paymentUrl:
-      "https://payment-link-v3.ton.com.br/pl_v67KDy2kAnbQNEOhzoHw5lxoBZVjgM9L",
+      "https://payment-link-v3.ton.com.br/pl_4695AvNxVE7p3gdTWUxLG2qZWYLkJPnd",
   },
 } as const;
 

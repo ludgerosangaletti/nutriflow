@@ -104,7 +104,7 @@ const faqItems = [
   {
     question: "Como funciona o pagamento da consultoria online?",
     answer:
-      "Você escolhe o plano na própria página e segue para o ambiente seguro da TON, onde poderá revisar a cobrança, preencher seus dados e concluir por Pix ou cartão. O site não recebe nem armazena os dados do seu cartão.",
+      "Você escolhe o plano na própria página e segue para o ambiente seguro da TON. O pagamento pode ser feito por Pix à vista ou cartão de crédito em até 12 vezes. No parcelamento, há incidência dos juros aplicados pela TON, apresentados antes da confirmação. O site não recebe nem armazena os dados do seu cartão.",
   },
 ];
 
@@ -333,8 +333,8 @@ export default function Home() {
           </div>
           <p>
             Selecione o plano que melhor combina com o seu momento. Primeiro
-            faremos um cadastro breve; depois você conclui o pagamento com
-            segurança no ambiente da TON.
+            faremos um cadastro breve; depois você conclui o pagamento por Pix
+            ou cartão em até 12 vezes no ambiente seguro da TON.
           </p>
         </div>
 

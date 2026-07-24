@@ -7,8 +7,8 @@ const plans = [
     id: "mensal",
     name: "Mensal",
     duration: "1 mês de acompanhamento",
-    installments: "1x de R$ 250",
-    total: "R$ 250 no total",
+    installments: "R$ 250",
+    total: "Pix ou cartão em até 12x*",
     note: "Para começar com um ciclo mais curto",
     badge: undefined,
   },
@@ -16,8 +16,8 @@ const plans = [
     id: "bimestral",
     name: "Bimestral",
     duration: "2 meses de acompanhamento",
-    installments: "2x de R$ 200",
-    total: "R$ 400 no total",
+    installments: "R$ 450",
+    total: "Pix ou cartão em até 12x*",
     note: "Mais tempo para aplicar e ajustar",
     badge: undefined,
   },
@@ -25,8 +25,8 @@ const plans = [
     id: "trimestral",
     name: "Trimestral",
     duration: "3 meses de acompanhamento",
-    installments: "3x de R$ 180",
-    total: "R$ 540 no total",
+    installments: "R$ 600",
+    total: "Pix ou cartão em até 12x*",
     note: "Melhor equilíbrio entre tempo e investimento",
     badge: "Mais escolhido",
   },
@@ -103,9 +103,13 @@ export default function CheckoutForm() {
             </svg>
             Pagamento processado pela TON
           </span>
-          <span>Pix e cartão</span>
-          <span>Você revisa antes de pagar</span>
+          <span>Pix à vista</span>
+          <span>Cartão em até 12x*</span>
         </div>
+        <small className="payment-terms">
+          *O parcelamento no cartão está sujeito aos juros aplicados pela TON,
+          informados antes da confirmação do pagamento.
+        </small>
       </div>
     </div>
   );
