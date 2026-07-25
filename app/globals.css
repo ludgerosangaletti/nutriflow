@@ -423,6 +423,211 @@ button:disabled {
   background: var(--lime);
 }
 
+.progress-dashboard-card {
+  grid-column: 1 / -1;
+  min-height: auto;
+}
+
+.progress-page {
+  background:
+    radial-gradient(circle at 92% 5%, rgba(255, 235, 0, 0.18), transparent 25rem),
+    var(--cream);
+}
+
+.progress-hero {
+  align-items: end;
+  display: grid;
+  gap: clamp(32px, 7vw, 100px);
+  grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.75fr);
+  margin: 0 auto 48px;
+  max-width: 1160px;
+}
+
+.progress-hero h1 {
+  font-family: var(--font-geist-sans), Arial, sans-serif;
+  font-size: clamp(48px, 7vw, 88px);
+  letter-spacing: -0.055em;
+  line-height: 0.96;
+  margin: 18px 0 24px;
+}
+
+.progress-hero > div > p:last-child,
+.comparison-note,
+.photo-history > p:last-child {
+  color: #666;
+  line-height: 1.7;
+  max-width: 680px;
+}
+
+.photo-guidance {
+  background: var(--ink);
+  border-radius: 24px;
+  color: white;
+  padding: 28px;
+}
+
+.photo-guidance strong {
+  color: var(--lime);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 23px;
+}
+
+.photo-guidance ul {
+  display: grid;
+  gap: 12px;
+  line-height: 1.5;
+  margin: 22px 0 0;
+  padding-left: 20px;
+}
+
+.photo-upload-section,
+.comparison-section,
+.photo-history {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 26px;
+  margin: 22px auto;
+  max-width: 1160px;
+  padding: clamp(24px, 4vw, 48px);
+}
+
+.photo-upload-section h2,
+.comparison-section h2,
+.photo-history h2 {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(32px, 4vw, 52px);
+  font-weight: 400;
+  margin: 12px 0 28px;
+}
+
+.photo-upload-form {
+  display: grid;
+  gap: 22px;
+}
+
+.photo-period {
+  display: grid;
+  font-size: 12px;
+  font-weight: 900;
+  gap: 8px;
+  max-width: 280px;
+}
+
+.photo-period input {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font: inherit;
+  padding: 13px;
+}
+
+.photo-input-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.photo-input {
+  background: #f4f2eb;
+  border: 1px dashed #aaa99f;
+  border-radius: 18px;
+  display: grid;
+  gap: 7px;
+  padding: 22px;
+}
+
+.photo-input span {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 24px;
+}
+
+.photo-input small {
+  color: #777;
+}
+
+.photo-input input {
+  font-size: 12px;
+  margin-top: 12px;
+  max-width: 100%;
+}
+
+.photo-upload-form .button {
+  justify-self: start;
+}
+
+.form-success {
+  background: #dceadf;
+  border-radius: 10px;
+  color: #245333;
+  font-size: 12px;
+  margin: 0;
+  padding: 12px;
+}
+
+.comparison-angles {
+  display: grid;
+  gap: 22px;
+  margin-top: 30px;
+}
+
+.comparison-angle {
+  border-top: 1px solid var(--line);
+  padding-top: 22px;
+}
+
+.comparison-angle h3,
+.photo-month h3 {
+  font-size: 15px;
+  letter-spacing: 0.08em;
+  margin: 0 0 14px;
+  text-transform: uppercase;
+}
+
+.comparison-angle > div {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.comparison-angle figure,
+.photo-month figure {
+  margin: 0;
+}
+
+.comparison-angle img,
+.photo-month img {
+  aspect-ratio: 3 / 4;
+  background: #ecebe5;
+  border-radius: 14px;
+  display: block;
+  object-fit: contain;
+  width: 100%;
+}
+
+.comparison-angle figcaption,
+.photo-month figcaption {
+  color: #666;
+  font-size: 11px;
+  font-weight: 800;
+  margin-top: 8px;
+}
+
+.photo-month {
+  border-top: 1px solid var(--line);
+  margin-top: 26px;
+  padding-top: 24px;
+}
+
+.photo-month-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.admin-photo-section > p {
+  color: #666;
+}
+
 .empty-state {
   margin: 8vh auto;
   max-width: 760px;
@@ -2706,6 +2911,31 @@ footer p,
 
   .footer-top {
     justify-self: start;
+  }
+}
+
+@media (max-width: 760px) {
+  .progress-hero {
+    align-items: stretch;
+    grid-template-columns: 1fr;
+  }
+
+  .photo-input-grid,
+  .photo-month-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .comparison-angle > div {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .progress-page {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+
+  .progress-hero h1 {
+    font-size: clamp(42px, 14vw, 62px);
   }
 }
 

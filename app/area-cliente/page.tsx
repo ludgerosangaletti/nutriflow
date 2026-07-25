@@ -86,6 +86,17 @@ export default async function ClientArea() {
                 </>
               )}
             </article>
+            <article className="dashboard-card progress-dashboard-card">
+              <span>Acompanhamento corporal</span>
+              <strong>Registro fotográfico opcional</strong>
+              <p>
+                Se você se sentir confortável, envie fotos mensais de frente,
+                lado e costas para comparar sua evolução.
+              </p>
+              <Link className="button button-dark" href="/evolucao">
+                Acessar registros
+              </Link>
+            </article>
           </div>
         </section>
       )}

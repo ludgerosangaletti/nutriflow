@@ -39,3 +39,24 @@ export const anamneses = sqliteTable(
     uniqueIndex("anamneses_client_email_unique").on(table.clientEmail),
   ],
 );
+
+export const progressPhotos = sqliteTable(
+  "progress_photos",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    clientEmail: text("client_email").notNull(),
+    period: text("period").notNull(),
+    angle: text("angle").notNull(),
+    objectKey: text("object_key").notNull(),
+    contentType: text("content_type").notNull(),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("progress_photos_period_angle_unique").on(
+      table.clientEmail,
+      table.period,
+      table.angle,
+    ),
+  ],
+);

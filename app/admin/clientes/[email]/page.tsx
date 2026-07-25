@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import Link from "next/link";
 import { getDb } from "../../../../db";
-import { anamneses, clients } from "../../../../db/schema";
+import { anamneses, clients, progressPhotos } from "../../../../db/schema";
 import { requireAdmin } from "../../../supabase/server";
 import { fieldLabels, sections, type Answers } from "../../../anamnese/questions";
 
@@ -33,6 +33,16 @@ export default async function ClientAnswers({
   } catch {
     answers = {};
   }
+  const photos = await db
+    .select()
+    .from(progressPhotos)
+    .where(eq(progressPhotos.clientEmail, email));
+  const photoGroups = Map.groupBy(photos, (photo) => photo.period);
+  const angleLabels: Record<string, string> = {
+    front: "Frente",
+    side: "Lado",
+    back: "Costas",
+  };
 
   return (
     <main className="portal-shell response-page">
@@ -66,6 +76,31 @@ export default async function ClientAnswers({
             </div>
           </section>
         ))}
+        <section className="response-section admin-photo-section">
+          <h2>Evolução corporal</h2>
+          {!photos.length ? (
+            <p>Nenhum registro fotográfico enviado.</p>
+          ) : (
+            [...photoGroups.entries()]
+              .sort(([a], [b]) => b.localeCompare(a))
+              .map(([period, periodPhotos]) => (
+                <article className="photo-month" key={period}>
+                  <h3>{period.split("-").reverse().join("/")}</h3>
+                  <div className="photo-month-grid">
+                    {periodPhotos.map((photo) => (
+                      <figure key={photo.id}>
+                        <img
+                          alt={`${angleLabels[photo.angle]} — ${period}`}
+                          src={`/api/evolucao/foto?id=${photo.id}`}
+                        />
+                        <figcaption>{angleLabels[photo.angle]}</figcaption>
+                      </figure>
+                    ))}
+                  </div>
+                </article>
+              ))
+          )}
+        </section>
       </div>
     </main>
   );
