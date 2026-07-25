@@ -54,6 +54,19 @@ export async function getAdminUser() {
   return isAdminEmail(user?.email) ? user : null;
 }
 
+export async function getAdminSession() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!isAdminEmail(user?.email)) return null;
+
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  return session ? { user: user!, session } : null;
+}
+
 export async function requireAdmin(returnTo: string) {
   const user = await getPatientUser();
   if (!user) redirect(`/admin/entrar?next=${encodeURIComponent(returnTo)}`);

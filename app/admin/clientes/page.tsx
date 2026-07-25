@@ -37,6 +37,7 @@ export default async function AdminClients() {
                 <th>WhatsApp</th>
                 <th>Plano</th>
                 <th>Status</th>
+                <th>Aviso</th>
                 <th>Anamnese</th>
                 <th>Ação</th>
               </tr>
@@ -47,6 +48,17 @@ export default async function AdminClients() {
                   <td><strong>{client.name}</strong><small>{client.email}</small></td>
                   <td>{client.whatsapp}</td>
                   <td>{client.plan}</td>
+                  <td>
+                    {client.approvalEmailStatus === "sent"
+                      ? `Enviado em ${new Intl.DateTimeFormat("pt-BR", {
+                          dateStyle: "short",
+                          timeStyle: "short",
+                          timeZone: "America/Sao_Paulo",
+                        }).format(new Date(client.approvalEmailSentAt!))}`
+                      : client.approvalEmailStatus === "failed"
+                        ? "Falha no envio"
+                        : "Não enviado"}
+                  </td>
                   <td>
                     {client.paymentStatus === "approved"
                       ? "Liberado"
@@ -71,7 +83,7 @@ export default async function AdminClients() {
                 </tr>
               ))}
               {!rows.length ? (
-                <tr><td colSpan={6}>Nenhum cadastro recebido até o momento.</td></tr>
+                <tr><td colSpan={7}>Nenhum cadastro recebido até o momento.</td></tr>
               ) : null}
             </tbody>
           </table>
