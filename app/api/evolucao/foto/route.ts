@@ -1,7 +1,8 @@
 import { eq } from "drizzle-orm";
 import { env } from "cloudflare:workers";
 import { getDb } from "../../../../db";
-import { progressPhotos } from "../../../../db/schema";
+import { clients, progressPhotos } from "../../../../db/schema";
+import { hasActiveAccess } from "../../../access";
 import { getPatientUser, isAdminEmail } from "../../../supabase/server";
 
 export async function GET(request: Request) {
@@ -19,6 +20,16 @@ export async function GET(request: Request) {
   if (!photo) return new Response("Foto não encontrada.", { status: 404 });
   if (!isAdminEmail(user.email) && user.email.toLowerCase() !== photo.clientEmail.toLowerCase()) {
     return new Response("Não autorizado.", { status: 403 });
+  }
+  if (!isAdminEmail(user.email)) {
+    const [client] = await getDb()
+      .select()
+      .from(clients)
+      .where(eq(clients.email, photo.clientEmail))
+      .limit(1);
+    if (!client || !hasActiveAccess(client)) {
+      return new Response("Vigência encerrada.", { status: 403 });
+    }
   }
 
   const object = await env.BUCKET.get(photo.objectKey);

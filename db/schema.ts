@@ -14,6 +14,8 @@ export const clients = sqliteTable(
     approvalEmailStatus: text("approval_email_status").notNull().default("not_sent"),
     approvalEmailSentAt: text("approval_email_sent_at"),
     approvalEmailError: text("approval_email_error"),
+    accessStartedAt: text("access_started_at"),
+    accessExpiresAt: text("access_expires_at"),
     formStatus: text("form_status").notNull().default("not_started"),
     createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
     updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),

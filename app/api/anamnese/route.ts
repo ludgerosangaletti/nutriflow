@@ -1,6 +1,7 @@
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { getDb } from "../../../db";
 import { anamneses, clients } from "../../../db/schema";
+import { hasActiveAccess } from "../../access";
 import { getPatientUser } from "../../supabase/server";
 import { sections, type Answers } from "../../anamnese/questions";
 
@@ -25,10 +26,10 @@ export async function PUT(request: Request) {
   const [client] = await db
     .select()
     .from(clients)
-    .where(and(eq(clients.authUserId, user.id), eq(clients.paymentStatus, "approved")))
+    .where(eq(clients.authUserId, user.id))
     .limit(1);
-  if (!client) {
-    return Response.json({ error: "Acesso ainda não liberado." }, { status: 403 });
+  if (!client || !hasActiveAccess(client)) {
+    return Response.json({ error: "Acesso não liberado ou vigência encerrada." }, { status: 403 });
   }
 
   const payload = (await request.json()) as { answers?: unknown; submit?: boolean };

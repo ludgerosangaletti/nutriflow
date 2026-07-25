@@ -2,8 +2,10 @@ import { eq } from "drizzle-orm";
 import Link from "next/link";
 import { getDb } from "../../db";
 import { clients } from "../../db/schema";
+import { hasActiveAccess } from "../access";
 import { isPlanId, plans } from "../plans";
 import { requirePatient } from "../supabase/server";
+import AccessCountdown from "./access-countdown";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +17,7 @@ export default async function ClientArea() {
     .from(clients)
     .where(eq(clients.authUserId, user.id))
     .limit(1);
+  const active = client ? hasActiveAccess(client) : false;
 
   return (
     <main className="portal-shell">
@@ -39,15 +42,36 @@ export default async function ClientArea() {
               <h1>Olá, {client.name.split(" ")[0]}.</h1>
               <p>Acompanhe aqui as próximas etapas da sua consultoria.</p>
             </div>
-            <div className={`status-card status-${client.paymentStatus}`}>
+            <div className={`status-card ${client.paymentStatus === "approved" && !active ? "status-expired" : `status-${client.paymentStatus}`}`}>
               <span>Status do pagamento</span>
               <strong>
                 {client.paymentStatus === "approved"
-                  ? "Pagamento confirmado"
+                  ? active
+                    ? "Pagamento confirmado"
+                    : "Vigência encerrada"
                   : "Aguardando confirmação"}
               </strong>
             </div>
           </div>
+          {active && client.accessStartedAt && client.accessExpiresAt ? (
+            <AccessCountdown
+              expiresAt={client.accessExpiresAt}
+              startedAt={client.accessStartedAt}
+            />
+          ) : null}
+          {client.paymentStatus === "approved" && !active ? (
+            <section className="access-expired">
+              <span>Vigência encerrada</span>
+              <strong>Seu plano chegou ao fim.</strong>
+              <p>
+                O acesso à assessoria e aos materiais foi pausado. Escolha um
+                novo plano para continuar o acompanhamento.
+              </p>
+              <Link className="button button-dark" href="/#comprar">
+                Renovar meu plano
+              </Link>
+            </section>
+          ) : null}
           <div className="dashboard-grid">
             <article className="dashboard-card">
               <span>Plano contratado</span>
@@ -55,13 +79,14 @@ export default async function ClientArea() {
                 {isPlanId(client.plan) ? plans[client.plan].name : client.plan}
               </strong>
               <p>
-                Após pagar, a confirmação poderá levar algum tempo. Seu acesso
-                à anamnese será liberado assim que o pagamento for conferido.
+                {active
+                  ? "Sua assessoria e o acesso aos recursos permanecem disponíveis durante a vigência deste plano."
+                  : "Após pagar, a confirmação poderá levar algum tempo. A vigência começa assim que o pagamento for confirmado."}
               </p>
             </article>
             <article className="dashboard-card dashboard-card-accent">
               <span>Próxima etapa</span>
-              {client.paymentStatus === "approved" ? (
+              {active ? (
                 <>
                   <strong>Preencher a anamnese</strong>
                   <p>
@@ -78,15 +103,20 @@ export default async function ClientArea() {
                 </>
               ) : (
                 <>
-                  <strong>Confirmação do pagamento</strong>
+                  <strong>
+                    {client.paymentStatus === "approved"
+                      ? "Renovar acompanhamento"
+                      : "Confirmação do pagamento"}
+                  </strong>
                   <p>
-                    Se você já concluiu a compra na TON, aguarde a validação para
-                    acessar o questionário da consultoria.
+                    {client.paymentStatus === "approved"
+                      ? "Escolha um novo plano para retomar a assessoria e o acesso aos recursos."
+                      : "Se você já concluiu a compra na TON, aguarde a validação para acessar o questionário da consultoria."}
                   </p>
                 </>
               )}
             </article>
-            <article className="dashboard-card progress-dashboard-card">
+            {active ? <article className="dashboard-card progress-dashboard-card">
               <span>Acompanhamento corporal</span>
               <strong>Registro fotográfico opcional</strong>
               <p>
@@ -96,7 +126,7 @@ export default async function ClientArea() {
               <Link className="button button-dark" href="/evolucao">
                 Acessar registros
               </Link>
-            </article>
+            </article> : null}
           </div>
         </section>
       )}

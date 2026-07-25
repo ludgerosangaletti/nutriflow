@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { env } from "cloudflare:workers";
 import { getDb } from "../../../db";
 import { clients, progressPhotos } from "../../../db/schema";
+import { hasActiveAccess } from "../../access";
 import { getPatientUser } from "../../supabase/server";
 
 const allowedTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
@@ -19,8 +20,8 @@ export async function POST(request: Request) {
     .where(eq(clients.authUserId, user.id))
     .limit(1);
   if (!client) return Response.json({ error: "Paciente não encontrado." }, { status: 404 });
-  if (client.paymentStatus !== "approved") {
-    return Response.json({ error: "O acompanhamento será liberado após a confirmação do pagamento." }, { status: 403 });
+  if (!hasActiveAccess(client)) {
+    return Response.json({ error: "O acompanhamento não está liberado ou a vigência terminou." }, { status: 403 });
   }
 
   const form = await request.formData();

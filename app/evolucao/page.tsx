@@ -2,6 +2,7 @@ import { asc, eq } from "drizzle-orm";
 import Link from "next/link";
 import { getDb } from "../../db";
 import { clients, progressPhotos } from "../../db/schema";
+import { hasActiveAccess } from "../access";
 import { requirePatient } from "../supabase/server";
 import PhotoUploadForm from "./photo-upload-form";
 
@@ -31,10 +32,14 @@ export default async function ProgressPage() {
     .where(eq(clients.authUserId, user.id))
     .limit(1);
 
-  if (!client) {
+  if (!client || !hasActiveAccess(client)) {
     return (
       <main className="portal-shell">
-        <section className="empty-state"><h1>Cadastro não encontrado.</h1></section>
+        <section className="empty-state">
+          <h1>Acompanhamento indisponível.</h1>
+          <p>Aguarde a confirmação do pagamento ou renove seu plano.</p>
+          <Link className="button button-dark" href="/area-cliente">Voltar</Link>
+        </section>
       </main>
     );
   }

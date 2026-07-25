@@ -399,6 +399,120 @@ button:disabled {
   background: #dceadf;
 }
 
+.status-expired {
+  background: #f2d8d2;
+}
+
+.access-countdown {
+  align-items: center;
+  background: var(--ink);
+  border-radius: 24px;
+  color: white;
+  display: grid;
+  gap: clamp(24px, 5vw, 64px);
+  grid-template-columns: minmax(210px, 0.45fr) minmax(0, 1fr);
+  margin-bottom: 22px;
+  overflow: hidden;
+  padding: clamp(26px, 4vw, 42px);
+  position: relative;
+}
+
+.access-countdown::after {
+  background: var(--lime);
+  content: "";
+  height: 110px;
+  opacity: 0.95;
+  position: absolute;
+  right: -42px;
+  top: -44px;
+  transform: rotate(36deg);
+  width: 150px;
+}
+
+.access-countdown > div:first-child span {
+  color: var(--lime);
+  display: block;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.access-countdown > div:first-child strong {
+  display: inline-block;
+  font-family: var(--font-geist-sans), Arial, sans-serif;
+  font-size: clamp(64px, 8vw, 104px);
+  letter-spacing: -0.07em;
+  line-height: 0.9;
+  margin: 12px 12px 0 0;
+}
+
+.access-countdown > div:first-child b {
+  color: #c7d5cf;
+  font-size: 13px;
+}
+
+.access-countdown-detail p {
+  color: #d8dfdc;
+  line-height: 1.6;
+  margin: 0 0 15px;
+}
+
+.access-countdown-detail p strong {
+  color: white;
+}
+
+.access-progress {
+  background: #30433d;
+  border-radius: 999px;
+  height: 9px;
+  overflow: hidden;
+}
+
+.access-progress span {
+  background: var(--lime);
+  display: block;
+  height: 100%;
+  transition: width 300ms ease;
+}
+
+.access-countdown-detail small {
+  color: #9fb0a9;
+  display: block;
+  line-height: 1.5;
+  margin-top: 12px;
+}
+
+.access-expired {
+  background: #f2d8d2;
+  border: 1px solid #dfb8b0;
+  border-radius: 24px;
+  margin-bottom: 22px;
+  padding: clamp(26px, 4vw, 38px);
+}
+
+.access-expired > span {
+  color: #8b2d23;
+  display: block;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.13em;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+}
+
+.access-expired > strong {
+  display: block;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 30px;
+}
+
+.access-expired p {
+  color: #6c4a44;
+  line-height: 1.6;
+  max-width: 650px;
+}
+
 .dashboard-grid {
   display: grid;
   gap: 22px;
@@ -2915,6 +3029,11 @@ footer p,
 }
 
 @media (max-width: 760px) {
+  .access-countdown {
+    align-items: start;
+    grid-template-columns: 1fr;
+  }
+
   .progress-hero {
     align-items: stretch;
     grid-template-columns: 1fr;

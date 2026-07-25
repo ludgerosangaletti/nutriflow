@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { getDb } from "../../../../db";
 import { clients } from "../../../../db/schema";
+import { calculateAccessPeriod } from "../../../access";
 import { getAdminSession } from "../../../supabase/server";
 
 export async function PATCH(request: Request) {
@@ -12,6 +13,7 @@ export async function PATCH(request: Request) {
   const payload = (await request.json()) as {
     email?: string;
     paymentStatus?: string;
+    renew?: boolean;
   };
   if (
     !payload.email ||
@@ -36,6 +38,14 @@ export async function PATCH(request: Request) {
     client.paymentStatus !== "approved" &&
     !client.approvalEmailSentAt;
   const now = new Date().toISOString();
+  const startsNewPeriod =
+    payload.paymentStatus === "approved" &&
+    (payload.renew ||
+      client.paymentStatus !== "approved" ||
+      !client.accessExpiresAt);
+  const accessPeriod = startsNewPeriod
+    ? calculateAccessPeriod(client.plan, new Date(now))
+    : null;
 
   await db
     .update(clients)
@@ -45,6 +55,8 @@ export async function PATCH(request: Request) {
         ? "sending"
         : client.approvalEmailStatus,
       approvalEmailError: shouldSendEmail ? null : client.approvalEmailError,
+      accessStartedAt: accessPeriod?.startedAt ?? client.accessStartedAt,
+      accessExpiresAt: accessPeriod?.expiresAt ?? client.accessExpiresAt,
       updatedAt: now,
     })
     .where(eq(clients.email, payload.email));

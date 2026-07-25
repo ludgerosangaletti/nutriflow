@@ -2,6 +2,7 @@ import { desc } from "drizzle-orm";
 import Link from "next/link";
 import { getDb } from "../../../db";
 import { clients } from "../../../db/schema";
+import { daysRemaining, hasActiveAccess } from "../../access";
 import { requireAdmin } from "../../supabase/server";
 import ApprovalButton from "./approval-button";
 
@@ -37,6 +38,7 @@ export default async function AdminClients() {
                 <th>WhatsApp</th>
                 <th>Plano</th>
                 <th>Status</th>
+                <th>Vigência</th>
                 <th>Aviso</th>
                 <th>Anamnese</th>
                 <th>Ação</th>
@@ -49,6 +51,18 @@ export default async function AdminClients() {
                   <td>{client.whatsapp}</td>
                   <td>{client.plan}</td>
                   <td>
+                    {hasActiveAccess(client)
+                      ? "Liberado"
+                      : client.paymentStatus === "approved"
+                        ? "Vencido"
+                        : "Pendente"}
+                  </td>
+                  <td>
+                    {client.accessExpiresAt
+                      ? `${daysRemaining(client.accessExpiresAt)} dias`
+                      : "Não iniciada"}
+                  </td>
+                  <td>
                     {client.approvalEmailStatus === "sent"
                       ? `Enviado em ${new Intl.DateTimeFormat("pt-BR", {
                           dateStyle: "short",
@@ -58,11 +72,6 @@ export default async function AdminClients() {
                       : client.approvalEmailStatus === "failed"
                         ? "Falha no envio"
                         : "Não enviado"}
-                  </td>
-                  <td>
-                    {client.paymentStatus === "approved"
-                      ? "Liberado"
-                      : "Pendente"}
                   </td>
                   <td>
                     {client.formStatus === "submitted" ? (
@@ -78,12 +87,16 @@ export default async function AdminClients() {
                     <ApprovalButton
                       email={client.email}
                       approved={client.paymentStatus === "approved"}
+                      expired={
+                        client.paymentStatus === "approved" &&
+                        !hasActiveAccess(client)
+                      }
                     />
                   </td>
                 </tr>
               ))}
               {!rows.length ? (
-                <tr><td colSpan={7}>Nenhum cadastro recebido até o momento.</td></tr>
+                <tr><td colSpan={8}>Nenhum cadastro recebido até o momento.</td></tr>
               ) : null}
             </tbody>
           </table>

@@ -5,9 +5,11 @@ import { useState } from "react";
 export default function ApprovalButton({
   email,
   approved,
+  expired,
 }: {
   email: string;
   approved: boolean;
+  expired: boolean;
 }) {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
@@ -20,7 +22,8 @@ export default function ApprovalButton({
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         email,
-        paymentStatus: approved ? "pending" : "approved",
+        paymentStatus: approved && !expired ? "pending" : "approved",
+        renew: approved && expired,
       }),
     });
     const result = (await response.json().catch(() => ({}))) as {
@@ -32,7 +35,9 @@ export default function ApprovalButton({
       setMessage(result.error || "Não foi possível salvar.");
       return;
     }
-    if (!approved && result.email?.sent) {
+    if (expired) {
+      setMessage("Nova vigência iniciada.");
+    } else if (!approved && result.email?.sent) {
       setMessage("Pagamento aprovado e e-mail enviado.");
     } else if (!approved && result.email?.error) {
       setMessage("Pagamento aprovado, mas o e-mail não foi enviado.");
@@ -43,7 +48,13 @@ export default function ApprovalButton({
   return (
     <div>
       <button className="admin-action" onClick={update} disabled={saving}>
-        {saving ? "Salvando..." : approved ? "Retirar liberação" : "Confirmar pagamento"}
+        {saving
+          ? "Salvando..."
+          : approved && expired
+            ? "Renovar vigência"
+            : approved
+              ? "Retirar liberação"
+              : "Confirmar pagamento"}
       </button>
       {message ? <small role="status">{message}</small> : null}
     </div>
