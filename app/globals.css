@@ -542,6 +542,202 @@ button:disabled {
   min-height: auto;
 }
 
+.documents-dashboard-card {
+  grid-column: 1 / -1;
+  min-height: auto;
+}
+
+.document-upload-form {
+  background: #f3f2ec;
+  border-radius: 18px;
+  display: grid;
+  gap: 16px;
+  margin-top: 22px;
+  padding: 22px;
+}
+
+.document-form-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: minmax(180px, 0.55fr) minmax(120px, 0.35fr) minmax(240px, 1fr);
+}
+
+.document-upload-form label {
+  display: grid;
+  font-size: 11px;
+  font-weight: 900;
+  gap: 7px;
+}
+
+.document-upload-form input,
+.document-upload-form select {
+  background: white;
+  border: 1px solid #cfcec6;
+  border-radius: 10px;
+  color: var(--ink);
+  font: inherit;
+  padding: 12px;
+}
+
+.document-file-field small {
+  color: #777;
+  font-weight: 400;
+}
+
+.document-upload-form .admin-action {
+  justify-self: start;
+}
+
+.admin-upload-message {
+  color: #50635b;
+  font-size: 12px;
+  margin: 0;
+}
+
+.admin-document-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.admin-document-list article {
+  align-items: center;
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 16px;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  padding-top: 14px;
+}
+
+.admin-document-list article strong,
+.admin-document-list article span {
+  display: block;
+}
+
+.admin-document-list article span {
+  color: #777;
+  font-size: 11px;
+  margin-top: 4px;
+}
+
+.admin-whatsapp-link {
+  background: #1f8d4d;
+  border-radius: 999px;
+  color: white;
+  font-size: 10px;
+  font-weight: 900;
+  padding: 9px 12px;
+  text-decoration: none;
+}
+
+.documents-page {
+  background:
+    radial-gradient(circle at 90% 2%, rgba(255, 235, 0, 0.18), transparent 25rem),
+    var(--cream);
+}
+
+.documents-heading,
+.current-documents,
+.archived-documents {
+  margin-left: auto;
+  margin-right: auto;
+  max-width: 1160px;
+}
+
+.documents-heading {
+  margin-bottom: 42px;
+}
+
+.documents-heading h1 {
+  font-family: var(--font-geist-sans), Arial, sans-serif;
+  font-size: clamp(48px, 7vw, 88px);
+  letter-spacing: -0.055em;
+  line-height: 0.96;
+  margin: 18px 0 22px;
+}
+
+.documents-heading > p:last-child {
+  color: #666;
+  line-height: 1.7;
+  max-width: 680px;
+}
+
+.current-documents,
+.archived-documents {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 26px;
+  margin-bottom: 22px;
+  padding: clamp(24px, 4vw, 46px);
+}
+
+.current-documents h2,
+.archived-documents h2 {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(30px, 4vw, 48px);
+  font-weight: 400;
+  margin: 0 0 24px;
+}
+
+.patient-document-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.patient-document-card,
+.patient-document-empty {
+  background: #f3f2ec;
+  border-radius: 20px;
+  min-height: 240px;
+  padding: 26px;
+}
+
+.patient-document-card > span {
+  color: #666;
+  display: block;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+}
+
+.patient-document-card > strong,
+.patient-document-empty > strong {
+  display: block;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 27px;
+}
+
+.patient-document-card p,
+.patient-document-empty p {
+  color: #666;
+  line-height: 1.55;
+  margin: 16px 0 24px;
+}
+
+.archived-documents article {
+  align-items: center;
+  border-top: 1px solid var(--line);
+  display: flex;
+  gap: 18px;
+  justify-content: space-between;
+  padding: 16px 0;
+}
+
+.archived-documents article strong,
+.archived-documents article span {
+  display: block;
+}
+
+.archived-documents article span,
+.archived-documents article a {
+  color: #666;
+  font-size: 11px;
+  margin-top: 4px;
+}
+
 .progress-page {
   background:
     radial-gradient(circle at 92% 5%, rgba(255, 235, 0, 0.18), transparent 25rem),
@@ -3029,6 +3225,21 @@ footer p,
 }
 
 @media (max-width: 760px) {
+  .document-form-grid,
+  .patient-document-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-document-list article {
+    align-items: start;
+    grid-template-columns: 1fr;
+  }
+
+  .archived-documents article {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
   .access-countdown {
     align-items: start;
     grid-template-columns: 1fr;

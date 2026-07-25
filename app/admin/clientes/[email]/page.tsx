@@ -1,9 +1,10 @@
 import { and, eq } from "drizzle-orm";
 import Link from "next/link";
 import { getDb } from "../../../../db";
-import { anamneses, clients, progressPhotos } from "../../../../db/schema";
+import { anamneses, clients, patientDocuments, progressPhotos } from "../../../../db/schema";
 import { requireAdmin } from "../../../supabase/server";
 import { fieldLabels, sections, type Answers } from "../../../anamnese/questions";
+import DocumentUploadForm from "./document-upload-form";
 
 export const dynamic = "force-dynamic";
 
@@ -38,6 +39,10 @@ export default async function ClientAnswers({
     .from(progressPhotos)
     .where(eq(progressPhotos.clientEmail, email));
   const photoGroups = Map.groupBy(photos, (photo) => photo.period);
+  const documents = await db
+    .select()
+    .from(patientDocuments)
+    .where(eq(patientDocuments.clientEmail, email));
   const angleLabels: Record<string, string> = {
     front: "Frente",
     side: "Lado",
@@ -59,6 +64,50 @@ export default async function ClientAnswers({
         </span>
       </section>
       <div className="response-sections">
+        <section className="response-section admin-documents-section">
+          <h2>Documentos do paciente</h2>
+          <p>
+            Publique o protocolo e os materiais auxiliares. Uma nova versão do
+            protocolo substitui a anterior como versão atual.
+          </p>
+          <DocumentUploadForm email={row.client.email} />
+          <div className="admin-document-list">
+            {documents
+              .toSorted((a, b) => b.publishedAt.localeCompare(a.publishedAt))
+              .map((document) => {
+                const whatsapp = row.client.whatsapp.replace(/\D/g, "");
+                const phone = whatsapp.startsWith("55") ? whatsapp : `55${whatsapp}`;
+                const message = encodeURIComponent(
+                  `Olá, ${row.client.name.split(" ")[0]}! Seu ${document.documentType === "protocol" ? "protocolo alimentar" : "material auxiliar"} já está disponível na Área do Paciente: https://ludgerosangaletti.com.br/area-cliente`,
+                );
+                return (
+                  <article key={document.id}>
+                    <div>
+                      <strong>{document.title}</strong>
+                      <span>
+                        Versão {document.version} · {document.isCurrent ? "Atual" : "Arquivada"}
+                      </span>
+                    </div>
+                    <a
+                      className="admin-response-link"
+                      href={`/api/documentos/${document.id}`}
+                    >
+                      Baixar
+                    </a>
+                    <a
+                      className="admin-whatsapp-link"
+                      href={`https://wa.me/${phone}?text=${message}`}
+                      rel="noreferrer"
+                      target="_blank"
+                    >
+                      Avisar no WhatsApp
+                    </a>
+                  </article>
+                );
+              })}
+            {!documents.length ? <p>Nenhum documento publicado.</p> : null}
+          </div>
+        </section>
         {sections.map((section) => (
           <section key={section.id} className="response-section">
             <h2>{section.title}</h2>

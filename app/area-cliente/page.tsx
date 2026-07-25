@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import Link from "next/link";
 import { getDb } from "../../db";
-import { clients } from "../../db/schema";
+import { clients, patientDocuments } from "../../db/schema";
 import { hasActiveAccess } from "../access";
 import { isPlanId, plans } from "../plans";
 import { requirePatient } from "../supabase/server";
@@ -18,6 +18,12 @@ export default async function ClientArea() {
     .where(eq(clients.authUserId, user.id))
     .limit(1);
   const active = client ? hasActiveAccess(client) : false;
+  const documents = client
+    ? await db
+        .select()
+        .from(patientDocuments)
+        .where(eq(patientDocuments.clientEmail, client.email))
+    : [];
 
   return (
     <main className="portal-shell">
@@ -127,6 +133,23 @@ export default async function ClientArea() {
                 Acessar registros
               </Link>
             </article> : null}
+            {active ? (
+              <article className="dashboard-card documents-dashboard-card">
+                <span>Protocolo e materiais</span>
+                <strong>
+                  {documents.length
+                    ? `${documents.filter((document) => document.isCurrent).length} arquivo(s) disponível(is)`
+                    : "Em elaboração"}
+                </strong>
+                <p>
+                  Consulte e baixe seu protocolo alimentar e os materiais
+                  auxiliares publicados durante a assessoria.
+                </p>
+                <Link className="button button-dark" href="/documentos">
+                  Ver meus documentos
+                </Link>
+              </article>
+            ) : null}
           </div>
         </section>
       )}

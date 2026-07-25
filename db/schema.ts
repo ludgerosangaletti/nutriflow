@@ -62,3 +62,24 @@ export const progressPhotos = sqliteTable(
     ),
   ],
 );
+
+export const patientDocuments = sqliteTable(
+  "patient_documents",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    clientEmail: text("client_email").notNull(),
+    documentType: text("document_type").notNull(),
+    title: text("title").notNull(),
+    version: text("version").notNull(),
+    originalName: text("original_name").notNull(),
+    objectKey: text("object_key").notNull(),
+    contentType: text("content_type").notNull().default("application/pdf"),
+    sizeBytes: integer("size_bytes").notNull(),
+    isCurrent: integer("is_current", { mode: "boolean" }).notNull().default(true),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    publishedAt: text("published_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("patient_documents_object_key_unique").on(table.objectKey),
+  ],
+);
