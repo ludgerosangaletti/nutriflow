@@ -168,6 +168,14 @@ export default async function ClientArea() {
               </article>
             ) : null}
             {active ? (
+              <article className="dashboard-card timeline-dashboard-card">
+                <span>Linha do tempo</span>
+                <strong>Sua jornada em um só lugar</strong>
+                <p>Acompanhe as etapas concluídas, os materiais publicados e os próximos marcos da consultoria.</p>
+                <Link className="button button-dark" href="/linha-do-tempo">Ver minha jornada</Link>
+              </article>
+            ) : null}
+            {active ? (
               <article className="dashboard-card goals-dashboard-card">
                 <span>Metas em conjunto</span>
                 <strong>

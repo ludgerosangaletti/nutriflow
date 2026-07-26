@@ -8,6 +8,8 @@ import DocumentUploadForm from "./document-upload-form";
 import CheckInReviewButton from "./check-in-review-button";
 import GoalManager from "./goal-manager";
 import AdjustmentManager from "./adjustment-manager";
+import TimelineList from "../../../timeline-list";
+import { buildTimeline } from "../../../timeline";
 
 export const dynamic = "force-dynamic";
 
@@ -55,6 +57,15 @@ export default async function ClientAnswers({
     side: "Lado",
     back: "Costas",
   };
+  const timelineEvents = buildTimeline({
+    client: row.client,
+    anamnesis: row.anamnesis,
+    documents,
+    checkIns: patientCheckIns,
+    photos,
+    goals: patientGoals,
+    adjustments: patientAdjustments,
+  });
 
   return (
     <main className="portal-shell response-page">
@@ -71,6 +82,13 @@ export default async function ClientAnswers({
         </span>
       </section>
       <div className="response-sections">
+        <section className="response-section admin-timeline-section">
+          <div className="admin-checkin-heading">
+            <div><p className="section-kicker">Histórico da consultoria</p><h2>Linha do tempo</h2></div>
+            <strong>{timelineEvents.filter((event) => !event.future).length} evento(s)</strong>
+          </div>
+          <TimelineList events={timelineEvents} admin />
+        </section>
         <section className="response-section admin-adjustments-section">
           <div className="admin-checkin-heading"><div><p className="section-kicker">Solicitações de ajustes</p><h2>Pedidos do paciente</h2></div><strong>{patientAdjustments.filter((item) => !["adjusted", "closed"].includes(item.status)).length} aberta(s)</strong></div>
           <AdjustmentManager
