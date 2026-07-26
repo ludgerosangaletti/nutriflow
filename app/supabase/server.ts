@@ -35,6 +35,18 @@ export async function getPatientUser() {
   return user;
 }
 
+export async function getPatientSession() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return null;
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  return session ? { user, session } : null;
+}
+
 export async function requirePatient(returnTo: string) {
   const user = await getPatientUser();
   if (!user) redirect(`/entrar?next=${encodeURIComponent(returnTo)}`);
