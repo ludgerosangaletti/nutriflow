@@ -114,3 +114,24 @@ export const checkIns = sqliteTable(
     uniqueIndex("check_ins_client_week_unique").on(table.clientEmail, table.weekStart),
   ],
 );
+
+export const checkInReminders = sqliteTable(
+  "check_in_reminders",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    clientEmail: text("client_email").notNull(),
+    weekStart: text("week_start").notNull(),
+    status: text("status").notNull().default("pending"),
+    providerId: text("provider_id"),
+    error: text("error"),
+    sentAt: text("sent_at"),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("check_in_reminders_client_week_unique").on(
+      table.clientEmail,
+      table.weekStart,
+    ),
+  ],
+);

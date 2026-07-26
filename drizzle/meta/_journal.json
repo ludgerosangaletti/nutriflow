@@ -64,6 +64,13 @@
       "when": 1785088262527,
       "tag": "0008_youthful_scarlet_spider",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1785089136532,
+      "tag": "0009_panoramic_revanche",
+      "breakpoints": true
     }
   ]
 }
