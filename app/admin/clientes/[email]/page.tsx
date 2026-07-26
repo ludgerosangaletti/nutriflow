@@ -10,6 +10,7 @@ import GoalManager from "./goal-manager";
 import AdjustmentManager from "./adjustment-manager";
 import TimelineList from "../../../timeline-list";
 import { buildTimeline } from "../../../timeline";
+import ProgressCharts from "../../../progress-charts";
 
 export const dynamic = "force-dynamic";
 
@@ -82,6 +83,18 @@ export default async function ClientAnswers({
         </span>
       </section>
       <div className="response-sections">
+        <section className="response-section admin-charts-section">
+          <div className="admin-checkin-heading">
+            <div><p className="section-kicker">Evolução em gráficos</p><h2>Visão clínica do período</h2></div>
+            <strong>{patientCheckIns.length} check-in(s)</strong>
+          </div>
+          <ProgressCharts
+            checkIns={patientCheckIns}
+            compact
+            goalProgress={patientGoalProgress}
+            goals={patientGoals}
+          />
+        </section>
         <section className="response-section admin-timeline-section">
           <div className="admin-checkin-heading">
             <div><p className="section-kicker">Histórico da consultoria</p><h2>Linha do tempo</h2></div>

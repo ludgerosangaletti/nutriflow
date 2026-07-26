@@ -168,6 +168,14 @@ export default async function ClientArea() {
               </article>
             ) : null}
             {active ? (
+              <article className="dashboard-card charts-dashboard-card">
+                <span>Evolução em gráficos</span>
+                <strong>Veja suas tendências</strong>
+                <p>Acompanhe peso, aderência, fome, saciedade, sono, energia, treinos e progresso das metas.</p>
+                <Link className="button button-dark" href="/graficos">Ver meus gráficos</Link>
+              </article>
+            ) : null}
+            {active ? (
               <article className="dashboard-card timeline-dashboard-card">
                 <span>Linha do tempo</span>
                 <strong>Sua jornada em um só lugar</strong>
