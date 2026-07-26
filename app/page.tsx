@@ -186,6 +186,7 @@ export default function Home() {
               width={500}
               height={500}
               priority
+              unoptimized
             />
           </div>
           <div className="floating-note floating-note-top">
@@ -305,6 +306,7 @@ export default function Home() {
               alt="Ludgero Sangaletti em seu consultório"
               fill
               sizes="(max-width: 900px) 90vw, 42vw"
+              unoptimized
             />
             <div className="portrait-caption">
               <span>Atendimento próximo</span>
