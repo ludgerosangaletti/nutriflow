@@ -135,3 +135,37 @@ export const checkInReminders = sqliteTable(
     ),
   ],
 );
+
+export const goals = sqliteTable(
+  "goals",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    clientEmail: text("client_email").notNull(),
+    category: text("category").notNull(),
+    title: text("title").notNull(),
+    initialValue: text("initial_value").notNull(),
+    targetValue: text("target_value").notNull(),
+    currentValue: text("current_value").notNull(),
+    unit: text("unit").notNull(),
+    deadline: text("deadline"),
+    frequency: text("frequency").notNull().default("weekly"),
+    professionalNote: text("professional_note").notNull().default(""),
+    status: text("status").notNull().default("active"),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    achievedAt: text("achieved_at"),
+  },
+);
+
+export const goalProgress = sqliteTable(
+  "goal_progress",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    goalId: integer("goal_id").notNull(),
+    clientEmail: text("client_email").notNull(),
+    value: text("value").notNull(),
+    note: text("note").notNull().default(""),
+    source: text("source").notNull().default("patient"),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+);

@@ -1,11 +1,12 @@
 import { and, eq } from "drizzle-orm";
 import Link from "next/link";
 import { getDb } from "../../../../db";
-import { anamneses, checkIns, clients, patientDocuments, progressPhotos } from "../../../../db/schema";
+import { anamneses, checkIns, clients, goalProgress, goals, patientDocuments, progressPhotos } from "../../../../db/schema";
 import { requireAdmin } from "../../../supabase/server";
 import { fieldLabels, sections, type Answers } from "../../../anamnese/questions";
 import DocumentUploadForm from "./document-upload-form";
 import CheckInReviewButton from "./check-in-review-button";
+import GoalManager from "./goal-manager";
 
 export const dynamic = "force-dynamic";
 
@@ -45,6 +46,8 @@ export default async function ClientAnswers({
     .from(patientDocuments)
     .where(eq(patientDocuments.clientEmail, email));
   const patientCheckIns = await db.select().from(checkIns).where(eq(checkIns.clientEmail, email));
+  const patientGoals = await db.select().from(goals).where(eq(goals.clientEmail, email));
+  const patientGoalProgress = await db.select().from(goalProgress).where(eq(goalProgress.clientEmail, email));
   const angleLabels: Record<string, string> = {
     front: "Frente",
     side: "Lado",
@@ -66,6 +69,20 @@ export default async function ClientAnswers({
         </span>
       </section>
       <div className="response-sections">
+        <section className="response-section admin-goals-section">
+          <div className="admin-checkin-heading">
+            <div><p className="section-kicker">Metas em conjunto</p><h2>Objetivos do paciente</h2></div>
+            <strong>{patientGoals.filter((goal) => goal.status === "active").length}/3 ativas</strong>
+          </div>
+          <p>Defina até três prioridades simultâneas. O paciente poderá registrar o progresso, mas somente você altera o objetivo, prazo ou status.</p>
+          <GoalManager
+            email={row.client.email}
+            goals={patientGoals.map((goal) => ({
+              ...goal,
+              progressCount: patientGoalProgress.filter((item) => item.goalId === goal.id).length,
+            }))}
+          />
+        </section>
         <section className="response-section admin-checkin-section">
           <div className="admin-checkin-heading"><div><p className="section-kicker">Acompanhamento periódico</p><h2>Check-ins semanais</h2></div><strong>{patientCheckIns.filter((item) => item.adminStatus === "new").length} novo(s)</strong></div>
           {!patientCheckIns.length ? <p>Nenhum check-in enviado até o momento.</p> : (

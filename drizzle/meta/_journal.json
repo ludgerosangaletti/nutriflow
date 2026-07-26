@@ -71,6 +71,13 @@
       "when": 1785089136532,
       "tag": "0009_panoramic_revanche",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1785096756723,
+      "tag": "0010_noisy_lucky_pierre",
+      "breakpoints": true
     }
   ]
 }

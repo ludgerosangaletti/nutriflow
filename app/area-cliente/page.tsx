@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import Link from "next/link";
 import { getDb } from "../../db";
-import { checkIns, clients, patientDocuments } from "../../db/schema";
+import { checkIns, clients, goals, patientDocuments } from "../../db/schema";
 import { hasActiveAccess } from "../access";
 import { isPlanId, plans } from "../plans";
 import { requirePatient } from "../supabase/server";
@@ -26,6 +26,9 @@ export default async function ClientArea() {
     : [];
   const patientCheckIns = client
     ? await db.select().from(checkIns).where(eq(checkIns.clientEmail, client.email))
+    : [];
+  const patientGoals = client
+    ? await db.select().from(goals).where(eq(goals.clientEmail, client.email))
     : [];
 
   return (
@@ -159,6 +162,18 @@ export default async function ClientArea() {
                 <Link className="button button-dark" href="/documentos">
                   Ver meus documentos
                 </Link>
+              </article>
+            ) : null}
+            {active ? (
+              <article className="dashboard-card goals-dashboard-card">
+                <span>Metas em conjunto</span>
+                <strong>
+                  {patientGoals.filter((goal) => goal.status === "active").length
+                    ? `${patientGoals.filter((goal) => goal.status === "active").length} meta(s) em andamento`
+                    : "Objetivos do acompanhamento"}
+                </strong>
+                <p>Acompanhe seus objetivos prioritários e registre cada evolução durante a consultoria.</p>
+                <Link className="button button-dark" href="/metas">Ver minhas metas</Link>
               </article>
             ) : null}
           </div>
