@@ -1,0 +1,20 @@
+CREATE TABLE `adjustment_requests` (
+	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	`client_email` text NOT NULL,
+	`reason` text NOT NULL,
+	`protocol_area` text NOT NULL,
+	`description` text NOT NULL,
+	`duration` text NOT NULL,
+	`attempts` text NOT NULL,
+	`requested_change` text NOT NULL,
+	`attachment_key` text,
+	`attachment_name` text,
+	`attachment_type` text,
+	`status` text DEFAULT 'submitted' NOT NULL,
+	`admin_response` text,
+	`linked_document_id` integer,
+	`created_at` text DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	`updated_at` text DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	`answered_at` text,
+	`closed_at` text
+);

@@ -1,12 +1,13 @@
 import { and, eq } from "drizzle-orm";
 import Link from "next/link";
 import { getDb } from "../../../../db";
-import { anamneses, checkIns, clients, goalProgress, goals, patientDocuments, progressPhotos } from "../../../../db/schema";
+import { adjustmentRequests, anamneses, checkIns, clients, goalProgress, goals, patientDocuments, progressPhotos } from "../../../../db/schema";
 import { requireAdmin } from "../../../supabase/server";
 import { fieldLabels, sections, type Answers } from "../../../anamnese/questions";
 import DocumentUploadForm from "./document-upload-form";
 import CheckInReviewButton from "./check-in-review-button";
 import GoalManager from "./goal-manager";
+import AdjustmentManager from "./adjustment-manager";
 
 export const dynamic = "force-dynamic";
 
@@ -48,6 +49,7 @@ export default async function ClientAnswers({
   const patientCheckIns = await db.select().from(checkIns).where(eq(checkIns.clientEmail, email));
   const patientGoals = await db.select().from(goals).where(eq(goals.clientEmail, email));
   const patientGoalProgress = await db.select().from(goalProgress).where(eq(goalProgress.clientEmail, email));
+  const patientAdjustments = await db.select().from(adjustmentRequests).where(eq(adjustmentRequests.clientEmail, email));
   const angleLabels: Record<string, string> = {
     front: "Frente",
     side: "Lado",
@@ -69,6 +71,13 @@ export default async function ClientAnswers({
         </span>
       </section>
       <div className="response-sections">
+        <section className="response-section admin-adjustments-section">
+          <div className="admin-checkin-heading"><div><p className="section-kicker">Solicitações de ajustes</p><h2>Pedidos do paciente</h2></div><strong>{patientAdjustments.filter((item) => !["adjusted", "closed"].includes(item.status)).length} aberta(s)</strong></div>
+          <AdjustmentManager
+            documents={documents.map((document) => ({ id: document.id, title: document.title, version: document.version }))}
+            requests={patientAdjustments}
+          />
+        </section>
         <section className="response-section admin-goals-section">
           <div className="admin-checkin-heading">
             <div><p className="section-kicker">Metas em conjunto</p><h2>Objetivos do paciente</h2></div>

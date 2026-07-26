@@ -169,3 +169,27 @@ export const goalProgress = sqliteTable(
     createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
   },
 );
+
+export const adjustmentRequests = sqliteTable(
+  "adjustment_requests",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    clientEmail: text("client_email").notNull(),
+    reason: text("reason").notNull(),
+    protocolArea: text("protocol_area").notNull(),
+    description: text("description").notNull(),
+    duration: text("duration").notNull(),
+    attempts: text("attempts").notNull(),
+    requestedChange: text("requested_change").notNull(),
+    attachmentKey: text("attachment_key"),
+    attachmentName: text("attachment_name"),
+    attachmentType: text("attachment_type"),
+    status: text("status").notNull().default("submitted"),
+    adminResponse: text("admin_response"),
+    linkedDocumentId: integer("linked_document_id"),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    answeredAt: text("answered_at"),
+    closedAt: text("closed_at"),
+  },
+);

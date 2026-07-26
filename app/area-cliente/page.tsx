@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import Link from "next/link";
 import { getDb } from "../../db";
-import { checkIns, clients, goals, patientDocuments } from "../../db/schema";
+import { adjustmentRequests, checkIns, clients, goals, patientDocuments } from "../../db/schema";
 import { hasActiveAccess } from "../access";
 import { isPlanId, plans } from "../plans";
 import { requirePatient } from "../supabase/server";
@@ -29,6 +29,9 @@ export default async function ClientArea() {
     : [];
   const patientGoals = client
     ? await db.select().from(goals).where(eq(goals.clientEmail, client.email))
+    : [];
+  const patientAdjustments = client
+    ? await db.select().from(adjustmentRequests).where(eq(adjustmentRequests.clientEmail, client.email))
     : [];
 
   return (
@@ -174,6 +177,18 @@ export default async function ClientArea() {
                 </strong>
                 <p>Acompanhe seus objetivos prioritários e registre cada evolução durante a consultoria.</p>
                 <Link className="button button-dark" href="/metas">Ver minhas metas</Link>
+              </article>
+            ) : null}
+            {active ? (
+              <article className="dashboard-card adjustments-dashboard-card">
+                <span>Solicitação de ajustes</span>
+                <strong>
+                  {patientAdjustments.some((item) => !["adjusted", "closed"].includes(item.status))
+                    ? "Solicitação em andamento"
+                    : "Precisa de alguma mudança?"}
+                </strong>
+                <p>Informe dificuldades com refeições, rotina, sintomas ou aderência de forma organizada.</p>
+                <Link className="button button-dark" href="/ajustes">Acessar solicitações</Link>
               </article>
             ) : null}
           </div>
