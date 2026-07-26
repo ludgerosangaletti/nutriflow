@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import Link from "next/link";
 import { getDb } from "../../db";
-import { clients, patientDocuments } from "../../db/schema";
+import { checkIns, clients, patientDocuments } from "../../db/schema";
 import { hasActiveAccess } from "../access";
 import { isPlanId, plans } from "../plans";
 import { requirePatient } from "../supabase/server";
@@ -23,6 +23,9 @@ export default async function ClientArea() {
         .select()
         .from(patientDocuments)
         .where(eq(patientDocuments.clientEmail, client.email))
+    : [];
+  const patientCheckIns = client
+    ? await db.select().from(checkIns).where(eq(checkIns.clientEmail, client.email))
     : [];
 
   return (
@@ -133,6 +136,14 @@ export default async function ClientArea() {
                 Acessar registros
               </Link>
             </article> : null}
+            {active ? (
+              <article className="dashboard-card checkin-dashboard-card">
+                <span>Check-in periódico</span>
+                <strong>Acompanhamento semanal</strong>
+                <p>Conte como foram seus últimos sete dias. O preenchimento leva cerca de 3 minutos e ajuda a orientar os próximos ajustes.</p>
+                <Link className="button button-dark" href="/check-in">{patientCheckIns.length ? "Ver e preencher check-in" : "Fazer primeiro check-in"}</Link>
+              </article>
+            ) : null}
             {active ? (
               <article className="dashboard-card documents-dashboard-card">
                 <span>Protocolo e materiais</span>

@@ -1,10 +1,11 @@
 import { and, eq } from "drizzle-orm";
 import Link from "next/link";
 import { getDb } from "../../../../db";
-import { anamneses, clients, patientDocuments, progressPhotos } from "../../../../db/schema";
+import { anamneses, checkIns, clients, patientDocuments, progressPhotos } from "../../../../db/schema";
 import { requireAdmin } from "../../../supabase/server";
 import { fieldLabels, sections, type Answers } from "../../../anamnese/questions";
 import DocumentUploadForm from "./document-upload-form";
+import CheckInReviewButton from "./check-in-review-button";
 
 export const dynamic = "force-dynamic";
 
@@ -43,6 +44,7 @@ export default async function ClientAnswers({
     .select()
     .from(patientDocuments)
     .where(eq(patientDocuments.clientEmail, email));
+  const patientCheckIns = await db.select().from(checkIns).where(eq(checkIns.clientEmail, email));
   const angleLabels: Record<string, string> = {
     front: "Frente",
     side: "Lado",
@@ -64,6 +66,25 @@ export default async function ClientAnswers({
         </span>
       </section>
       <div className="response-sections">
+        <section className="response-section admin-checkin-section">
+          <div className="admin-checkin-heading"><div><p className="section-kicker">Acompanhamento periódico</p><h2>Check-ins semanais</h2></div><strong>{patientCheckIns.filter((item) => item.adminStatus === "new").length} novo(s)</strong></div>
+          {!patientCheckIns.length ? <p>Nenhum check-in enviado até o momento.</p> : (
+            <div className="admin-checkin-list">
+              {patientCheckIns.toSorted((a, b) => b.weekStart.localeCompare(a.weekStart)).map((item) => (
+                <article className={item.adminStatus === "new" ? "is-new" : ""} key={item.id}>
+                  <header><div><span>Semana de {new Intl.DateTimeFormat("pt-BR", { timeZone: "UTC" }).format(new Date(`${item.weekStart}T00:00:00Z`))}</span><strong>{item.weightKg ? `${item.weightKg.replace(".", ",")} kg` : "Peso não informado"}</strong></div><CheckInReviewButton id={item.id} reviewed={item.adminStatus === "reviewed"} /></header>
+                  <div className="admin-checkin-metrics"><span>Aderência <b>{item.adherence}/5</b></span><span>Fome <b>{item.hunger}/5</b></span><span>Saciedade <b>{item.satiety}/5</b></span><span>Sono <b>{item.sleep}/5</b></span><span>Energia <b>{item.energy}/5</b></span><span>Treinos <b>{item.trainingSessions}</b></span></div>
+                  <dl>
+                    <div><dt>Intestino</dt><dd>{({ regular: "Regular, sem desconforto", constipation: "Mais preso que o habitual", diarrhea: "Mais solto que o habitual", alternating: "Alternando entre preso e solto", discomfort: "Com dor, gases ou desconforto" } as Record<string, string>)[item.bowelFunction] || item.bowelFunction}</dd></div>
+                    <div><dt>Principal dificuldade</dt><dd>{item.mainDifficulty}</dd></div>
+                    <div><dt>Evolução da semana</dt><dd>{item.weeklyWin}</dd></div>
+                    {item.notes ? <div><dt>Observações</dt><dd>{item.notes}</dd></div> : null}
+                  </dl>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
         <section className="response-section admin-documents-section">
           <h2>Documentos do paciente</h2>
           <p>

@@ -87,3 +87,30 @@ export const patientDocuments = sqliteTable(
     uniqueIndex("patient_documents_object_key_unique").on(table.objectKey),
   ],
 );
+
+export const checkIns = sqliteTable(
+  "check_ins",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    clientEmail: text("client_email").notNull(),
+    weekStart: text("week_start").notNull(),
+    weightKg: text("weight_kg"),
+    adherence: integer("adherence").notNull(),
+    hunger: integer("hunger").notNull(),
+    satiety: integer("satiety").notNull(),
+    sleep: integer("sleep").notNull(),
+    energy: integer("energy").notNull(),
+    trainingSessions: integer("training_sessions").notNull().default(0),
+    bowelFunction: text("bowel_function").notNull(),
+    mainDifficulty: text("main_difficulty").notNull().default(""),
+    weeklyWin: text("weekly_win").notNull().default(""),
+    notes: text("notes").notNull().default(""),
+    adminStatus: text("admin_status").notNull().default("new"),
+    reviewedAt: text("reviewed_at"),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("check_ins_client_week_unique").on(table.clientEmail, table.weekStart),
+  ],
+);
