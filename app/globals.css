@@ -4238,6 +4238,96 @@ footer p,
   color: #ffe900;
 }
 
+.patient-health-indicators {
+  display: grid;
+  grid-template-columns: minmax(260px, 1.2fr) auto minmax(220px, .8fr);
+  gap: 28px;
+  align-items: center;
+  margin-bottom: 18px;
+  padding: 26px 28px;
+  border: 1px solid #deddd5;
+  border-radius: 24px;
+  background: #111;
+  color: #fff;
+}
+
+.patient-indicator-heading > span,
+.patient-bmi-result > span,
+.patient-bmi-context > span {
+  display: block;
+  color: #ffe900;
+  font-size: .67rem;
+  font-weight: 900;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.patient-indicator-heading h2 {
+  margin: 7px 0 8px;
+  font-size: clamp(1.55rem, 3vw, 2.2rem);
+  letter-spacing: -.04em;
+}
+
+.patient-indicator-heading p,
+.patient-bmi-context p {
+  margin: 0;
+  color: #aaa;
+  font-size: .82rem;
+  line-height: 1.5;
+}
+
+.patient-bmi-result {
+  min-width: 145px;
+  padding: 19px 24px;
+  border-radius: 18px;
+  background: #ffe900;
+  color: #111;
+  text-align: center;
+}
+
+.patient-bmi-result > span {
+  color: #625a00;
+}
+
+.patient-bmi-result strong {
+  display: inline-block;
+  margin-top: 5px;
+  font-size: 2.65rem;
+  letter-spacing: -.06em;
+  line-height: 1;
+}
+
+.patient-bmi-result small {
+  margin-left: 4px;
+  color: #625a00;
+  font-size: .65rem;
+  font-weight: 800;
+}
+
+.patient-bmi-context strong {
+  display: block;
+  margin: 8px 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.25rem;
+}
+
+.patient-bmi-context small {
+  display: block;
+  margin-top: 7px;
+  color: #777;
+  font-size: .68rem;
+}
+
+.patient-bmi-note {
+  grid-column: 1 / -1;
+  margin: -7px 0 0;
+  padding-top: 16px;
+  border-top: 1px solid #303030;
+  color: #999;
+  font-size: .75rem;
+  line-height: 1.55;
+}
+
 .patient-section-heading {
   display: flex;
   justify-content: space-between;
@@ -4364,6 +4454,14 @@ footer p,
   .patient-milestones {
     grid-column: 1 / -1;
   }
+
+  .patient-health-indicators {
+    grid-template-columns: 1fr auto;
+  }
+
+  .patient-bmi-context {
+    grid-column: 1 / -1;
+  }
 }
 
 @media (max-width: 700px) {
@@ -4390,6 +4488,19 @@ footer p,
 
   .patient-progress-overview {
     grid-template-columns: 1fr;
+  }
+
+  .patient-health-indicators {
+    grid-template-columns: 1fr;
+  }
+
+  .patient-bmi-result {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .patient-bmi-context {
+    grid-column: auto;
   }
 
   .progress-ring {

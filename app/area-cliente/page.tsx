@@ -4,6 +4,7 @@ import type { CSSProperties } from "react";
 import { getDb } from "../../db";
 import {
   adjustmentRequests,
+  anamneses,
   checkIns,
   clients,
   goals,
@@ -22,6 +23,36 @@ function currentWeekStart(date = new Date()) {
   const day = utc.getUTCDay() || 7;
   utc.setUTCDate(utc.getUTCDate() - day + 1);
   return utc.toISOString().slice(0, 10);
+}
+
+type AnamnesisAnswers = Record<string, string | boolean>;
+
+function numberFromAnswer(value: unknown) {
+  if (typeof value !== "string") return Number.NaN;
+  return Number(value.trim().replace(",", "."));
+}
+
+function ageFromBirthDate(value: unknown) {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  const birthDate = new Date(`${value}T12:00:00Z`);
+  if (Number.isNaN(birthDate.getTime())) return null;
+  const today = new Date();
+  let age = today.getUTCFullYear() - birthDate.getUTCFullYear();
+  const birthdayOccurred =
+    today.getUTCMonth() > birthDate.getUTCMonth() ||
+    (today.getUTCMonth() === birthDate.getUTCMonth() &&
+      today.getUTCDate() >= birthDate.getUTCDate());
+  if (!birthdayOccurred) age -= 1;
+  return age;
+}
+
+function bmiClassification(bmi: number) {
+  if (bmi < 18.5) return "Baixo peso";
+  if (bmi < 25) return "Peso adequado";
+  if (bmi < 30) return "Sobrepeso";
+  if (bmi < 35) return "Obesidade grau I";
+  if (bmi < 40) return "Obesidade grau II";
+  return "Obesidade grau III";
 }
 
 export default async function ClientArea() {
@@ -50,13 +81,14 @@ export default async function ClientArea() {
     );
   }
 
-  const [documents, patientCheckIns, patientGoals, patientAdjustments, photos] =
+  const [documents, patientCheckIns, patientGoals, patientAdjustments, photos, patientAnamneses] =
     await Promise.all([
       db.select().from(patientDocuments).where(eq(patientDocuments.clientEmail, client.email)),
       db.select().from(checkIns).where(eq(checkIns.clientEmail, client.email)),
       db.select().from(goals).where(eq(goals.clientEmail, client.email)),
       db.select().from(adjustmentRequests).where(eq(adjustmentRequests.clientEmail, client.email)),
       db.select().from(progressPhotos).where(eq(progressPhotos.clientEmail, client.email)),
+      db.select().from(anamneses).where(eq(anamneses.clientEmail, client.email)),
     ]);
 
   const active = hasActiveAccess(client);
@@ -74,6 +106,61 @@ export default async function ClientArea() {
   ];
   const milestonesDone = milestones.filter((item) => item.done).length;
   const progressPercent = milestonesDone * 25;
+  const submittedAnamnesis = patientAnamneses.find((item) => item.status === "submitted");
+  let initialIndicators:
+    | {
+        bmi: number;
+        classification: string | null;
+        heightCm: number;
+        weightKg: number;
+        referenceDate: string;
+        reason: string | null;
+      }
+    | null = null;
+  if (submittedAnamnesis) {
+    try {
+      const answers = JSON.parse(submittedAnamnesis.answersJson) as AnamnesisAnswers;
+      const heightCm = numberFromAnswer(answers.height);
+      const weightKg = numberFromAnswer(answers.weight);
+      const age = ageFromBirthDate(answers.birthDate);
+      const pregnancyContext = [answers.diagnoses, answers.additionalNotes]
+        .filter((value): value is string => typeof value === "string")
+        .join(" ")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase();
+      const pregnancyReported = /\b(gestante|gravida|gravidez|gestacao)\b/.test(
+        pregnancyContext,
+      );
+      if (
+        Number.isFinite(heightCm) &&
+        Number.isFinite(weightKg) &&
+        heightCm >= 120 &&
+        heightCm <= 230 &&
+        weightKg >= 30 &&
+        weightKg <= 350
+      ) {
+        const bmi = weightKg / ((heightCm / 100) ** 2);
+        const reason =
+          age !== null && age < 18
+            ? "A classificação adulta do IMC não é aplicada a menores de 18 anos."
+            : pregnancyReported
+              ? "Durante a gestação, o IMC precisa ser interpretado por critérios específicos."
+              : null;
+        initialIndicators = {
+          bmi,
+          classification: reason ? null : bmiClassification(bmi),
+          heightCm,
+          weightKg,
+          referenceDate:
+            submittedAnamnesis.submittedAt || submittedAnamnesis.updatedAt,
+          reason,
+        };
+      }
+    } catch {
+      initialIndicators = null;
+    }
+  }
 
   const nextAction = (() => {
     if (client.paymentStatus !== "approved") {
@@ -200,6 +287,48 @@ export default async function ClientArea() {
             ))}
           </ol>
         </section>
+
+        {initialIndicators ? (
+          <section className="patient-health-indicators" aria-labelledby="initial-indicators-title">
+            <div className="patient-indicator-heading">
+              <span>Indicadores iniciais</span>
+              <h2 id="initial-indicators-title">Seu ponto de partida</h2>
+              <p>
+                Calculado automaticamente com os dados enviados na anamnese.
+              </p>
+            </div>
+            <div className="patient-bmi-result">
+              <span>IMC atual</span>
+              <strong>{initialIndicators.bmi.toFixed(1).replace(".", ",")}</strong>
+              <small>kg/m²</small>
+            </div>
+            <div className="patient-bmi-context">
+              <span>Classificação</span>
+              <strong>
+                {initialIndicators.classification || "Avaliação individual necessária"}
+              </strong>
+              <p>
+                {initialIndicators.weightKg.toLocaleString("pt-BR", {
+                  maximumFractionDigits: 1,
+                })}{" "}
+                kg · {initialIndicators.heightCm.toLocaleString("pt-BR", {
+                  maximumFractionDigits: 1,
+                })}{" "}
+                cm
+              </p>
+              <small>
+                Referência:{" "}
+                {new Intl.DateTimeFormat("pt-BR").format(
+                  new Date(initialIndicators.referenceDate),
+                )}
+              </small>
+            </div>
+            <p className="patient-bmi-note">
+              {initialIndicators.reason ||
+                "O IMC é um indicador de triagem. Sua interpretação considera também composição corporal, rotina, objetivos e nível de treinamento — especialmente em pessoas com maior massa muscular."}
+            </p>
+          </section>
+        ) : null}
 
         {active && client.accessStartedAt && client.accessExpiresAt ? (
           <AccessCountdown expiresAt={client.accessExpiresAt} startedAt={client.accessStartedAt} />
