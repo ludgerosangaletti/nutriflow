@@ -1230,6 +1230,72 @@ button:disabled {
   text-underline-offset: 3px;
 }
 
+.renewal-email-test {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) minmax(170px, auto) auto;
+  gap: 18px;
+  align-items: end;
+  margin-top: 24px;
+  padding: 20px;
+  border: 1px solid #d9d8d0;
+  border-radius: 18px;
+  background: #f3f2ec;
+}
+
+.renewal-email-test > div > span {
+  display: block;
+  color: #777;
+  font-size: .65rem;
+  font-weight: 900;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+}
+
+.renewal-email-test > div > strong {
+  display: block;
+  margin-top: 5px;
+}
+
+.renewal-email-test > div > p {
+  margin: 6px 0 0;
+  color: #777;
+  font-size: .75rem;
+  line-height: 1.4;
+}
+
+.renewal-email-test label {
+  color: #666;
+  font-size: .68rem;
+  font-weight: 800;
+}
+
+.renewal-email-test select {
+  display: block;
+  width: 100%;
+  margin-top: 7px;
+  padding: 10px;
+  border: 1px solid #cfcec6;
+  border-radius: 10px;
+  background: #fff;
+  color: #111;
+}
+
+.renewal-email-test > small {
+  grid-column: 1 / -1;
+  color: #50635b;
+}
+
+@media (max-width: 780px) {
+  .renewal-email-test {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .renewal-email-test > small {
+    grid-column: auto;
+  }
+}
+
 @media (max-width: 900px) {
   .admin-summary-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));

@@ -11,6 +11,7 @@ import AdjustmentManager from "./adjustment-manager";
 import TimelineList from "../../../timeline-list";
 import { buildTimeline } from "../../../timeline";
 import ProgressCharts from "../../../progress-charts";
+import RenewalEmailTest from "./renewal-email-test";
 
 export const dynamic = "force-dynamic";
 
@@ -81,6 +82,7 @@ export default async function ClientAnswers({
         <span className="response-status">
           {row.anamnesis?.status === "submitted" ? "Enviada" : "Rascunho"}
         </span>
+        <RenewalEmailTest email={row.client.email} />
       </section>
       <div className="response-sections">
         <section className="response-section admin-charts-section">
