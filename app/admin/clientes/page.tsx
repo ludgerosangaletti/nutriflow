@@ -14,18 +14,27 @@ import ApprovalButton from "./approval-button";
 
 export const dynamic = "force-dynamic";
 
+function formatAdminDate(
+  value: string | null | undefined,
+  options: Intl.DateTimeFormatOptions,
+) {
+  if (!value) return "Data não informada";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Data não informada";
+  return new Intl.DateTimeFormat("pt-BR", options).format(date);
+}
+
 export default async function AdminClients() {
   await requireAdmin("/admin/clientes");
 
   const db = getDb();
-  const [rows, allAnamneses, allDocuments, allCheckIns, allAdjustments] =
-    await Promise.all([
-      db.select().from(clients).orderBy(desc(clients.createdAt)),
-      db.select().from(anamneses),
-      db.select().from(patientDocuments),
-      db.select().from(checkIns),
-      db.select().from(adjustmentRequests),
-    ]);
+  // Keep D1 reads sequential. Parallel database calls can cross request I/O
+  // contexts in the Workers runtime and make the whole Server Component fail.
+  const rows = await db.select().from(clients).orderBy(desc(clients.createdAt));
+  const allAnamneses = await db.select().from(anamneses);
+  const allDocuments = await db.select().from(patientDocuments);
+  const allCheckIns = await db.select().from(checkIns);
+  const allAdjustments = await db.select().from(adjustmentRequests);
 
   const clientByEmail = new Map(rows.map((client) => [client.email, client]));
   const currentProtocolEmails = new Set(
@@ -74,7 +83,7 @@ export default async function AdminClients() {
       tone: "urgent" as const,
       category: "Pagamento",
       title: `Conferir compra de ${client.name}`,
-      detail: `${client.plan} · compra informada ${client.purchaseStartedAt ? new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short", timeZone: "America/Sao_Paulo" }).format(new Date(client.purchaseStartedAt)) : ""}`,
+      detail: `${client.plan} · compra informada ${formatAdminDate(client.purchaseStartedAt, { dateStyle: "short", timeStyle: "short", timeZone: "America/Sao_Paulo" })}`,
       href: "#pacientes",
       action: "Localizar cadastro",
     })),
@@ -87,7 +96,7 @@ export default async function AdminClients() {
         tone: "attention" as const,
         category: "Anamnese recebida",
         title: `Preparar protocolo de ${client.name}`,
-        detail: `Enviada em ${new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short", timeZone: "America/Sao_Paulo" }).format(new Date(anamnesis.submittedAt || anamnesis.updatedAt))}`,
+        detail: `Enviada em ${formatAdminDate(anamnesis.submittedAt || anamnesis.updatedAt, { dateStyle: "short", timeStyle: "short", timeZone: "America/Sao_Paulo" })}`,
         href: `/admin/clientes/${encodeURIComponent(client.email)}#documentos`,
         action: "Abrir paciente",
       }];
@@ -115,7 +124,7 @@ export default async function AdminClients() {
         tone: "urgent" as const,
         category: "Solicitação de ajuste",
         title: `${client.name} aguarda análise`,
-        detail: `${adjustment.protocolArea} · enviada em ${new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeZone: "America/Sao_Paulo" }).format(new Date(adjustment.createdAt))}`,
+        detail: `${adjustment.protocolArea} · enviada em ${formatAdminDate(adjustment.createdAt, { dateStyle: "short", timeZone: "America/Sao_Paulo" })}`,
         href: `/admin/clientes/${encodeURIComponent(client.email)}#ajustes`,
         action: "Analisar solicitação",
       }];
@@ -128,7 +137,7 @@ export default async function AdminClients() {
         tone: "routine" as const,
         category: "Plano próximo do fim",
         title: `${client.name}: ${remaining === 0 ? "encerra hoje" : `${remaining} dia(s) restante(s)`}`,
-        detail: `${client.plan} · vigência até ${new Intl.DateTimeFormat("pt-BR", { timeZone: "UTC" }).format(new Date(client.accessExpiresAt!))}`,
+        detail: `${client.plan} · vigência até ${formatAdminDate(client.accessExpiresAt, { timeZone: "UTC" })}`,
         href: `/admin/clientes/${encodeURIComponent(client.email)}`,
         action: "Ver paciente",
       };
@@ -251,11 +260,11 @@ export default async function AdminClients() {
                   </td>
                   <td>
                     {client.approvalEmailStatus === "sent"
-                      ? `Enviado em ${new Intl.DateTimeFormat("pt-BR", {
+                      ? `Enviado em ${formatAdminDate(client.approvalEmailSentAt, {
                           dateStyle: "short",
                           timeStyle: "short",
                           timeZone: "America/Sao_Paulo",
-                        }).format(new Date(client.approvalEmailSentAt!))}`
+                        })}`
                       : client.approvalEmailStatus === "failed"
                         ? "Falha no envio"
                         : "Não enviado"}
