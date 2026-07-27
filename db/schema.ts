@@ -136,6 +136,29 @@ export const checkInReminders = sqliteTable(
   ],
 );
 
+export const renewalReminders = sqliteTable(
+  "renewal_reminders",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    clientEmail: text("client_email").notNull(),
+    accessExpiresAt: text("access_expires_at").notNull(),
+    daysBefore: integer("days_before").notNull(),
+    status: text("status").notNull().default("pending"),
+    providerId: text("provider_id"),
+    error: text("error"),
+    sentAt: text("sent_at"),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("renewal_reminders_cycle_day_unique").on(
+      table.clientEmail,
+      table.accessExpiresAt,
+      table.daysBefore,
+    ),
+  ],
+);
+
 export const goals = sqliteTable(
   "goals",
   {
