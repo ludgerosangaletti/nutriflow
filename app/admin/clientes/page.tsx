@@ -1,7 +1,12 @@
 import { desc } from "drizzle-orm";
 import Link from "next/link";
 import { getDb } from "../../../db";
-import { anamneses, clients, patientDocuments } from "../../../db/schema";
+import {
+  anamneses,
+  checkIns,
+  clients,
+  patientDocuments,
+} from "../../../db/schema";
 import { daysRemaining, hasActiveAccess } from "../../access";
 import { requireAdmin } from "../../supabase/server";
 import ApprovalButton from "./approval-button";
@@ -19,6 +24,15 @@ function formatApprovalDate(value: string | null) {
   }).format(date);
 }
 
+function formatWeekDate(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "data não informada";
+  return new Intl.DateTimeFormat("pt-BR", {
+    dateStyle: "short",
+    timeZone: "UTC",
+  }).format(date);
+}
+
 export default async function AdminClients() {
   await requireAdmin("/admin/clientes");
 
@@ -32,6 +46,9 @@ export default async function AdminClients() {
   const currentProtocols = (await getDb().select().from(patientDocuments)).filter(
     (document) => document.documentType === "protocol" && document.isCurrent,
   );
+  const newCheckIns = (await getDb().select().from(checkIns)).filter(
+    (checkIn) => checkIn.adminStatus === "new",
+  );
   const clientByEmail = new Map(rows.map((client) => [client.email, client]));
   const protocolPatientEmails = new Set(
     currentProtocols.map((document) => document.clientEmail),
@@ -40,6 +57,9 @@ export default async function AdminClients() {
     (anamnesis) =>
       clientByEmail.has(anamnesis.clientEmail) &&
       !protocolPatientEmails.has(anamnesis.clientEmail),
+  );
+  const checkInsAwaitingReview = newCheckIns.filter((checkIn) =>
+    clientByEmail.has(checkIn.clientEmail),
   );
   const activeClients = rows.filter((client) => hasActiveAccess(client)).length;
   const pendingPaymentClients = rows.filter(
@@ -158,6 +178,46 @@ export default async function AdminClients() {
             <div className="admin-all-clear">
               <strong>✓ Nenhuma anamnese aguardando protocolo</strong>
               <p>Novas anamneses concluídas aparecerão automaticamente nesta fila.</p>
+            </div>
+          )}
+        </section>
+        <section className="admin-pending-section" id="pendencias-check-in">
+          <header>
+            <div>
+              <span>Fila de trabalho</span>
+              <h2>Check-ins aguardando análise</h2>
+            </div>
+            <strong>{checkInsAwaitingReview.length} novo(s)</strong>
+          </header>
+          {checkInsAwaitingReview.length ? (
+            <div className="admin-pending-list">
+              {checkInsAwaitingReview.map((checkIn) => {
+                const client = clientByEmail.get(checkIn.clientEmail)!;
+                return (
+                  <article className="is-attention" key={checkIn.id}>
+                    <i aria-hidden="true" />
+                    <div>
+                      <span>Check-in novo</span>
+                      <strong>Revisar semana de {client.name}</strong>
+                      <p>
+                        Semana de {formatWeekDate(checkIn.weekStart)} ·
+                        aderência {checkIn.adherence}/5 · energia{" "}
+                        {checkIn.energy}/5
+                      </p>
+                    </div>
+                    <Link
+                      href={`/admin/clientes/${encodeURIComponent(client.email)}#check-ins`}
+                    >
+                      Revisar check-in →
+                    </Link>
+                  </article>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="admin-all-clear">
+              <strong>✓ Nenhum check-in aguardando análise</strong>
+              <p>Novos check-ins aparecerão automaticamente nesta fila.</p>
             </div>
           )}
         </section>
