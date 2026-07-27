@@ -75,11 +75,11 @@ export default async function AdminClients() {
     (client) =>
       client.paymentStatus !== "approved" && Boolean(client.purchaseStartedAt),
   );
-  const expiringPlans = rows.filter((client) => {
+  const expiringPlanClients = rows.filter((client) => {
     if (!hasActiveAccess(client) || !client.accessExpiresAt) return false;
     const remaining = daysRemaining(client.accessExpiresAt);
     return remaining >= 0 && remaining <= 7;
-  }).length;
+  });
 
   return (
     <main className="portal-shell">
@@ -113,7 +113,7 @@ export default async function AdminClients() {
           </a>
           <a href="#pacientes">
             <span>Planos vencendo</span>
-            <strong>{expiringPlans}</strong>
+            <strong>{expiringPlanClients.length}</strong>
             <small>Nos próximos 7 dias</small>
           </a>
         </div>
@@ -270,6 +270,47 @@ export default async function AdminClients() {
             <div className="admin-all-clear">
               <strong>✓ Nenhuma solicitação de ajuste aberta</strong>
               <p>Novos pedidos dos pacientes aparecerão automaticamente nesta fila.</p>
+            </div>
+          )}
+        </section>
+        <section className="admin-pending-section" id="pendencias-vencimento">
+          <header>
+            <div>
+              <span>Fila de trabalho</span>
+              <h2>Planos próximos do vencimento</h2>
+            </div>
+            <strong>{expiringPlanClients.length} plano(s)</strong>
+          </header>
+          {expiringPlanClients.length ? (
+            <div className="admin-pending-list">
+              {expiringPlanClients.map((client) => {
+                const remaining = daysRemaining(client.accessExpiresAt);
+                return (
+                  <article className="is-routine" key={client.id}>
+                    <i aria-hidden="true" />
+                    <div>
+                      <span>Renovação próxima</span>
+                      <strong>
+                        {client.name}: {remaining} dia(s) restante(s)
+                      </strong>
+                      <p>
+                        {client.plan} · vigência até{" "}
+                        {formatWeekDate(client.accessExpiresAt!)}
+                      </p>
+                    </div>
+                    <Link
+                      href={`/admin/clientes/${encodeURIComponent(client.email)}`}
+                    >
+                      Ver paciente →
+                    </Link>
+                  </article>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="admin-all-clear">
+              <strong>✓ Nenhum plano vence nos próximos 7 dias</strong>
+              <p>Planos próximos do fim aparecerão automaticamente nesta fila.</p>
             </div>
           )}
         </section>
