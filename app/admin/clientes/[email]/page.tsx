@@ -12,6 +12,7 @@ import TimelineList from "../../../timeline-list";
 import { buildTimeline } from "../../../timeline";
 import ProgressCharts from "../../../progress-charts";
 import RenewalEmailTest from "./renewal-email-test";
+import { daysRemaining, hasActiveAccess } from "../../../access";
 
 export const dynamic = "force-dynamic";
 
@@ -68,6 +69,19 @@ export default async function ClientAnswers({
     goals: patientGoals,
     adjustments: patientAdjustments,
   });
+  const activeAccess = hasActiveAccess(row.client);
+  const remainingDays = row.client.accessExpiresAt
+    ? daysRemaining(row.client.accessExpiresAt)
+    : null;
+  const newCheckInCount = patientCheckIns.filter(
+    (item) => item.adminStatus === "new",
+  ).length;
+  const openAdjustmentCount = patientAdjustments.filter(
+    (item) => !["adjusted", "closed"].includes(item.status),
+  ).length;
+  const activeGoalCount = patientGoals.filter(
+    (goal) => goal.status === "active",
+  ).length;
 
   return (
     <main className="portal-shell response-page">
@@ -76,46 +90,92 @@ export default async function ClientAnswers({
         <span>{row.client.plan}</span>
       </header>
       <section className="response-heading">
-        <p className="section-kicker">Anamnese nutricional</p>
-        <h1>{row.client.name}</h1>
-        <p>{row.client.email} · {row.client.whatsapp}</p>
-        <span className="response-status">
-          {row.anamnesis?.status === "submitted" ? "Enviada" : "Rascunho"}
-        </span>
-        <RenewalEmailTest email={row.client.email} />
+        <div className="admin-patient-identity">
+          <div>
+            <p className="section-kicker">Prontuário do paciente</p>
+            <h1>{row.client.name}</h1>
+            <p>{row.client.email} · {row.client.whatsapp}</p>
+          </div>
+          <aside>
+            <span className={activeAccess ? "is-active" : "is-inactive"}>
+              {activeAccess ? "Acesso ativo" : "Acesso inativo"}
+            </span>
+            <strong>{row.client.plan}</strong>
+            <small>
+              {remainingDays === null
+                ? "Vigência não iniciada"
+                : remainingDays >= 0
+                  ? `${remainingDays} dia(s) restante(s)`
+                  : "Plano vencido"}
+            </small>
+          </aside>
+        </div>
+        <div className="admin-patient-stats">
+          <a href="#anamnese">
+            <span>Anamnese</span>
+            <strong>{row.anamnesis?.status === "submitted" ? "Enviada" : "Pendente"}</strong>
+          </a>
+          <a href="#documentos">
+            <span>Documentos</span>
+            <strong>{documents.length}</strong>
+          </a>
+          <a href="#check-ins">
+            <span>Check-ins</span>
+            <strong>{patientCheckIns.length}</strong>
+          </a>
+          <a href="#ajustes">
+            <span>Ajustes abertos</span>
+            <strong>{openAdjustmentCount}</strong>
+          </a>
+        </div>
+        <nav className="admin-patient-nav" aria-label="Seções do paciente">
+          <a href="#documentos">Documentos</a>
+          <a href="#check-ins">Check-ins</a>
+          <a href="#ajustes">Ajustes</a>
+          <a href="#metas">Metas</a>
+          <a href="#evolucao">Evolução</a>
+          <a href="#anamnese">Anamnese</a>
+        </nav>
+        <details className="admin-tools">
+          <summary>Ferramentas administrativas <span>Teste de e-mail de renovação</span></summary>
+          <RenewalEmailTest email={row.client.email} />
+        </details>
       </section>
       <div className="response-sections">
-        <section className="response-section admin-charts-section">
-          <div className="admin-checkin-heading">
+        <details className="response-section admin-charts-section">
+          <summary className="admin-section-summary">
             <div><p className="section-kicker">Evolução em gráficos</p><h2>Visão clínica do período</h2></div>
             <strong>{patientCheckIns.length} check-in(s)</strong>
-          </div>
+            <i aria-hidden="true">⌄</i>
+          </summary>
           <ProgressCharts
             checkIns={patientCheckIns}
             compact
             goalProgress={patientGoalProgress}
             goals={patientGoals}
           />
-        </section>
-        <section className="response-section admin-timeline-section">
-          <div className="admin-checkin-heading">
+        </details>
+        <details className="response-section admin-timeline-section">
+          <summary className="admin-section-summary">
             <div><p className="section-kicker">Histórico da consultoria</p><h2>Linha do tempo</h2></div>
             <strong>{timelineEvents.filter((event) => !event.future).length} evento(s)</strong>
-          </div>
+            <i aria-hidden="true">⌄</i>
+          </summary>
           <TimelineList events={timelineEvents} admin />
-        </section>
-        <section className="response-section admin-adjustments-section" id="ajustes">
-          <div className="admin-checkin-heading"><div><p className="section-kicker">Solicitações de ajustes</p><h2>Pedidos do paciente</h2></div><strong>{patientAdjustments.filter((item) => !["adjusted", "closed"].includes(item.status)).length} aberta(s)</strong></div>
+        </details>
+        <details className="response-section admin-adjustments-section" id="ajustes" open={openAdjustmentCount > 0}>
+          <summary className="admin-section-summary"><div><p className="section-kicker">Solicitações de ajustes</p><h2>Pedidos do paciente</h2></div><strong>{openAdjustmentCount} aberta(s)</strong><i aria-hidden="true">⌄</i></summary>
           <AdjustmentManager
             documents={documents.map((document) => ({ id: document.id, title: document.title, version: document.version }))}
             requests={patientAdjustments}
           />
-        </section>
-        <section className="response-section admin-goals-section">
-          <div className="admin-checkin-heading">
+        </details>
+        <details className="response-section admin-goals-section" id="metas">
+          <summary className="admin-section-summary">
             <div><p className="section-kicker">Metas em conjunto</p><h2>Objetivos do paciente</h2></div>
-            <strong>{patientGoals.filter((goal) => goal.status === "active").length}/3 ativas</strong>
-          </div>
+            <strong>{activeGoalCount}/3 ativas</strong>
+            <i aria-hidden="true">⌄</i>
+          </summary>
           <p>Defina até três prioridades simultâneas. O paciente poderá registrar o progresso, mas somente você altera o objetivo, prazo ou status.</p>
           <GoalManager
             email={row.client.email}
@@ -124,9 +184,9 @@ export default async function ClientAnswers({
               progressCount: patientGoalProgress.filter((item) => item.goalId === goal.id).length,
             }))}
           />
-        </section>
-        <section className="response-section admin-checkin-section" id="check-ins">
-          <div className="admin-checkin-heading"><div><p className="section-kicker">Acompanhamento periódico</p><h2>Check-ins semanais</h2></div><strong>{patientCheckIns.filter((item) => item.adminStatus === "new").length} novo(s)</strong></div>
+        </details>
+        <details className="response-section admin-checkin-section" id="check-ins" open={newCheckInCount > 0}>
+          <summary className="admin-section-summary"><div><p className="section-kicker">Acompanhamento periódico</p><h2>Check-ins semanais</h2></div><strong>{newCheckInCount} novo(s)</strong><i aria-hidden="true">⌄</i></summary>
           {!patientCheckIns.length ? <p>Nenhum check-in enviado até o momento.</p> : (
             <div className="admin-checkin-list">
               {patientCheckIns.toSorted((a, b) => b.weekStart.localeCompare(a.weekStart)).map((item) => (
@@ -143,9 +203,13 @@ export default async function ClientAnswers({
               ))}
             </div>
           )}
-        </section>
-        <section className="response-section admin-documents-section" id="documentos">
-          <h2>Documentos do paciente</h2>
+        </details>
+        <details className="response-section admin-documents-section" id="documentos">
+          <summary className="admin-section-summary">
+            <div><p className="section-kicker">Materiais</p><h2>Documentos do paciente</h2></div>
+            <strong>{documents.length} arquivo(s)</strong>
+            <i aria-hidden="true">⌄</i>
+          </summary>
           <p>
             Publique o protocolo e os materiais auxiliares. Uma nova versão do
             protocolo substitui a anterior como versão atual.
@@ -187,26 +251,39 @@ export default async function ClientAnswers({
               })}
             {!documents.length ? <p>Nenhum documento publicado.</p> : null}
           </div>
-        </section>
-        {sections.map((section) => (
-          <section key={section.id} className="response-section">
-            <h2>{section.title}</h2>
-            <div>
-              {section.fields.map((field) => (
-                <article key={field.id}>
-                  <span>{fieldLabels[field.id]}</span>
-                  <p>
-                    {typeof answers[field.id] === "boolean"
-                      ? answers[field.id] ? "Sim" : "Não"
-                      : String(answers[field.id] || "Não informado")}
-                  </p>
-                </article>
-              ))}
-            </div>
-          </section>
-        ))}
-        <section className="response-section admin-photo-section">
-          <h2>Evolução corporal</h2>
+        </details>
+        <details className="response-section admin-anamnesis-section" id="anamnese">
+          <summary className="admin-section-summary">
+            <div><p className="section-kicker">Dados clínicos</p><h2>Anamnese completa</h2></div>
+            <strong>{sections.length} seção(ões)</strong>
+            <i aria-hidden="true">⌄</i>
+          </summary>
+          <div className="admin-anamnesis-groups">
+            {sections.map((section) => (
+              <details key={section.id}>
+                <summary>{section.title}<span>{section.fields.length} respostas</span></summary>
+                <div>
+                  {section.fields.map((field) => (
+                    <article key={field.id}>
+                      <span>{fieldLabels[field.id]}</span>
+                      <p>
+                        {typeof answers[field.id] === "boolean"
+                          ? answers[field.id] ? "Sim" : "Não"
+                          : String(answers[field.id] || "Não informado")}
+                      </p>
+                    </article>
+                  ))}
+                </div>
+              </details>
+            ))}
+          </div>
+        </details>
+        <details className="response-section admin-photo-section" id="evolucao">
+          <summary className="admin-section-summary">
+            <div><p className="section-kicker">Comparativo visual</p><h2>Evolução corporal</h2></div>
+            <strong>{photos.length} foto(s)</strong>
+            <i aria-hidden="true">⌄</i>
+          </summary>
           {!photos.length ? (
             <p>Nenhum registro fotográfico enviado.</p>
           ) : (
@@ -229,7 +306,7 @@ export default async function ClientAnswers({
                 </article>
               ))
           )}
-        </section>
+        </details>
       </div>
     </main>
   );

@@ -1835,6 +1835,371 @@ button:disabled {
   white-space: pre-wrap;
 }
 
+/* Ficha administrativa do paciente */
+.admin-patient-identity {
+  align-items: end;
+  display: grid;
+  gap: 36px;
+  grid-template-columns: minmax(0, 1fr) 260px;
+}
+
+.admin-patient-identity > div > p:last-child {
+  color: #666;
+  margin: 0;
+}
+
+.admin-patient-identity aside {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  display: grid;
+  gap: 8px;
+  padding: 20px;
+}
+
+.admin-patient-identity aside span {
+  border-radius: 999px;
+  font-size: .64rem;
+  font-weight: 900;
+  justify-self: start;
+  padding: 7px 10px;
+  text-transform: uppercase;
+}
+
+.admin-patient-identity aside span.is-active {
+  background: #e7f3e9;
+  color: #28613a;
+}
+
+.admin-patient-identity aside span.is-inactive {
+  background: #f8e9e6;
+  color: #9e382a;
+}
+
+.admin-patient-identity aside strong {
+  font-size: 1.3rem;
+  text-transform: capitalize;
+}
+
+.admin-patient-identity aside small {
+  color: #777;
+}
+
+.admin-patient-stats {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: 26px;
+}
+
+.admin-patient-stats a {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  color: #111;
+  padding: 16px 18px;
+  text-decoration: none;
+}
+
+.admin-patient-stats span {
+  color: #777;
+  display: block;
+  font-size: .62rem;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.admin-patient-stats strong {
+  display: block;
+  font-size: 1.05rem;
+  margin-top: 7px;
+}
+
+.admin-patient-nav {
+  align-items: center;
+  background: #111;
+  border-radius: 16px;
+  display: flex;
+  gap: 5px;
+  margin-top: 12px;
+  overflow-x: auto;
+  padding: 7px;
+}
+
+.admin-patient-nav a {
+  border-radius: 10px;
+  color: #d7d7d7;
+  flex: 0 0 auto;
+  font-size: .72rem;
+  font-weight: 800;
+  padding: 10px 13px;
+  text-decoration: none;
+}
+
+.admin-patient-nav a:hover {
+  background: #2a2a2a;
+  color: #fff;
+}
+
+.admin-tools {
+  background: #f4f3ed;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  margin-top: 12px;
+  overflow: hidden;
+}
+
+.admin-tools > summary {
+  cursor: pointer;
+  font-size: .78rem;
+  font-weight: 900;
+  list-style: none;
+  padding: 17px 20px;
+}
+
+.admin-tools > summary::-webkit-details-marker {
+  display: none;
+}
+
+.admin-tools > summary span {
+  color: #777;
+  font-weight: 500;
+  margin-left: 8px;
+}
+
+.admin-tools .renewal-email-test {
+  border: 0;
+  border-radius: 0;
+  border-top: 1px solid var(--line);
+  margin: 0;
+}
+
+.response-sections {
+  gap: 12px;
+}
+
+.response-section {
+  padding: 0;
+  overflow: hidden;
+  scroll-margin-top: 20px;
+}
+
+.admin-section-summary {
+  align-items: center;
+  cursor: pointer;
+  display: grid;
+  gap: 18px;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  list-style: none;
+  padding: 22px 26px;
+  transition: background 150ms ease;
+}
+
+.admin-section-summary::-webkit-details-marker {
+  display: none;
+}
+
+.admin-section-summary:hover {
+  background: #faf9f4;
+}
+
+.admin-section-summary h2 {
+  font-size: 1.55rem;
+  margin: 5px 0 0;
+}
+
+.admin-section-summary > strong {
+  background: #f0efe9;
+  border-radius: 999px;
+  font-size: .69rem;
+  padding: 8px 11px;
+  white-space: nowrap;
+}
+
+.admin-section-summary > i {
+  font-size: 1.15rem;
+  font-style: normal;
+  transition: transform 150ms ease;
+}
+
+.response-section[open] > .admin-section-summary {
+  border-bottom: 1px solid var(--line);
+}
+
+.response-section[open] > .admin-section-summary > i {
+  transform: rotate(180deg);
+}
+
+.response-section > .admin-section-summary ~ * {
+  margin-left: 26px;
+  margin-right: 26px;
+}
+
+.response-section > .admin-section-summary ~ *:last-child {
+  margin-bottom: 26px;
+}
+
+.response-section > .admin-section-summary + p {
+  color: #666;
+  line-height: 1.55;
+  margin-top: 22px;
+}
+
+.admin-anamnesis-section > .admin-anamnesis-groups {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 1fr;
+  margin-top: 20px;
+}
+
+.admin-anamnesis-groups > details {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.admin-anamnesis-groups > details > summary {
+  align-items: center;
+  cursor: pointer;
+  display: flex;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.08rem;
+  justify-content: space-between;
+  list-style: none;
+  padding: 16px 18px;
+}
+
+.admin-anamnesis-groups > details > summary::-webkit-details-marker {
+  display: none;
+}
+
+.admin-anamnesis-groups > details > summary span {
+  color: #777;
+  font-family: Arial, sans-serif;
+  font-size: .65rem;
+  font-weight: 800;
+}
+
+.admin-anamnesis-groups > details > div {
+  display: grid;
+  gap: 0 22px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding: 0 18px;
+}
+
+.admin-anamnesis-groups article {
+  border-top: 1px solid var(--line);
+  padding: 17px 0;
+}
+
+/* No contexto administrativo, os painéis clínicos usam contraste claro. */
+.admin-timeline-section .consultation-timeline li::before {
+  background: #d7d6cf;
+}
+
+.admin-timeline-section .timeline-marker {
+  background: #e5d100;
+  border-color: #fff;
+  box-shadow: 0 0 0 1px #c8b900;
+}
+
+.admin-timeline-section .consultation-timeline article,
+.admin-timeline-section .consultation-timeline .is-future article {
+  background: #f5f4ee;
+  border-color: #deddd6;
+}
+
+.admin-timeline-section .timeline-meta,
+.admin-timeline-section .consultation-timeline p {
+  color: #666;
+}
+
+.admin-timeline-section .timeline-meta span,
+.admin-timeline-section .consultation-timeline h3 {
+  color: #111;
+}
+
+.admin-timeline-section .consultation-timeline a {
+  color: #5f5700;
+}
+
+.admin-charts-section .chart-summary-grid article,
+.admin-charts-section .weight-chart-card,
+.admin-charts-section .wellbeing-chart-section,
+.admin-charts-section .goal-chart-section,
+.admin-charts-section .metric-chart-grid > article,
+.admin-charts-section .goal-chart-grid > article,
+.admin-charts-section .charts-empty {
+  background: #f5f4ee;
+  border-color: #deddd6;
+  color: #111;
+}
+
+.admin-charts-section .chart-summary-grid span,
+.admin-charts-section .chart-summary-grid p,
+.admin-charts-section .charts-empty p,
+.admin-charts-section .chart-no-data,
+.admin-charts-section .chart-section-heading p,
+.admin-charts-section .metric-chart-grid header span,
+.admin-charts-section .goal-chart-grid p,
+.admin-charts-section .goal-chart-grid small {
+  color: #666;
+}
+
+.admin-charts-section .chart-grid-line {
+  stroke: rgba(0, 0, 0, .1);
+}
+
+@media (max-width: 850px) {
+  .admin-patient-identity {
+    align-items: stretch;
+    grid-template-columns: 1fr;
+  }
+
+  .admin-patient-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-anamnesis-groups > details > div {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  .admin-patient-stats {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .admin-patient-stats a {
+    padding: 14px;
+  }
+
+  .admin-section-summary {
+    gap: 10px;
+    grid-template-columns: minmax(0, 1fr) auto;
+    padding: 18px;
+  }
+
+  .admin-section-summary > strong {
+    align-self: start;
+  }
+
+  .admin-section-summary > i {
+    display: none;
+  }
+
+  .response-section > .admin-section-summary ~ * {
+    margin-left: 18px;
+    margin-right: 18px;
+  }
+
+  .admin-tools > summary span {
+    display: block;
+    margin: 5px 0 0;
+  }
+}
+
 @media (max-width: 850px) {
   .portal-grid,
   .dashboard-grid {
@@ -4993,4 +5358,48 @@ footer p,
     grid-template-columns: repeat(2, 1fr);
     row-gap: 18px;
   }
+}
+
+/* Contraste final da ficha administrativa — prevalece sobre temas clínicos escuros. */
+.response-page .admin-timeline-section .consultation-timeline article,
+.response-page .admin-timeline-section .consultation-timeline .is-future article {
+  background: #f5f4ee;
+  border-color: #deddd6;
+}
+
+.response-page .admin-timeline-section .consultation-timeline h3,
+.response-page .admin-timeline-section .timeline-meta span {
+  color: #111;
+}
+
+.response-page .admin-timeline-section .consultation-timeline p,
+.response-page .admin-timeline-section .timeline-meta {
+  color: #626262;
+}
+
+.response-page .admin-charts-section .chart-summary-grid article,
+.response-page .admin-charts-section .weight-chart-card,
+.response-page .admin-charts-section .wellbeing-chart-section,
+.response-page .admin-charts-section .goal-chart-section,
+.response-page .admin-charts-section .metric-chart-grid > article,
+.response-page .admin-charts-section .goal-chart-grid > article,
+.response-page .admin-charts-section .charts-empty {
+  background: #f5f4ee;
+  border-color: #deddd6;
+  color: #111;
+}
+
+.response-page .admin-charts-section .chart-summary-grid span,
+.response-page .admin-charts-section .chart-summary-grid p,
+.response-page .admin-charts-section .charts-empty p,
+.response-page .admin-charts-section .chart-no-data,
+.response-page .admin-charts-section .chart-section-heading p,
+.response-page .admin-charts-section .metric-chart-grid header span,
+.response-page .admin-charts-section .goal-chart-grid p,
+.response-page .admin-charts-section .goal-chart-grid small {
+  color: #626262;
+}
+
+.response-page .admin-charts-section .chart-grid-line {
+  stroke: rgba(0, 0, 0, .1);
 }
