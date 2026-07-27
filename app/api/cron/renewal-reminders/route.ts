@@ -26,7 +26,7 @@ export async function POST(request: Request) {
   const db = getDb();
   const allClients = await db.select().from(clients);
   const dueClients = allClients
-    .filter(hasActiveAccess)
+    .filter((client) => hasActiveAccess(client))
     .flatMap((client) => {
       if (!client.accessExpiresAt) return [];
       const days = daysRemaining(client.accessExpiresAt);

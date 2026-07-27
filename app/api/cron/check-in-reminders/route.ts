@@ -31,7 +31,7 @@ export async function POST(request: Request) {
   const db = getDb();
   const weekStart = currentWeekStart();
   const allClients = await db.select().from(clients);
-  const activeClients = allClients.filter(hasActiveAccess);
+  const activeClients = allClients.filter((client) => hasActiveAccess(client));
   const results: Array<{ email: string; status: "sent" | "skipped" | "failed"; error?: string }> = [];
 
   for (const client of activeClients) {

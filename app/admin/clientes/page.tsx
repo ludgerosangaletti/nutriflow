@@ -26,7 +26,7 @@ export default async function AdminClients() {
     .select()
     .from(clients)
     .orderBy(desc(clients.createdAt));
-  const activeClients = rows.filter(hasActiveAccess).length;
+  const activeClients = rows.filter((client) => hasActiveAccess(client)).length;
   const pendingPayments = rows.filter(
     (client) =>
       client.paymentStatus !== "approved" && Boolean(client.purchaseStartedAt),
