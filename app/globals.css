@@ -987,6 +987,62 @@ button:disabled {
   color: #666666;
 }
 
+.admin-hero {
+  align-items: end;
+  display: grid;
+  gap: 40px;
+  grid-template-columns: minmax(0, 1fr) 320px;
+}
+
+.admin-hero h1 {
+  margin-bottom: 12px;
+}
+
+.admin-hero > div > p:last-child {
+  color: #666;
+  margin: 0;
+}
+
+.admin-hero aside {
+  border: 1px solid #deddd6;
+  border-radius: 20px;
+  display: grid;
+  gap: 7px;
+  padding: 22px;
+}
+
+.admin-hero aside.has-actions {
+  background: #111;
+  border-color: #111;
+  color: #fff;
+}
+
+.admin-hero aside.is-clear {
+  background: #eff7f1;
+  border-color: #d8eadc;
+  color: #245c37;
+}
+
+.admin-hero aside span {
+  font-size: .64rem;
+  font-weight: 900;
+  letter-spacing: .1em;
+  opacity: .65;
+  text-transform: uppercase;
+}
+
+.admin-hero aside strong {
+  font-size: 1.35rem;
+}
+
+.admin-hero aside a {
+  color: inherit;
+  font-size: .72rem;
+  font-weight: 900;
+  margin-top: 5px;
+  text-decoration: none;
+}
+
 .admin-summary-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -995,20 +1051,14 @@ button:disabled {
 }
 
 .admin-summary-grid > a {
-  min-height: 165px;
-  padding: 22px;
+  min-height: 126px;
+  padding: 19px 20px;
   border: 1px solid var(--line);
   border-radius: 20px;
   background: var(--paper);
   color: var(--ink);
   text-decoration: none;
   transition: border-color 160ms ease, transform 160ms ease;
-}
-
-.admin-summary-grid > a:first-child {
-  border-color: #111;
-  background: #111;
-  color: #fff;
 }
 
 .admin-summary-grid > a:hover {
@@ -1027,15 +1077,10 @@ button:disabled {
   text-transform: uppercase;
 }
 
-.admin-summary-grid > a:first-child span,
-.admin-summary-grid > a:first-child small {
-  color: #bbb;
-}
-
 .admin-summary-grid strong {
   display: block;
-  margin: 12px 0 8px;
-  font-size: 2.7rem;
+  margin: 10px 0 6px;
+  font-size: 2.25rem;
   letter-spacing: -.06em;
   line-height: 1;
 }
@@ -1045,24 +1090,35 @@ button:disabled {
   font-size: .72rem;
 }
 
-.admin-pending-section {
-  margin-top: 42px;
-  overflow: hidden;
+.admin-action-center {
+  background: #fff;
   border: 1px solid var(--line);
   border-radius: 24px;
-  background: #fff;
+  margin-top: 28px;
+  overflow: hidden;
 }
 
-.admin-pending-section > header {
+.admin-action-center-heading {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: space-between;
   gap: 24px;
-  padding: 25px 28px;
+  padding: 27px 28px 23px;
   border-bottom: 1px solid var(--line);
 }
 
-.admin-pending-section > header h2,
+.admin-action-center-heading span,
+.admin-patient-heading span {
+  color: #777;
+  display: block;
+  font-size: .64rem;
+  font-weight: 900;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.admin-action-center-heading h2,
+.admin-patient-heading h2,
 .admin-patient-base h2 {
   margin: 6px 0 0;
   font-family: Georgia, "Times New Roman", serif;
@@ -1071,11 +1127,106 @@ button:disabled {
   letter-spacing: -.04em;
 }
 
-.admin-pending-section > header > strong {
+.admin-action-center-heading p {
+  color: #777;
+  font-size: .76rem;
+  margin: 8px 0 0;
+}
+
+.admin-action-center-heading > strong {
   padding: 8px 12px;
   border-radius: 999px;
   background: #f1f0e9;
   font-size: .72rem;
+}
+
+.admin-pending-section {
+  background: #fff;
+  border-bottom: 1px solid var(--line);
+}
+
+.admin-pending-section:last-child {
+  border-bottom: 0;
+}
+
+.admin-pending-section > summary {
+  align-items: center;
+  cursor: pointer;
+  display: grid;
+  gap: 15px;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  list-style: none;
+  padding: 18px 28px;
+  transition: background 150ms ease;
+}
+
+.admin-pending-section > summary::-webkit-details-marker {
+  display: none;
+}
+
+.admin-pending-section > summary:hover {
+  background: #faf9f4;
+}
+
+.admin-pending-section > summary > div > span {
+  color: #888;
+  display: block;
+  font-size: .61rem;
+  font-weight: 900;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+}
+
+.admin-pending-section > summary h3 {
+  font-size: .95rem;
+  margin: 4px 0 0;
+}
+
+.admin-pending-section > summary > strong {
+  background: #f1f0e9;
+  border-radius: 999px;
+  font-size: .72rem;
+  min-width: 31px;
+  padding: 8px 10px;
+  text-align: center;
+}
+
+.admin-pending-section > summary > i {
+  font-size: 1.1rem;
+  font-style: normal;
+  transition: transform 150ms ease;
+}
+
+.admin-pending-section[open] > summary > i {
+  transform: rotate(180deg);
+}
+
+.admin-task-icon {
+  align-items: center;
+  background: #f0f0ec;
+  border-radius: 10px;
+  color: #555;
+  display: flex;
+  font-size: .68rem;
+  font-weight: 900;
+  height: 34px;
+  justify-content: center;
+  width: 34px;
+}
+
+.admin-task-icon.is-urgent {
+  background: #feece8;
+  color: #b93624;
+}
+
+.admin-task-icon.is-attention {
+  background: #fff8ce;
+  color: #816f00;
+}
+
+.admin-task-icon.is-routine {
+  background: #e9f5ec;
+  color: #35724a;
 }
 
 .admin-pending-list article {
@@ -1139,7 +1290,7 @@ button:disabled {
 }
 
 .admin-all-clear {
-  padding: 30px 28px;
+  padding: 22px 28px;
   background: #eff7f1;
 }
 
@@ -1179,9 +1330,25 @@ button:disabled {
   overflow-x: auto;
 }
 
+.admin-patient-heading {
+  align-items: end;
+  display: flex;
+  gap: 40px;
+  justify-content: space-between;
+  margin-top: 44px;
+}
+
+.admin-patient-heading > p {
+  color: #777;
+  font-size: .76rem;
+  line-height: 1.45;
+  margin: 0;
+  max-width: 360px;
+}
+
 .admin-table {
   border-collapse: collapse;
-  min-width: 760px;
+  min-width: 680px;
   width: 100%;
 }
 
@@ -1297,6 +1464,11 @@ button:disabled {
 }
 
 @media (max-width: 900px) {
+  .admin-hero {
+    align-items: stretch;
+    grid-template-columns: 1fr;
+  }
+
   .admin-summary-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -1308,11 +1480,12 @@ button:disabled {
   }
 
   .admin-summary-grid > a {
-    min-height: 145px;
+    min-height: 120px;
     padding: 18px;
   }
 
-  .admin-pending-section > header,
+  .admin-action-center-heading,
+  .admin-patient-heading,
   .admin-patient-base {
     align-items: flex-start;
     flex-direction: column;
@@ -1325,6 +1498,10 @@ button:disabled {
 
   .admin-pending-list article > a {
     grid-column: 2;
+  }
+
+  .admin-pending-section > summary {
+    padding: 16px 18px;
   }
 }
 

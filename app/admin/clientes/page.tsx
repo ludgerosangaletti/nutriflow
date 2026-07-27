@@ -80,6 +80,12 @@ export default async function AdminClients() {
     const remaining = daysRemaining(client.accessExpiresAt);
     return remaining >= 0 && remaining <= 7;
   });
+  const actionCount =
+    pendingPaymentClients.length +
+    anamnesesAwaitingProtocol.length +
+    checkInsAwaitingReview.length +
+    adjustmentsAwaitingAction.length +
+    expiringPlanClients.length;
 
   return (
     <main className="portal-shell">
@@ -90,11 +96,24 @@ export default async function AdminClients() {
         </form>
       </header>
       <section className="admin-panel">
-        <p className="section-kicker">Gestão de clientes</p>
-        <h1>Pagamentos e acessos</h1>
-        <p>
-          Confirme somente após localizar o pagamento correspondente na TON.
-        </p>
+        <div className="admin-hero">
+          <div>
+            <p className="section-kicker">Gestão da consultoria</p>
+            <h1>Visão geral</h1>
+            <p>Acompanhe o que precisa da sua atenção hoje.</p>
+          </div>
+          <aside className={actionCount ? "has-actions" : "is-clear"}>
+            <span>Próxima ação</span>
+            <strong>
+              {actionCount
+                ? `${actionCount} ${actionCount === 1 ? "item pendente" : "itens pendentes"}`
+                : "Tudo em dia"}
+            </strong>
+            <a href="#central-acoes">
+              {actionCount ? "Revisar pendências ↓" : "Ver central de ações ↓"}
+            </a>
+          </aside>
+        </div>
         <div className="admin-summary-grid" aria-label="Indicadores da consultoria">
           <a href="#pacientes">
             <span>Cadastros totais</span>
@@ -117,14 +136,29 @@ export default async function AdminClients() {
             <small>Nos próximos 7 dias</small>
           </a>
         </div>
-        <section className="admin-pending-section" id="pendencias-pagamento">
-          <header>
+        <section className="admin-action-center" id="central-acoes">
+          <header className="admin-action-center-heading">
             <div>
-              <span>Fila de trabalho</span>
-              <h2>Pagamentos para conferir</h2>
+              <span>Prioridades</span>
+              <h2>Central de ações</h2>
+              <p>Abra uma categoria para ver os pacientes que precisam de atenção.</p>
             </div>
-            <strong>{pendingPaymentClients.length} pendente(s)</strong>
+            <strong>{actionCount} no total</strong>
           </header>
+        <details
+          className="admin-pending-section"
+          id="pendencias-pagamento"
+          open={pendingPaymentClients.length > 0}
+        >
+          <summary>
+            <span className="admin-task-icon is-urgent" aria-hidden="true">!</span>
+            <div>
+              <span>Financeiro</span>
+              <h3>Pagamentos para conferir</h3>
+            </div>
+            <strong>{pendingPaymentClients.length}</strong>
+            <i aria-hidden="true">⌄</i>
+          </summary>
           {pendingPaymentClients.length ? (
             <div className="admin-pending-list">
               {pendingPaymentClients.map((client) => (
@@ -148,15 +182,21 @@ export default async function AdminClients() {
               <p>Novas compras aparecerão automaticamente nesta fila.</p>
             </div>
           )}
-        </section>
-        <section className="admin-pending-section" id="pendencias-anamnese">
-          <header>
+        </details>
+        <details
+          className="admin-pending-section"
+          id="pendencias-anamnese"
+          open={anamnesesAwaitingProtocol.length > 0}
+        >
+          <summary>
+            <span className="admin-task-icon is-attention" aria-hidden="true">A</span>
             <div>
-              <span>Fila de trabalho</span>
-              <h2>Anamneses aguardando protocolo</h2>
+              <span>Atendimento</span>
+              <h3>Anamneses aguardando protocolo</h3>
             </div>
-            <strong>{anamnesesAwaitingProtocol.length} pendente(s)</strong>
-          </header>
+            <strong>{anamnesesAwaitingProtocol.length}</strong>
+            <i aria-hidden="true">⌄</i>
+          </summary>
           {anamnesesAwaitingProtocol.length ? (
             <div className="admin-pending-list">
               {anamnesesAwaitingProtocol.map((anamnesis) => {
@@ -189,15 +229,21 @@ export default async function AdminClients() {
               <p>Novas anamneses concluídas aparecerão automaticamente nesta fila.</p>
             </div>
           )}
-        </section>
-        <section className="admin-pending-section" id="pendencias-check-in">
-          <header>
+        </details>
+        <details
+          className="admin-pending-section"
+          id="pendencias-check-in"
+          open={checkInsAwaitingReview.length > 0}
+        >
+          <summary>
+            <span className="admin-task-icon is-attention" aria-hidden="true">C</span>
             <div>
-              <span>Fila de trabalho</span>
-              <h2>Check-ins aguardando análise</h2>
+              <span>Acompanhamento</span>
+              <h3>Check-ins aguardando análise</h3>
             </div>
-            <strong>{checkInsAwaitingReview.length} novo(s)</strong>
-          </header>
+            <strong>{checkInsAwaitingReview.length}</strong>
+            <i aria-hidden="true">⌄</i>
+          </summary>
           {checkInsAwaitingReview.length ? (
             <div className="admin-pending-list">
               {checkInsAwaitingReview.map((checkIn) => {
@@ -229,15 +275,21 @@ export default async function AdminClients() {
               <p>Novos check-ins aparecerão automaticamente nesta fila.</p>
             </div>
           )}
-        </section>
-        <section className="admin-pending-section" id="pendencias-ajustes">
-          <header>
+        </details>
+        <details
+          className="admin-pending-section"
+          id="pendencias-ajustes"
+          open={adjustmentsAwaitingAction.length > 0}
+        >
+          <summary>
+            <span className="admin-task-icon is-urgent" aria-hidden="true">J</span>
             <div>
-              <span>Fila de trabalho</span>
-              <h2>Solicitações de ajustes abertas</h2>
+              <span>Solicitações</span>
+              <h3>Ajustes em aberto</h3>
             </div>
-            <strong>{adjustmentsAwaitingAction.length} aberta(s)</strong>
-          </header>
+            <strong>{adjustmentsAwaitingAction.length}</strong>
+            <i aria-hidden="true">⌄</i>
+          </summary>
           {adjustmentsAwaitingAction.length ? (
             <div className="admin-pending-list">
               {adjustmentsAwaitingAction.map((adjustment) => {
@@ -272,15 +324,21 @@ export default async function AdminClients() {
               <p>Novos pedidos dos pacientes aparecerão automaticamente nesta fila.</p>
             </div>
           )}
-        </section>
-        <section className="admin-pending-section" id="pendencias-vencimento">
-          <header>
+        </details>
+        <details
+          className="admin-pending-section"
+          id="pendencias-vencimento"
+          open={expiringPlanClients.length > 0}
+        >
+          <summary>
+            <span className="admin-task-icon is-routine" aria-hidden="true">R</span>
             <div>
-              <span>Fila de trabalho</span>
-              <h2>Planos próximos do vencimento</h2>
+              <span>Renovação</span>
+              <h3>Planos próximos do vencimento</h3>
             </div>
-            <strong>{expiringPlanClients.length} plano(s)</strong>
-          </header>
+            <strong>{expiringPlanClients.length}</strong>
+            <i aria-hidden="true">⌄</i>
+          </summary>
           {expiringPlanClients.length ? (
             <div className="admin-pending-list">
               {expiringPlanClients.map((client) => {
@@ -313,17 +371,23 @@ export default async function AdminClients() {
               <p>Planos próximos do fim aparecerão automaticamente nesta fila.</p>
             </div>
           )}
+        </details>
         </section>
-        <div className="admin-table-wrap" id="pacientes">
+        <header className="admin-patient-heading" id="pacientes">
+          <div>
+            <span>Base de pacientes</span>
+            <h2>Todos os cadastros</h2>
+          </div>
+          <p>Abra um paciente para consultar histórico, documentos e acompanhamento.</p>
+        </header>
+        <div className="admin-table-wrap">
           <table className="admin-table">
             <thead>
               <tr>
-                <th>Cliente</th>
-                <th>WhatsApp</th>
+                <th>Paciente</th>
                 <th>Plano</th>
                 <th>Status</th>
                 <th>Vigência</th>
-                <th>Aviso</th>
                 <th>Anamnese</th>
                 <th>Ação</th>
               </tr>
@@ -332,7 +396,6 @@ export default async function AdminClients() {
               {rows.map((client) => (
                 <tr id={`paciente-${client.id}`} key={client.id}>
                   <td><strong>{client.name}</strong><small>{client.email}</small></td>
-                  <td>{client.whatsapp}</td>
                   <td>{client.plan}</td>
                   <td>
                     {hasActiveAccess(client)
@@ -345,13 +408,6 @@ export default async function AdminClients() {
                     {client.accessExpiresAt
                       ? `${daysRemaining(client.accessExpiresAt)} dias`
                       : "Não iniciada"}
-                  </td>
-                  <td>
-                    {client.approvalEmailStatus === "sent"
-                      ? `Enviado em ${formatApprovalDate(client.approvalEmailSentAt)}`
-                      : client.approvalEmailStatus === "failed"
-                        ? "Falha no envio"
-                        : "Não enviado"}
                   </td>
                   <td>
                     {client.formStatus === "submitted" ? (
@@ -376,7 +432,7 @@ export default async function AdminClients() {
                 </tr>
               ))}
               {!rows.length ? (
-                <tr><td colSpan={8}>Nenhum cadastro recebido até o momento.</td></tr>
+                <tr><td colSpan={6}>Nenhum cadastro recebido até o momento.</td></tr>
               ) : null}
             </tbody>
           </table>
