@@ -27,10 +27,10 @@ export default async function AdminClients() {
     .from(clients)
     .orderBy(desc(clients.createdAt));
   const activeClients = rows.filter((client) => hasActiveAccess(client)).length;
-  const pendingPayments = rows.filter(
+  const pendingPaymentClients = rows.filter(
     (client) =>
       client.paymentStatus !== "approved" && Boolean(client.purchaseStartedAt),
-  ).length;
+  );
   const expiringPlans = rows.filter((client) => {
     if (!hasActiveAccess(client) || !client.accessExpiresAt) return false;
     const remaining = daysRemaining(client.accessExpiresAt);
@@ -64,7 +64,7 @@ export default async function AdminClients() {
           </a>
           <a href="#pacientes">
             <span>Pagamentos pendentes</span>
-            <strong>{pendingPayments}</strong>
+            <strong>{pendingPaymentClients.length}</strong>
             <small>Aguardando conferência</small>
           </a>
           <a href="#pacientes">
@@ -73,6 +73,38 @@ export default async function AdminClients() {
             <small>Nos próximos 7 dias</small>
           </a>
         </div>
+        <section className="admin-pending-section" id="pendencias-pagamento">
+          <header>
+            <div>
+              <span>Fila de trabalho</span>
+              <h2>Pagamentos para conferir</h2>
+            </div>
+            <strong>{pendingPaymentClients.length} pendente(s)</strong>
+          </header>
+          {pendingPaymentClients.length ? (
+            <div className="admin-pending-list">
+              {pendingPaymentClients.map((client) => (
+                <article className="is-urgent" key={client.id}>
+                  <i aria-hidden="true" />
+                  <div>
+                    <span>Pagamento</span>
+                    <strong>Conferir compra de {client.name}</strong>
+                    <p>
+                      {client.plan} · compra informada em{" "}
+                      {formatApprovalDate(client.purchaseStartedAt)}
+                    </p>
+                  </div>
+                  <a href={`#paciente-${client.id}`}>Localizar cadastro →</a>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <div className="admin-all-clear">
+              <strong>✓ Nenhum pagamento aguardando conferência</strong>
+              <p>Novas compras aparecerão automaticamente nesta fila.</p>
+            </div>
+          )}
+        </section>
         <div className="admin-table-wrap" id="pacientes">
           <table className="admin-table">
             <thead>
@@ -89,7 +121,7 @@ export default async function AdminClients() {
             </thead>
             <tbody>
               {rows.map((client) => (
-                <tr key={client.id}>
+                <tr id={`paciente-${client.id}`} key={client.id}>
                   <td><strong>{client.name}</strong><small>{client.email}</small></td>
                   <td>{client.whatsapp}</td>
                   <td>{client.plan}</td>
