@@ -2,6 +2,7 @@ import { desc } from "drizzle-orm";
 import Link from "next/link";
 import { getDb } from "../../../db";
 import {
+  adjustmentRequests,
   anamneses,
   checkIns,
   clients,
@@ -49,6 +50,11 @@ export default async function AdminClients() {
   const newCheckIns = (await getDb().select().from(checkIns)).filter(
     (checkIn) => checkIn.adminStatus === "new",
   );
+  const openAdjustments = (
+    await getDb().select().from(adjustmentRequests)
+  ).filter((adjustment) =>
+    ["submitted", "analyzing"].includes(adjustment.status),
+  );
   const clientByEmail = new Map(rows.map((client) => [client.email, client]));
   const protocolPatientEmails = new Set(
     currentProtocols.map((document) => document.clientEmail),
@@ -60,6 +66,9 @@ export default async function AdminClients() {
   );
   const checkInsAwaitingReview = newCheckIns.filter((checkIn) =>
     clientByEmail.has(checkIn.clientEmail),
+  );
+  const adjustmentsAwaitingAction = openAdjustments.filter((adjustment) =>
+    clientByEmail.has(adjustment.clientEmail),
   );
   const activeClients = rows.filter((client) => hasActiveAccess(client)).length;
   const pendingPaymentClients = rows.filter(
@@ -218,6 +227,49 @@ export default async function AdminClients() {
             <div className="admin-all-clear">
               <strong>✓ Nenhum check-in aguardando análise</strong>
               <p>Novos check-ins aparecerão automaticamente nesta fila.</p>
+            </div>
+          )}
+        </section>
+        <section className="admin-pending-section" id="pendencias-ajustes">
+          <header>
+            <div>
+              <span>Fila de trabalho</span>
+              <h2>Solicitações de ajustes abertas</h2>
+            </div>
+            <strong>{adjustmentsAwaitingAction.length} aberta(s)</strong>
+          </header>
+          {adjustmentsAwaitingAction.length ? (
+            <div className="admin-pending-list">
+              {adjustmentsAwaitingAction.map((adjustment) => {
+                const client = clientByEmail.get(adjustment.clientEmail)!;
+                return (
+                  <article className="is-urgent" key={adjustment.id}>
+                    <i aria-hidden="true" />
+                    <div>
+                      <span>
+                        {adjustment.status === "analyzing"
+                          ? "Ajuste em análise"
+                          : "Nova solicitação de ajuste"}
+                      </span>
+                      <strong>{client.name} aguarda análise</strong>
+                      <p>
+                        {adjustment.protocolArea} · enviada em{" "}
+                        {formatApprovalDate(adjustment.createdAt)}
+                      </p>
+                    </div>
+                    <Link
+                      href={`/admin/clientes/${encodeURIComponent(client.email)}#ajustes`}
+                    >
+                      Analisar solicitação →
+                    </Link>
+                  </article>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="admin-all-clear">
+              <strong>✓ Nenhuma solicitação de ajuste aberta</strong>
+              <p>Novos pedidos dos pacientes aparecerão automaticamente nesta fila.</p>
             </div>
           )}
         </section>
