@@ -987,6 +987,190 @@ button:disabled {
   color: #666666;
 }
 
+.admin-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 34px;
+}
+
+.admin-summary-grid > a {
+  min-height: 165px;
+  padding: 22px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: var(--paper);
+  color: var(--ink);
+  text-decoration: none;
+  transition: border-color 160ms ease, transform 160ms ease;
+}
+
+.admin-summary-grid > a:first-child {
+  border-color: #111;
+  background: #111;
+  color: #fff;
+}
+
+.admin-summary-grid > a:hover {
+  transform: translateY(-2px);
+  border-color: #777;
+}
+
+.admin-summary-grid span,
+.admin-pending-section > header span,
+.admin-patient-base span {
+  display: block;
+  color: #777;
+  font-size: .66rem;
+  font-weight: 900;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.admin-summary-grid > a:first-child span,
+.admin-summary-grid > a:first-child small {
+  color: #bbb;
+}
+
+.admin-summary-grid strong {
+  display: block;
+  margin: 12px 0 8px;
+  font-size: 2.7rem;
+  letter-spacing: -.06em;
+  line-height: 1;
+}
+
+.admin-summary-grid small {
+  color: #777;
+  font-size: .72rem;
+}
+
+.admin-pending-section {
+  margin-top: 42px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  background: #fff;
+}
+
+.admin-pending-section > header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 25px 28px;
+  border-bottom: 1px solid var(--line);
+}
+
+.admin-pending-section > header h2,
+.admin-patient-base h2 {
+  margin: 6px 0 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(1.7rem, 3vw, 2.35rem);
+  font-weight: 400;
+  letter-spacing: -.04em;
+}
+
+.admin-pending-section > header > strong {
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: #f1f0e9;
+  font-size: .72rem;
+}
+
+.admin-pending-list article {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: center;
+  padding: 19px 28px;
+  border-bottom: 1px solid var(--line);
+}
+
+.admin-pending-list article:last-child {
+  border-bottom: 0;
+}
+
+.admin-pending-list article > i {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #aaa;
+}
+
+.admin-pending-list article.is-urgent > i {
+  background: #e04c36;
+}
+
+.admin-pending-list article.is-attention > i {
+  background: #e4c600;
+}
+
+.admin-pending-list article.is-routine > i {
+  background: #4a8d62;
+}
+
+.admin-pending-list article span {
+  display: block;
+  margin-bottom: 5px;
+  color: #777;
+  font-size: .64rem;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.admin-pending-list article strong {
+  font-size: .98rem;
+}
+
+.admin-pending-list article p {
+  margin: 5px 0 0;
+  color: #777;
+  font-size: .76rem;
+}
+
+.admin-pending-list article > a {
+  white-space: nowrap;
+  color: #111;
+  font-size: .76rem;
+  font-weight: 900;
+  text-decoration: none;
+}
+
+.admin-all-clear {
+  padding: 30px 28px;
+  background: #eff7f1;
+}
+
+.admin-all-clear strong {
+  color: #28623b;
+}
+
+.admin-all-clear p {
+  margin: 7px 0 0;
+  color: #64806d;
+}
+
+.admin-patient-base {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 30px;
+  margin-top: 52px;
+}
+
+.admin-patient-base > p {
+  max-width: 400px;
+  margin: 0;
+  color: #777;
+  font-size: .82rem;
+}
+
+.admin-patient-table {
+  margin-top: 18px;
+}
+
 .admin-table-wrap {
   background: var(--paper);
   border: 1px solid var(--line);
@@ -1044,6 +1228,44 @@ button:disabled {
   font-weight: 900;
   text-decoration: underline;
   text-underline-offset: 3px;
+}
+
+@media (max-width: 900px) {
+  .admin-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 650px) {
+  .admin-summary-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .admin-summary-grid > a {
+    min-height: 145px;
+    padding: 18px;
+  }
+
+  .admin-pending-section > header,
+  .admin-patient-base {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .admin-pending-list article {
+    grid-template-columns: auto 1fr;
+    padding: 18px 20px;
+  }
+
+  .admin-pending-list article > a {
+    grid-column: 2;
+  }
+}
+
+@media (max-width: 430px) {
+  .admin-summary-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .anamnesis-layout {

@@ -102,7 +102,7 @@ export default async function ClientAnswers({
           </div>
           <TimelineList events={timelineEvents} admin />
         </section>
-        <section className="response-section admin-adjustments-section">
+        <section className="response-section admin-adjustments-section" id="ajustes">
           <div className="admin-checkin-heading"><div><p className="section-kicker">Solicitações de ajustes</p><h2>Pedidos do paciente</h2></div><strong>{patientAdjustments.filter((item) => !["adjusted", "closed"].includes(item.status)).length} aberta(s)</strong></div>
           <AdjustmentManager
             documents={documents.map((document) => ({ id: document.id, title: document.title, version: document.version }))}
@@ -123,7 +123,7 @@ export default async function ClientAnswers({
             }))}
           />
         </section>
-        <section className="response-section admin-checkin-section">
+        <section className="response-section admin-checkin-section" id="check-ins">
           <div className="admin-checkin-heading"><div><p className="section-kicker">Acompanhamento periódico</p><h2>Check-ins semanais</h2></div><strong>{patientCheckIns.filter((item) => item.adminStatus === "new").length} novo(s)</strong></div>
           {!patientCheckIns.length ? <p>Nenhum check-in enviado até o momento.</p> : (
             <div className="admin-checkin-list">
@@ -142,7 +142,7 @@ export default async function ClientAnswers({
             </div>
           )}
         </section>
-        <section className="response-section admin-documents-section">
+        <section className="response-section admin-documents-section" id="documentos">
           <h2>Documentos do paciente</h2>
           <p>
             Publique o protocolo e os materiais auxiliares. Uma nova versão do
