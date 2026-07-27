@@ -1,7 +1,7 @@
 import { desc } from "drizzle-orm";
 import Link from "next/link";
 import { getDb } from "../../../db";
-import { clients } from "../../../db/schema";
+import { anamneses, clients, patientDocuments } from "../../../db/schema";
 import { daysRemaining, hasActiveAccess } from "../../access";
 import { requireAdmin } from "../../supabase/server";
 import ApprovalButton from "./approval-button";
@@ -26,6 +26,21 @@ export default async function AdminClients() {
     .select()
     .from(clients)
     .orderBy(desc(clients.createdAt));
+  const submittedAnamneses = (await getDb().select().from(anamneses)).filter(
+    (anamnesis) => anamnesis.status === "submitted",
+  );
+  const currentProtocols = (await getDb().select().from(patientDocuments)).filter(
+    (document) => document.documentType === "protocol" && document.isCurrent,
+  );
+  const clientByEmail = new Map(rows.map((client) => [client.email, client]));
+  const protocolPatientEmails = new Set(
+    currentProtocols.map((document) => document.clientEmail),
+  );
+  const anamnesesAwaitingProtocol = submittedAnamneses.filter(
+    (anamnesis) =>
+      clientByEmail.has(anamnesis.clientEmail) &&
+      !protocolPatientEmails.has(anamnesis.clientEmail),
+  );
   const activeClients = rows.filter((client) => hasActiveAccess(client)).length;
   const pendingPaymentClients = rows.filter(
     (client) =>
@@ -102,6 +117,47 @@ export default async function AdminClients() {
             <div className="admin-all-clear">
               <strong>✓ Nenhum pagamento aguardando conferência</strong>
               <p>Novas compras aparecerão automaticamente nesta fila.</p>
+            </div>
+          )}
+        </section>
+        <section className="admin-pending-section" id="pendencias-anamnese">
+          <header>
+            <div>
+              <span>Fila de trabalho</span>
+              <h2>Anamneses aguardando protocolo</h2>
+            </div>
+            <strong>{anamnesesAwaitingProtocol.length} pendente(s)</strong>
+          </header>
+          {anamnesesAwaitingProtocol.length ? (
+            <div className="admin-pending-list">
+              {anamnesesAwaitingProtocol.map((anamnesis) => {
+                const client = clientByEmail.get(anamnesis.clientEmail)!;
+                return (
+                  <article className="is-attention" key={anamnesis.id}>
+                    <i aria-hidden="true" />
+                    <div>
+                      <span>Anamnese recebida</span>
+                      <strong>Preparar protocolo de {client.name}</strong>
+                      <p>
+                        Enviada em{" "}
+                        {formatApprovalDate(
+                          anamnesis.submittedAt || anamnesis.updatedAt,
+                        )}
+                      </p>
+                    </div>
+                    <Link
+                      href={`/admin/clientes/${encodeURIComponent(client.email)}#documentos`}
+                    >
+                      Abrir paciente →
+                    </Link>
+                  </article>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="admin-all-clear">
+              <strong>✓ Nenhuma anamnese aguardando protocolo</strong>
+              <p>Novas anamneses concluídas aparecerão automaticamente nesta fila.</p>
             </div>
           )}
         </section>
