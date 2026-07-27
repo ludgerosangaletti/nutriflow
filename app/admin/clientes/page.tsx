@@ -26,6 +26,16 @@ export default async function AdminClients() {
     .select()
     .from(clients)
     .orderBy(desc(clients.createdAt));
+  const activeClients = rows.filter(hasActiveAccess).length;
+  const pendingPayments = rows.filter(
+    (client) =>
+      client.paymentStatus !== "approved" && Boolean(client.purchaseStartedAt),
+  ).length;
+  const expiringPlans = rows.filter((client) => {
+    if (!hasActiveAccess(client) || !client.accessExpiresAt) return false;
+    const remaining = daysRemaining(client.accessExpiresAt);
+    return remaining >= 0 && remaining <= 7;
+  }).length;
 
   return (
     <main className="portal-shell">
@@ -41,7 +51,29 @@ export default async function AdminClients() {
         <p>
           Confirme somente após localizar o pagamento correspondente na TON.
         </p>
-        <div className="admin-table-wrap">
+        <div className="admin-summary-grid" aria-label="Indicadores da consultoria">
+          <a href="#pacientes">
+            <span>Cadastros totais</span>
+            <strong>{rows.length}</strong>
+            <small>Pacientes registrados</small>
+          </a>
+          <a href="#pacientes">
+            <span>Pacientes ativos</span>
+            <strong>{activeClients}</strong>
+            <small>Com acesso vigente</small>
+          </a>
+          <a href="#pacientes">
+            <span>Pagamentos pendentes</span>
+            <strong>{pendingPayments}</strong>
+            <small>Aguardando conferência</small>
+          </a>
+          <a href="#pacientes">
+            <span>Planos vencendo</span>
+            <strong>{expiringPlans}</strong>
+            <small>Nos próximos 7 dias</small>
+          </a>
+        </div>
+        <div className="admin-table-wrap" id="pacientes">
           <table className="admin-table">
             <thead>
               <tr>
