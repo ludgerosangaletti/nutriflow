@@ -165,6 +165,16 @@ export default function AnamneseForm({
             </label>
           ))}
           {message ? <p className={message.includes("sucesso") || message.includes("salvo") ? "form-success" : "form-error"}>{message}</p> : null}
+          {step === sections.length - 1 ? (
+            <p className="anamnesis-privacy-note">
+              Ao enviar, você confirma o tratamento das informações fornecidas,
+              inclusive dados de saúde, exclusivamente para avaliação e
+              acompanhamento nutricional, conforme a{" "}
+              <a href="/politica-de-privacidade" target="_blank">
+                Política de Privacidade
+              </a>.
+            </p>
+          ) : null}
           <div className="form-navigation">
             <button
               className="button button-outline-dark"

@@ -62,6 +62,16 @@ export default function PhotoUploadForm({
           </label>
         ))}
       </div>
+      <label className="photo-consent">
+        <input name="photoConsent" required type="checkbox" value="accepted" />
+        <span>
+          Estou enviando estas fotos voluntariamente e autorizo seu uso restrito
+          ao acompanhamento da minha evolução corporal, conforme a{" "}
+          <a href="/politica-de-privacidade" target="_blank">
+            Política de Privacidade
+          </a>. Posso solicitar a exclusão posteriormente.
+        </span>
+      </label>
       <button className="button button-dark" disabled={saving} type="submit">
         {saving ? "Enviando com segurança..." : "Salvar registro mensal"}
       </button>

@@ -12,7 +12,7 @@ export default function PrivacyPolicyPage() {
         <p>
           O responsável pelo tratamento é Ludgero Sangaletti, nutricionista,
           CRN-8 11719. Dúvidas sobre privacidade podem ser encaminhadas pelo
-          WhatsApp profissional <a href="https://wa.me/5542999876280">+55 42 99987-6280</a>.
+          WhatsApp de atendimento <a href="https://wa.me/5542999846280">+55 42 99984-6280</a>.
         </p>
       </section>
 
@@ -25,6 +25,11 @@ export default function PrivacyPolicyPage() {
           de acesso e mensagens enviadas ao canal profissional no WhatsApp.
         </p>
         <p>
+          Na automação do WhatsApp podem ser tratados o número de telefone, o
+          conteúdo da mensagem, data e horário, identificadores técnicos e
+          informações de entrega necessárias ao funcionamento do canal.
+        </p>
+        <p>
           Informações relacionadas à saúde são dados pessoais sensíveis e
           recebem tratamento compatível com sua natureza, limitado à prestação
           do acompanhamento nutricional e às obrigações profissionais aplicáveis.
@@ -32,7 +37,7 @@ export default function PrivacyPolicyPage() {
       </section>
 
       <section>
-        <h2>3. Para que os dados são utilizados</h2>
+        <h2>3. Finalidades e bases legais</h2>
         <ul>
           <li>viabilizar cadastro, atendimento e acompanhamento nutricional;</li>
           <li>responder dúvidas e solicitações enviadas pelo site ou WhatsApp;</li>
@@ -40,6 +45,12 @@ export default function PrivacyPolicyPage() {
           <li>manter segurança, prevenir uso indevido e cumprir obrigações legais;</li>
           <li>melhorar a experiência e a confiabilidade dos serviços digitais.</li>
         </ul>
+        <p>
+          Conforme a situação, o tratamento poderá se apoiar no consentimento,
+          na execução do serviço contratado, no cumprimento de obrigações
+          legais ou regulatórias, no exercício regular de direitos e na tutela
+          da saúde por profissional habilitado.
+        </p>
       </section>
 
       <section>
@@ -49,7 +60,8 @@ export default function PrivacyPolicyPage() {
           e o número de telefone podem ser processados pela API oficial do
           WhatsApp/Meta e pelo servidor do site para identificar o assunto e
           enviar uma resposta informativa. A automação não realiza diagnóstico
-          nem substitui consulta nutricional.
+          nem substitui consulta nutricional. Também não são tomadas decisões
+          clínicas exclusivamente por meios automatizados.
         </p>
       </section>
 
@@ -63,13 +75,19 @@ export default function PrivacyPolicyPage() {
           segurança e privacidade.
         </p>
         <p>
+          Alguns fornecedores podem processar informações em infraestrutura
+          localizada fora do Brasil. Nesses casos, são utilizados serviços
+          necessários à operação e mecanismos compatíveis com a legislação
+          aplicável à transferência internacional de dados.
+        </p>
+        <p>
           Dados não são vendidos. O site não recebe nem armazena os dados
           completos do cartão utilizado no ambiente de pagamento.
         </p>
       </section>
 
       <section>
-        <h2>6. Retenção e segurança</h2>
+        <h2>6. Retenção, segurança e incidentes</h2>
         <p>
           Os dados são conservados pelo período necessário ao atendimento, à
           continuidade do acompanhamento e ao cumprimento de deveres legais,
@@ -77,15 +95,22 @@ export default function PrivacyPolicyPage() {
           organizacionais razoáveis para reduzir riscos de acesso, alteração,
           perda ou divulgação indevida.
         </p>
+        <p>
+          Entre os controles adotados estão autenticação, acesso administrativo
+          restrito, conexões protegidas, separação de permissões e rotinas de
+          continuidade. Caso ocorra incidente com risco ou dano relevante, serão
+          adotadas as providências e comunicações exigidas pela legislação.
+        </p>
       </section>
 
       <section>
         <h2>7. Seus direitos</h2>
         <p>
           Nos termos da Lei Geral de Proteção de Dados (LGPD), o titular pode
-          solicitar confirmação de tratamento, acesso, correção, portabilidade
-          quando aplicável, informação sobre compartilhamentos, revisão de
-          consentimento e exclusão dos dados que possam ser eliminados.
+          solicitar confirmação de tratamento, acesso, correção, anonimização,
+          bloqueio ou eliminação quando cabíveis, portabilidade quando aplicável,
+          informação sobre compartilhamentos, oposição e revogação do
+          consentimento.
         </p>
         <p>
           Para solicitar a exclusão, consulte também a página de{" "}
@@ -94,7 +119,16 @@ export default function PrivacyPolicyPage() {
       </section>
 
       <section>
-        <h2>8. Atualizações desta política</h2>
+        <h2>8. Cookies e armazenamento local</h2>
+        <p>
+          O site pode utilizar cookies ou tecnologias equivalentes estritamente
+          necessários para autenticação, segurança e manutenção da sessão. Não
+          são utilizados para vender dados pessoais.
+        </p>
+      </section>
+
+      <section>
+        <h2>9. Atualizações desta política</h2>
         <p>
           Este documento pode ser atualizado para refletir mudanças nos serviços,
           fornecedores ou requisitos legais. A versão vigente ficará sempre

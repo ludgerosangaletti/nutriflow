@@ -36,7 +36,13 @@ export default function CadastroForm({
           password,
           options: {
             emailRedirectTo: redirectTo,
-            data: { name, whatsapp, plan },
+            data: {
+              name,
+              whatsapp,
+              plan,
+              privacy_policy_version: "2026-07-28",
+              privacy_accepted_at: new Date().toISOString(),
+            },
           },
         }),
       );
@@ -118,8 +124,10 @@ export default function CadastroForm({
           required
         />
         <span>
-          Autorizo o uso destes dados para identificação da compra e prestação
-          da consultoria nutricional.
+          Li e aceito a <a href="/politica-de-privacidade" target="_blank">Política de Privacidade</a>{" "}
+          e os <a href="/termos-de-uso" target="_blank">Termos de Uso</a>. Autorizo
+          o tratamento destes dados para cadastro, identificação da compra e
+          prestação da consultoria nutricional.
         </span>
       </label>
       {error ? <p className="form-error">{error}</p> : null}

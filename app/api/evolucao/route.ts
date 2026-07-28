@@ -26,6 +26,13 @@ export async function POST(request: Request) {
 
   const form = await request.formData();
   const period = String(form.get("period") || "");
+  const photoConsent = String(form.get("photoConsent") || "");
+  if (photoConsent !== "accepted") {
+    return Response.json(
+      { error: "Confirme o consentimento para enviar as fotos." },
+      { status: 400 },
+    );
+  }
   const currentPeriod = new Date().toISOString().slice(0, 7);
   if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(period) || period > currentPeriod) {
     return Response.json({ error: "Selecione um mês válido." }, { status: 400 });
@@ -47,7 +54,13 @@ export async function POST(request: Request) {
     const objectKey = `progress/${user.id}/${period}/${angle}.${extension}`;
     await env.BUCKET.put(objectKey, await file.arrayBuffer(), {
       httpMetadata: { contentType: file.type },
-      customMetadata: { owner: client.email, period, angle },
+      customMetadata: {
+        owner: client.email,
+        period,
+        angle,
+        consentVersion: "2026-07-28",
+        consentRecordedAt: now,
+      },
     });
     await db
       .insert(progressPhotos)

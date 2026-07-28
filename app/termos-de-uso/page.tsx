@@ -33,6 +33,10 @@ export default function TermsPage() {
           em segurança e comunicar suspeitas de acesso indevido. O acesso à área
           do paciente é pessoal e não deve ser compartilhado.
         </p>
+        <p>
+          O usuário deve comunicar imediatamente qualquer suspeita de acesso
+          indevido e encerrar a sessão em dispositivos compartilhados.
+        </p>
       </section>
 
       <section>
@@ -54,7 +58,16 @@ export default function TermsPage() {
       </section>
 
       <section>
-        <h2>6. Disponibilidade e alterações</h2>
+        <h2>6. Vigência do acesso</h2>
+        <p>
+          O acesso à área do paciente e aos recursos de acompanhamento permanece
+          disponível durante a vigência do plano contratado. A renovação depende
+          de nova contratação ou confirmação de pagamento.
+        </p>
+      </section>
+
+      <section>
+        <h2>7. Disponibilidade e alterações</h2>
         <p>
           Recursos digitais podem passar por manutenção, atualização ou
           indisponibilidade temporária. Funcionalidades e estes termos poderão
@@ -63,12 +76,12 @@ export default function TermsPage() {
       </section>
 
       <section>
-        <h2>7. Privacidade e contato</h2>
+        <h2>8. Privacidade e contato</h2>
         <p>
           O tratamento de dados está descrito na{" "}
           <a href="/politica-de-privacidade">Política de Privacidade</a>. Para
-          dúvidas sobre estes termos, utilize o WhatsApp profissional{" "}
-          <a href="https://wa.me/5542999876280">+55 42 99987-6280</a>.
+          dúvidas sobre estes termos, utilize o WhatsApp de atendimento{" "}
+          <a href="https://wa.me/5542999846280">+55 42 99984-6280</a>.
         </p>
       </section>
     </LegalLayout>

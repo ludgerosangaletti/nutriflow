@@ -73,7 +73,7 @@ export const sections = [
       { id: "challenges", label: "Quais são hoje suas maiores dificuldades?", type: "textarea", required: true },
       { id: "expectations", label: "O que espera da consultoria e do acompanhamento?", type: "textarea", required: true },
       { id: "additionalNotes", label: "Existe algo importante que não foi perguntado?", type: "textarea" },
-      { id: "truthConsent", label: "Confirmo que as informações fornecidas são verdadeiras e podem ser utilizadas na elaboração da minha estratégia nutricional.", type: "checkbox", required: true },
+      { id: "truthConsent", label: "Confirmo que as informações fornecidas são verdadeiras e autorizo o tratamento dos dados de saúde para avaliação e elaboração da minha estratégia nutricional.", type: "checkbox", required: true },
     ],
   },
 ] as const;
