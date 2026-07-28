@@ -1,4 +1,6 @@
 const GRAPH_API_VERSION = process.env.WHATSAPP_GRAPH_API_VERSION || "v23.0";
+const HUMAN_SUPPORT_URL =
+  "https://wa.me/5542999846280?text=Ol%C3%A1%2C%20vim%20pelo%20atendimento%20autom%C3%A1tico%20e%20gostaria%20de%20falar%20com%20o%20Ludgero.";
 
 const triggers = {
   presencial: "gostaria de saber mais sobre os planos da consulta presencial",
@@ -25,7 +27,8 @@ Equivalente a R$ 315,00 por mês
 R$ 1.680,00
 Equivalente a R$ 280,00 por mês
 
-Para agendar ou esclarecer alguma dúvida, responda a esta mensagem. Assim que possível, continuarei seu atendimento pessoalmente.`,
+Para agendar ou falar diretamente comigo, acesse:
+${HUMAN_SUPPORT_URL}`,
 
   online: `Olá! Que bom receber seu interesse na consultoria on-line 😊
 
@@ -34,7 +37,8 @@ Todo o processo é realizado pela minha plataforma: você poderá conhecer os pl
 Acesse:
 https://ludgerosangaletti.com.br
 
-Se permanecer alguma dúvida antes da contratação, responda a esta mensagem. Assim que possível, continuarei seu atendimento pessoalmente.`,
+Se permanecer alguma dúvida antes da contratação, fale diretamente comigo:
+${HUMAN_SUPPORT_URL}`,
 
   mentoria: `Olá! Que bom receber seu interesse na mentoria individual 😊
 
@@ -50,7 +54,10 @@ Para agendar, envie:
 • Seu nome completo;
 • O tema que deseja abordar;
 • Suas principais dúvidas;
-• Dias e horários disponíveis.`,
+• Dias e horários disponíveis.
+
+Atendimento e agendamento:
+${HUMAN_SUPPORT_URL}`,
 
   avaliacao: `Olá! Que bom receber seu interesse na avaliação física 😊
 
@@ -63,7 +70,8 @@ A avaliação inclui:
 
 *Investimento: R$ 150,00.*
 
-Para solicitar um horário, responda a esta mensagem informando seu nome e os dias e períodos em que possui disponibilidade.`,
+Para solicitar um horário, fale diretamente comigo:
+${HUMAN_SUPPORT_URL}`,
 } as const;
 
 type Trigger = keyof typeof triggers;
