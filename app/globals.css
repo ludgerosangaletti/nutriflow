@@ -33,6 +33,125 @@ a {
   text-decoration: none;
 }
 
+.legal-page {
+  min-height: 100vh;
+}
+
+.legal-header,
+.legal-footer {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  margin: 0 auto;
+  max-width: 1180px;
+  padding: 24px clamp(22px, 5vw, 64px);
+}
+
+.legal-back {
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.legal-document {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  margin: clamp(28px, 5vw, 70px) auto;
+  max-width: 920px;
+  padding: clamp(32px, 7vw, 78px);
+}
+
+.legal-document h1 {
+  font-size: clamp(42px, 7vw, 76px);
+  letter-spacing: -0.055em;
+  line-height: 0.96;
+  margin: 18px 0 24px;
+}
+
+.legal-intro {
+  color: #525252;
+  font-size: clamp(17px, 2vw, 21px);
+  line-height: 1.65;
+}
+
+.legal-updated {
+  border-bottom: 1px solid var(--line);
+  color: #777;
+  font-size: 12px;
+  margin: 30px 0 0;
+  padding-bottom: 30px;
+}
+
+.legal-content {
+  display: grid;
+  gap: 34px;
+  padding-top: 36px;
+}
+
+.legal-content h2 {
+  font-size: 21px;
+  letter-spacing: -0.025em;
+  margin: 0 0 12px;
+}
+
+.legal-content p,
+.legal-content li {
+  color: #515151;
+  line-height: 1.75;
+}
+
+.legal-content p {
+  margin: 0 0 12px;
+}
+
+.legal-content ul,
+.legal-content ol {
+  margin: 0;
+  padding-left: 22px;
+}
+
+.legal-content a {
+  font-weight: 800;
+  text-decoration: underline;
+  text-decoration-color: var(--lime-dark);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+
+.legal-footer {
+  border-top: 1px solid var(--line);
+  color: #666;
+  font-size: 12px;
+}
+
+.legal-footer nav,
+.footer-legal {
+  display: flex;
+  gap: 18px;
+}
+
+.legal-footer a,
+.footer-legal a {
+  font-weight: 700;
+}
+
+@media (max-width: 700px) {
+  .legal-header .brand-copy {
+    display: none;
+  }
+
+  .legal-footer {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .legal-footer nav,
+  .footer-legal {
+    flex-wrap: wrap;
+  }
+}
+
 button,
 a {
   -webkit-tap-highlight-color: transparent;

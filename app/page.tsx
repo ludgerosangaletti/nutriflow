@@ -412,6 +412,11 @@ export default function Home() {
           </span>
         </a>
         <p>CRN-8 11719 · Atendimento nutricional individualizado</p>
+        <nav className="footer-legal" aria-label="Documentos legais">
+          <a href="/politica-de-privacidade">Privacidade</a>
+          <a href="/termos-de-uso">Termos</a>
+          <a href="/exclusao-de-dados">Exclusão de dados</a>
+        </nav>
         <a href="#inicio" className="footer-top">Voltar ao topo ↑</a>
       </footer>
     </main>
