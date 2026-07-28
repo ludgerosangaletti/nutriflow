@@ -100,6 +100,22 @@ function findTrigger(message: string): Trigger | null {
   return (match?.[0] as Trigger | undefined) || null;
 }
 
+function normalizeRecipient(value: string) {
+  const digits = value.replace(/\D/g, "");
+
+  // A Meta ainda pode entregar o wa_id brasileiro no formato antigo,
+  // sem o nono dígito. O envio pela Cloud API exige o número cadastrado.
+  if (
+    digits.startsWith("55") &&
+    digits.length === 12 &&
+    !digits.slice(4).startsWith("9")
+  ) {
+    return `${digits.slice(0, 4)}9${digits.slice(4)}`;
+  }
+
+  return digits;
+}
+
 function bytesToHex(bytes: ArrayBuffer) {
   return Array.from(new Uint8Array(bytes))
     .map((byte) => byte.toString(16).padStart(2, "0"))
@@ -153,7 +169,7 @@ async function sendText(to: string, body: string) {
       body: JSON.stringify({
         messaging_product: "whatsapp",
         recipient_type: "individual",
-        to,
+        to: normalizeRecipient(to),
         type: "text",
         text: { preview_url: true, body },
       }),
