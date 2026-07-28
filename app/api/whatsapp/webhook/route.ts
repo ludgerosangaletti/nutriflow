@@ -6,6 +6,8 @@ const schedulingUrls = {
     "https://wa.me/5542999876280?text=Ol%C3%A1%2C%20recebi%20as%20informa%C3%A7%C3%B5es%20pelo%20atendimento%20autom%C3%A1tico%20e%20quero%20agendar%20uma%20sess%C3%A3o%20de%20mentoria.",
   avaliacao:
     "https://wa.me/5542999876280?text=Ol%C3%A1%2C%20recebi%20as%20informa%C3%A7%C3%B5es%20pelo%20atendimento%20autom%C3%A1tico%20e%20quero%20agendar%20uma%20avalia%C3%A7%C3%A3o%20f%C3%ADsica.",
+  geral:
+    "https://wa.me/5542999876280?text=Ol%C3%A1%2C%20recebi%20as%20informa%C3%A7%C3%B5es%20pelo%20atendimento%20autom%C3%A1tico%20e%20quero%20prosseguir%20com%20um%20agendamento.",
 } as const;
 
 const triggers = {
@@ -74,9 +76,58 @@ A avaliação inclui:
 *Quer prosseguir com o agendamento?*
 Clique abaixo:
 ${schedulingUrls.avaliacao}`,
+
+  agendamento: `Perfeito! 😊
+
+Para falar com o atendimento responsável e prosseguir com o agendamento, clique no link abaixo:
+${schedulingUrls.geral}
+
+Ao abrir a conversa, a mensagem de solicitação já estará preenchida para você.`,
 } as const;
 
 type Trigger = keyof typeof triggers;
+
+const menu = `Olá! 👋 Você está falando com o *Atendimento Ludgero Sangaletti*.
+
+Para direcionarmos sua dúvida, responda com o número de uma opção:
+
+1️⃣ Consulta presencial
+2️⃣ Consultoria on-line
+3️⃣ Mentoria individual
+4️⃣ Avaliação física
+5️⃣ Já quero agendar
+
+Você também pode escrever *menu*, *início* ou *voltar* a qualquer momento.`;
+
+const unknownMessage = `Não consegui identificar qual atendimento você procura.
+
+${menu}`;
+
+const unsupportedMessage = `Recebi seu arquivo, mas este atendimento automático funciona por mensagens de texto.
+
+${menu}`;
+
+const menuCommands = new Set([
+  "menu",
+  "inicio",
+  "voltar",
+  "comecar",
+  "recomecar",
+  "ajuda",
+  "oi",
+  "ola",
+  "bom dia",
+  "boa tarde",
+  "boa noite",
+]);
+
+const optionReplies = {
+  "1": replies.presencial,
+  "2": replies.online,
+  "3": replies.mentoria,
+  "4": replies.avaliacao,
+  "5": replies.agendamento,
+} as const;
 
 type WhatsAppWebhook = {
   entry?: Array<{
@@ -108,6 +159,57 @@ function findTrigger(message: string): Trigger | null {
     normalized.includes(trigger),
   );
   return (match?.[0] as Trigger | undefined) || null;
+}
+
+function findNaturalReply(message: string): string | null {
+  const normalized = normalize(message);
+  const numericOption = normalized.match(/^[1-5]$/)?.[0] as
+    | keyof typeof optionReplies
+    | undefined;
+
+  if (numericOption) return optionReplies[numericOption];
+  if (menuCommands.has(normalized)) return menu;
+
+  const trigger = findTrigger(normalized);
+  if (trigger) return replies[trigger];
+
+  if (
+    normalized.includes("quero agendar") ||
+    normalized.includes("quero marcar") ||
+    normalized.includes("fazer agendamento") ||
+    normalized === "agendar" ||
+    normalized === "agendamento"
+  ) {
+    return replies.agendamento;
+  }
+
+  if (
+    normalized.includes("avaliacao fisica") ||
+    normalized.includes("bioimpedancia") ||
+    normalized.includes("antropometria")
+  ) {
+    return replies.avaliacao;
+  }
+
+  if (normalized.includes("mentoria")) return replies.mentoria;
+
+  if (
+    normalized.includes("consultoria online") ||
+    normalized.includes("consultoria on-line") ||
+    normalized.includes("consulta online") ||
+    normalized.includes("atendimento online")
+  ) {
+    return replies.online;
+  }
+
+  if (
+    normalized.includes("consulta presencial") ||
+    normalized.includes("atendimento presencial")
+  ) {
+    return replies.presencial;
+  }
+
+  return null;
 }
 
 function normalizeRecipient(value: string) {
@@ -237,16 +339,19 @@ export async function POST(request: Request) {
     ) || [];
 
   for (const message of messages) {
-    if (message.type !== "text" || !message.from || !message.text?.body) continue;
-    const trigger = findTrigger(message.text.body);
-    if (trigger) {
-      try {
-        await sendText(message.from, replies[trigger]);
-      } catch (error) {
-        console.error("whatsapp_reply_failed", {
-          error: error instanceof Error ? error.message : "Erro desconhecido",
-        });
-      }
+    if (!message.from) continue;
+
+    const reply =
+      message.type === "text" && message.text?.body
+        ? findNaturalReply(message.text.body) || unknownMessage
+        : unsupportedMessage;
+
+    try {
+      await sendText(message.from, reply);
+    } catch (error) {
+      console.error("whatsapp_reply_failed", {
+        error: error instanceof Error ? error.message : "Erro desconhecido",
+      });
     }
   }
 
