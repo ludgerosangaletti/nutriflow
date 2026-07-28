@@ -1,6 +1,12 @@
 const GRAPH_API_VERSION = process.env.WHATSAPP_GRAPH_API_VERSION || "v23.0";
-const HUMAN_SUPPORT_URL =
-  "https://wa.me/5542999846280?text=Ol%C3%A1%2C%20vim%20pelo%20atendimento%20autom%C3%A1tico%20e%20gostaria%20de%20falar%20com%20o%20Ludgero.";
+const schedulingUrls = {
+  presencial:
+    "https://wa.me/5542999876280?text=Ol%C3%A1%2C%20recebi%20as%20informa%C3%A7%C3%B5es%20pelo%20atendimento%20autom%C3%A1tico%20e%20quero%20agendar%20uma%20consulta%20presencial.",
+  mentoria:
+    "https://wa.me/5542999876280?text=Ol%C3%A1%2C%20recebi%20as%20informa%C3%A7%C3%B5es%20pelo%20atendimento%20autom%C3%A1tico%20e%20quero%20agendar%20uma%20sess%C3%A3o%20de%20mentoria.",
+  avaliacao:
+    "https://wa.me/5542999876280?text=Ol%C3%A1%2C%20recebi%20as%20informa%C3%A7%C3%B5es%20pelo%20atendimento%20autom%C3%A1tico%20e%20quero%20agendar%20uma%20avalia%C3%A7%C3%A3o%20f%C3%ADsica.",
+} as const;
 
 const triggers = {
   presencial: "gostaria de saber mais sobre os planos da consulta presencial",
@@ -27,8 +33,9 @@ Equivalente a R$ 315,00 por mês
 R$ 1.680,00
 Equivalente a R$ 280,00 por mês
 
-Para agendar ou falar diretamente comigo, acesse:
-${HUMAN_SUPPORT_URL}`,
+*Quer prosseguir com o agendamento?*
+Clique abaixo:
+${schedulingUrls.presencial}`,
 
   online: `Olá! Que bom receber seu interesse na consultoria on-line 😊
 
@@ -37,8 +44,7 @@ Todo o processo é realizado pela minha plataforma: você poderá conhecer os pl
 Acesse:
 https://ludgerosangaletti.com.br
 
-Se permanecer alguma dúvida antes da contratação, fale diretamente comigo:
-${HUMAN_SUPPORT_URL}`,
+A contratação e todo o acompanhamento são realizados diretamente pelo site.`,
 
   mentoria: `Olá! Que bom receber seu interesse na mentoria individual 😊
 
@@ -50,14 +56,9 @@ Antes da sessão, você poderá informar o assunto e enviar suas principais dúv
 
 A mentoria possui caráter pontual e educativo. Ela não inclui anamnese clínica, elaboração de plano alimentar ou acompanhamento posterior. Caso seja necessário um atendimento individualizado com prescrição, indicarei a consulta ou consultoria mais adequada.
 
-Para agendar, envie:
-• Seu nome completo;
-• O tema que deseja abordar;
-• Suas principais dúvidas;
-• Dias e horários disponíveis.
-
-Atendimento e agendamento:
-${HUMAN_SUPPORT_URL}`,
+*Quer prosseguir com o agendamento?*
+Clique abaixo:
+${schedulingUrls.mentoria}`,
 
   avaliacao: `Olá! Que bom receber seu interesse na avaliação física 😊
 
@@ -70,8 +71,9 @@ A avaliação inclui:
 
 *Investimento: R$ 150,00.*
 
-Para solicitar um horário, fale diretamente comigo:
-${HUMAN_SUPPORT_URL}`,
+*Quer prosseguir com o agendamento?*
+Clique abaixo:
+${schedulingUrls.avaliacao}`,
 } as const;
 
 type Trigger = keyof typeof triggers;
