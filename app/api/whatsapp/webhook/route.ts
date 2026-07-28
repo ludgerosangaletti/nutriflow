@@ -186,7 +186,11 @@ async function sendText(to: string, body: string) {
 
   if (!response.ok) {
     const detail = await response.text();
-    throw new Error(`Falha ao enviar mensagem: ${response.status} ${detail}`);
+    console.error("whatsapp_send_failed", {
+      status: response.status,
+      detail,
+    });
+    throw new Error(`Falha ao enviar mensagem: ${response.status}`);
   }
 }
 
@@ -233,7 +237,15 @@ export async function POST(request: Request) {
   for (const message of messages) {
     if (message.type !== "text" || !message.from || !message.text?.body) continue;
     const trigger = findTrigger(message.text.body);
-    if (trigger) await sendText(message.from, replies[trigger]);
+    if (trigger) {
+      try {
+        await sendText(message.from, replies[trigger]);
+      } catch (error) {
+        console.error("whatsapp_reply_failed", {
+          error: error instanceof Error ? error.message : "Erro desconhecido",
+        });
+      }
+    }
   }
 
   return Response.json({ received: true });
