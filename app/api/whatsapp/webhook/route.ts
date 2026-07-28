@@ -18,22 +18,37 @@ const triggers = {
 } as const;
 
 const replies = {
-  presencial: `Olá! Que bom receber seu interesse no acompanhamento presencial 😊
+  presencial: `Olá! Que bom receber seu interesse na consulta presencial 😊
 
-O atendimento é individualizado e inclui avaliação completa, análise da rotina, definição de estratégias e planejamento alimentar personalizado conforme seus objetivos.
+A consulta presencial tem foco totalmente individualizado, com avaliação completa para entender seu momento atual e traçar uma estratégia alinhada aos seus objetivos, seja emagrecimento, ganho de massa muscular, performance esportiva ou melhora da saúde.
 
-*Planos disponíveis:*
+📋 *O que está incluso?*
+✅ Avaliação física completa
+✅ Antropometria e bioimpedância
+✅ Planejamento alimentar personalizado
+✅ Cronograma de metas e objetivos
+✅ Acompanhamento e suporte durante o período contratado
 
-🔹 *Mensal*
-R$ 350,00
+💰 *Planos disponíveis:*
 
-🔹 *Trimestral — 10% de desconto*
-R$ 945,00
-Equivalente a R$ 315,00 por mês
+*Mensal*
+• R$ 350,00
 
-🔹 *Semestral — 20% de desconto*
-R$ 1.680,00
-Equivalente a R$ 280,00 por mês
+*Trimestral — 10% de desconto*
+• R$ 939,90
+(Equivalente a R$ 313,30 por mês)
+
+*Semestral — 20% de desconto*
+• R$ 1.679,90
+(Equivalente a R$ 279,98 por mês)
+
+Os planos trimestral e semestral costumam ser os mais procurados por proporcionarem melhor custo-benefício e um acompanhamento mais consistente para alcançar resultados duradouros.
+
+💳 *Formas de pagamento*
+• Plano mensal: pagamento à vista, em dinheiro ou Pix.
+• Pacotes trimestral e semestral: pagamento à vista, em dinheiro ou Pix, ou parcelamento no cartão de crédito. No parcelamento, são aplicados os juros da maquininha, informados antes da confirmação.
+
+O parcelamento no cartão não está disponível para a modalidade mensal.
 
 *Quer prosseguir com o agendamento?*
 Clique abaixo:
@@ -41,22 +56,35 @@ ${schedulingUrls.presencial}`,
 
   online: `Olá! Que bom receber seu interesse na consultoria on-line 😊
 
-Todo o processo é realizado pela minha plataforma: você poderá conhecer os planos, realizar o pagamento, preencher sua anamnese e acompanhar sua evolução pela área do paciente.
+A consultoria é realizada totalmente a distância e mantém o atendimento individualizado para objetivos como emagrecimento, ganho de massa muscular, performance esportiva e melhora da saúde.
 
-Acesse:
+📋 *Como funciona?*
+✅ Você escolhe o plano e realiza seu cadastro pelo site;
+✅ O pagamento é concluído no ambiente seguro da TON;
+✅ Você preenche uma anamnese detalhada;
+✅ Recebe planejamento alimentar personalizado;
+✅ Acompanha metas, check-ins, ajustes, evolução e materiais pela área do paciente.
+
+💳 O pagamento pode ser feito por Pix à vista ou cartão de crédito em até 12 vezes. No parcelamento, os juros aplicados pela TON são apresentados antes da confirmação.
+
+A consultoria on-line não inclui antropometria ou bioimpedância presencial. Caso você precise apenas dessas medições, selecione a opção *Avaliação física* no menu.
+
+Os planos, valores atualizados, cadastro e contratação estão disponíveis diretamente no site:
 https://ludgerosangaletti.com.br
 
-A contratação e todo o acompanhamento são realizados diretamente pelo site.`,
+A contratação da consultoria on-line é concluída diretamente pela plataforma, sem necessidade de agendamento pelo WhatsApp.`,
 
   mentoria: `Olá! Que bom receber seu interesse na mentoria individual 😊
 
-A mentoria consiste em uma chamada on-line, com aproximadamente *50 minutos de duração*, para esclarecer dúvidas e conversar de maneira aprofundada sobre um tema relacionado à nutrição, alimentação, suplementação, desempenho esportivo ou organização da rotina alimentar.
+A mentoria consiste em uma chamada on-line individual, com aproximadamente *50 minutos de duração*, para esclarecer dúvidas e conversar de maneira aprofundada sobre um tema relacionado à nutrição, alimentação, suplementação, desempenho esportivo ou organização da rotina alimentar.
 
-Antes da sessão, você poderá informar o assunto e enviar suas principais dúvidas. Assim, consigo direcionar a conversa e aproveitar melhor o nosso tempo.
+Antes da sessão, você poderá informar o assunto e enviar as principais dúvidas. Assim, a conversa será preparada para aproveitar melhor o tempo disponível.
 
 *Investimento: R$ 200,00 por sessão.*
 
-A mentoria possui caráter pontual e educativo. Ela não inclui anamnese clínica, elaboração de plano alimentar ou acompanhamento posterior. Caso seja necessário um atendimento individualizado com prescrição, indicarei a consulta ou consultoria mais adequada.
+ℹ️ *Importante:* a mentoria tem caráter pontual e educativo. Ela não inclui anamnese clínica, avaliação física, elaboração ou prescrição de plano alimentar, nem acompanhamento após a sessão. Quando a necessidade envolver avaliação individual completa ou prescrição, a consulta presencial ou a consultoria on-line será a modalidade mais adequada.
+
+Os horários disponíveis e a forma de pagamento são confirmados pelo atendimento no momento do agendamento.
 
 *Quer prosseguir com o agendamento?*
 Clique abaixo:
@@ -72,6 +100,10 @@ A avaliação inclui:
 ✅ Análise dos resultados.
 
 *Investimento: R$ 150,00.*
+
+ℹ️ A avaliação física é um serviço pontual. Ela não inclui consulta nutricional, planejamento alimentar ou acompanhamento posterior. Caso você também queira uma estratégia nutricional completa, selecione *Consulta presencial* no menu.
+
+Após o agendamento, você receberá as orientações de preparo para que as medidas e a bioimpedância sejam realizadas adequadamente. Os horários disponíveis e a forma de pagamento são confirmados pelo atendimento.
 
 *Quer prosseguir com o agendamento?*
 Clique abaixo:
@@ -100,6 +132,10 @@ Para direcionarmos sua dúvida, responda com o número de uma opção:
 Você também pode escrever *menu*, *início* ou *voltar* a qualquer momento.`;
 
 const unknownMessage = `Não consegui identificar qual atendimento você procura.
+
+${menu}`;
+
+const serviceClarification = `Para informar corretamente valores, pagamento, duração ou disponibilidade, preciso saber qual serviço você procura.
 
 ${menu}`;
 
@@ -185,28 +221,56 @@ function findNaturalReply(message: string): string | null {
 
   if (
     normalized.includes("avaliacao fisica") ||
+    normalized.includes("valor da avaliacao") ||
+    normalized.includes("quanto custa a avaliacao") ||
     normalized.includes("bioimpedancia") ||
     normalized.includes("antropometria")
   ) {
     return replies.avaliacao;
   }
 
-  if (normalized.includes("mentoria")) return replies.mentoria;
+  if (
+    normalized.includes("mentoria") ||
+    normalized.includes("valor da mentoria") ||
+    normalized.includes("quanto custa a mentoria")
+  ) {
+    return replies.mentoria;
+  }
 
   if (
     normalized.includes("consultoria online") ||
     normalized.includes("consultoria on-line") ||
     normalized.includes("consulta online") ||
-    normalized.includes("atendimento online")
+    normalized.includes("atendimento online") ||
+    normalized.includes("valor da consultoria") ||
+    normalized.includes("quanto custa online")
   ) {
     return replies.online;
   }
 
   if (
     normalized.includes("consulta presencial") ||
-    normalized.includes("atendimento presencial")
+    normalized.includes("atendimento presencial") ||
+    normalized.includes("valor da consulta") ||
+    normalized.includes("quanto custa a consulta") ||
+    normalized.includes("pacote presencial")
   ) {
     return replies.presencial;
+  }
+
+  if (
+    normalized.includes("valor") ||
+    normalized.includes("quanto custa") ||
+    normalized.includes("pagamento") ||
+    normalized.includes("cartao") ||
+    normalized.includes("parcel") ||
+    normalized.includes("pix") ||
+    normalized.includes("horario") ||
+    normalized.includes("disponibilidade") ||
+    normalized.includes("o que inclui") ||
+    normalized.includes("como funciona")
+  ) {
+    return serviceClarification;
   }
 
   return null;
