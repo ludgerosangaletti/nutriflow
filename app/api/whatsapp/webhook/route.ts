@@ -560,11 +560,7 @@ async function sendText(to: string, body: string) {
   }
 }
 
-async function sendSchedulingButton(
-  to: string,
-  body: string,
-  serviceInterest: LeadService,
-) {
+async function sendSchedulingTemplate(to: string) {
   const accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
   const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
   if (!accessToken || !phoneNumberId) {
@@ -583,17 +579,10 @@ async function sendSchedulingButton(
         messaging_product: "whatsapp",
         recipient_type: "individual",
         to: normalizeRecipient(to),
-        type: "interactive",
-        interactive: {
-          type: "cta_url",
-          body: { text: body },
-          action: {
-            name: "cta_url",
-            parameters: {
-              display_text: "Continuar agendamento",
-              url: schedulingUrl(serviceInterest),
-            },
-          },
+        type: "template",
+        template: {
+          name: "agendamento_confirmado",
+          language: { code: "pt_BR" },
         },
       }),
     },
@@ -601,11 +590,13 @@ async function sendSchedulingButton(
 
   if (!response.ok) {
     const detail = await response.text();
-    console.error("whatsapp_cta_send_failed", {
+    console.error("whatsapp_template_send_failed", {
       status: response.status,
       detail,
     });
-    throw new Error(`Falha ao enviar botão de agendamento: ${response.status}`);
+    throw new Error(
+      `Falha ao enviar modelo de agendamento: ${response.status}`,
+    );
   }
 }
 
@@ -707,11 +698,7 @@ export async function POST(request: Request) {
 
       if (message.type === "text" && schedulingConfirmed) {
         try {
-          await sendSchedulingButton(
-            message.from,
-            reply,
-            classification.serviceInterest,
-          );
+          await sendSchedulingTemplate(message.from);
         } catch {
           await sendText(
             message.from,

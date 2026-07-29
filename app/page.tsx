@@ -7,6 +7,13 @@ const ArrowUpRight = () => (
   </svg>
 );
 
+const WhatsAppIcon = () => (
+  <svg aria-hidden="true" viewBox="0 0 24 24" className="whatsapp-icon">
+    <path d="M20 11.6a8 8 0 0 1-11.8 7L4 20l1.4-4.1A8 8 0 1 1 20 11.6Z" />
+    <path d="M9 8.2c.3 2.6 2.2 4.5 4.8 4.8M9 8.2l1.3-.4 1 2-1 .8M13.8 13l.4-1.3 2 .9-.4 1.3" />
+  </svg>
+);
+
 const Check = () => (
   <svg aria-hidden="true" viewBox="0 0 24 24" className="icon icon-check">
     <path d="m5 12 4 4L19 6" />
@@ -402,6 +409,23 @@ export default function Home() {
         </div>
         <small className="cta-note">Atendimento presencial em Guarapuava e consultoria online.</small>
       </section>
+
+      <a
+        className="presential-whatsapp"
+        href="https://wa.me/5542999879726?text=Gostaria%20de%20saber%20mais%20sobre%20os%20planos%20da%20consulta%20presencial"
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="Conversar no WhatsApp sobre a consulta presencial"
+      >
+        <span className="presential-whatsapp-icon">
+          <WhatsAppIcon />
+        </span>
+        <span className="presential-whatsapp-copy">
+          <small>Atendimento em Guarapuava</small>
+          <strong>Consulta presencial</strong>
+        </span>
+        <ArrowUpRight />
+      </a>
 
       <footer>
         <a className="brand" href="#inicio" aria-label="Voltar ao início">
