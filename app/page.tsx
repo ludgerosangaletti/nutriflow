@@ -412,7 +412,7 @@ export default function Home() {
 
       <a
         className="presential-whatsapp"
-        href="https://wa.me/5542999879726?text=Gostaria%20de%20saber%20mais%20sobre%20os%20planos%20da%20consulta%20presencial"
+        href="https://wa.me/5542999889176?text=Gostaria%20de%20saber%20mais%20sobre%20os%20planos%20da%20consulta%20presencial"
         target="_blank"
         rel="noopener noreferrer"
         aria-label="Conversar no WhatsApp sobre a consulta presencial"
