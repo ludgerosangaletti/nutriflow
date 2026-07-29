@@ -326,6 +326,189 @@ Para falar com a equipe responsável e escolher o melhor horário, toque no bot�
 Ao abrir a conversa, a solicitação já estará preenchida. Envie a mensagem para continuar o atendimento.`;
 }
 
+type QualificationPrompt = "service" | "period" | "appointment_type";
+
+type QualificationStep = {
+  reply: string;
+  interactionKind: string;
+  serviceInterest: LeadService;
+  preferredPeriod?: string | null;
+  appointmentType?: string | null;
+  prompt?: QualificationPrompt;
+  complete?: boolean;
+};
+
+const serviceQualificationReply = `Perfeito! Para qual serviço você deseja solicitar o agendamento?
+
+Escolha uma das opções abaixo.`;
+
+const periodQualificationReply = `Qual período costuma ser melhor para você?
+
+A equipe verificará os horários disponíveis dentro da sua preferência.`;
+
+const appointmentTypeQualificationReply = `Para finalizar, este será seu primeiro atendimento com o Ludgero ou você já é paciente?`;
+
+const qualificationServiceLabels: Record<string, string> = {
+  presencial: "Consulta presencial",
+  mentoria: "Mentoria individual",
+  avaliacao: "Avaliação física",
+};
+
+const qualificationPeriodLabels: Record<string, string> = {
+  manha: "Manhã",
+  tarde: "Tarde",
+  noite: "Noite",
+};
+
+const qualificationAppointmentLabels: Record<string, string> = {
+  primeira_consulta: "Primeiro atendimento",
+  retorno: "Já é paciente",
+};
+
+function findQualificationStep(
+  normalized: string,
+  previousService: LeadService,
+  lastInteractionKind?: string | null,
+  previousPeriod?: string | null,
+): QualificationStep | null {
+  if (menuCommands.has(normalized)) return null;
+
+  if (
+    previousService !== "online" &&
+    isSchedulingConfirmation(normalized, lastInteractionKind)
+  ) {
+    if (previousService === "unknown") {
+      return {
+        reply: serviceQualificationReply,
+        interactionKind: "qualification_service",
+        serviceInterest: "unknown",
+        preferredPeriod: null,
+        appointmentType: null,
+        prompt: "service",
+      };
+    }
+
+    return {
+      reply: periodQualificationReply,
+      interactionKind: "qualification_period",
+      serviceInterest: previousService,
+      preferredPeriod: null,
+      appointmentType: null,
+      prompt: "period",
+    };
+  }
+
+  if (lastInteractionKind === "qualification_service") {
+    const services: Record<string, LeadService> = {
+      agendar_presencial: "presencial",
+      consulta_presencial: "presencial",
+      "1": "presencial",
+      agendar_mentoria: "mentoria",
+      mentoria_individual: "mentoria",
+      "2": "mentoria",
+      agendar_avaliacao: "avaliacao",
+      avaliacao_fisica: "avaliacao",
+      "3": "avaliacao",
+    };
+    const selectedService = services[normalized];
+
+    if (!selectedService) {
+      return {
+        reply: `Não consegui identificar o serviço desejado.\n\n${serviceQualificationReply}`,
+        interactionKind: "qualification_service",
+        serviceInterest: previousService,
+        prompt: "service",
+      };
+    }
+
+    return {
+      reply: periodQualificationReply,
+      interactionKind: "qualification_period",
+      serviceInterest: selectedService,
+      preferredPeriod: null,
+      appointmentType: null,
+      prompt: "period",
+    };
+  }
+
+  if (lastInteractionKind === "qualification_period") {
+    const periods: Record<string, string> = {
+      periodo_manha: "manha",
+      manha: "manha",
+      periodo_tarde: "tarde",
+      tarde: "tarde",
+      periodo_noite: "noite",
+      noite: "noite",
+    };
+    const preferredPeriod = periods[normalized];
+
+    if (!preferredPeriod) {
+      return {
+        reply: `Não consegui identificar o período.\n\n${periodQualificationReply}`,
+        interactionKind: "qualification_period",
+        serviceInterest: previousService,
+        prompt: "period",
+      };
+    }
+
+    return {
+      reply: appointmentTypeQualificationReply,
+      interactionKind: "qualification_appointment",
+      serviceInterest: previousService,
+      preferredPeriod,
+      prompt: "appointment_type",
+    };
+  }
+
+  if (lastInteractionKind === "qualification_appointment") {
+    const appointmentTypes: Record<string, string> = {
+      primeiro_atendimento: "primeira_consulta",
+      "primeira consulta": "primeira_consulta",
+      "primeiro atendimento": "primeira_consulta",
+      "1": "primeira_consulta",
+      paciente_retorno: "retorno",
+      retorno: "retorno",
+      "ja sou paciente": "retorno",
+      "2": "retorno",
+    };
+    const appointmentType = appointmentTypes[normalized];
+
+    if (!appointmentType) {
+      return {
+        reply: `Não consegui identificar a opção.\n\n${appointmentTypeQualificationReply}`,
+        interactionKind: "qualification_appointment",
+        serviceInterest: previousService,
+        preferredPeriod: previousPeriod || undefined,
+        prompt: "appointment_type",
+      };
+    }
+
+    const serviceLabel =
+      qualificationServiceLabels[previousService] || "Atendimento";
+    const periodLabel =
+      qualificationPeriodLabels[previousPeriod || ""] || "A combinar";
+    const appointmentLabel =
+      qualificationAppointmentLabels[appointmentType] || appointmentType;
+
+    return {
+      reply: `Perfeito! Confirmei suas preferências: ✅
+
+• *Serviço:* ${serviceLabel}
+• *Período preferido:* ${periodLabel}
+• *Atendimento:* ${appointmentLabel}
+
+Agora toque no botão de agendamento para falar com a equipe e escolher o melhor horário disponível.`,
+      interactionKind: "scheduling_confirmed",
+      serviceInterest: previousService,
+      preferredPeriod: previousPeriod || undefined,
+      appointmentType,
+      complete: true,
+    };
+  }
+
+  return null;
+}
+
 function findServiceInterest(normalized: string): LeadService {
   const optionServices: Record<string, LeadService> = {
     "1": "presencial",
@@ -931,6 +1114,94 @@ async function sendInteractiveMenu(
   }
 }
 
+async function sendQualificationButtons(
+  to: string,
+  prompt: QualificationPrompt,
+  body: string,
+) {
+  const accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
+  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+  if (!accessToken || !phoneNumberId) {
+    throw new Error("Configuração do WhatsApp incompleta.");
+  }
+
+  const buttons =
+    prompt === "service"
+      ? [
+          {
+            type: "reply",
+            reply: { id: "agendar_presencial", title: "Consulta presencial" },
+          },
+          {
+            type: "reply",
+            reply: { id: "agendar_mentoria", title: "Mentoria" },
+          },
+          {
+            type: "reply",
+            reply: { id: "agendar_avaliacao", title: "Avaliação física" },
+          },
+        ]
+      : prompt === "period"
+        ? [
+            {
+              type: "reply",
+              reply: { id: "periodo_manha", title: "Manhã" },
+            },
+            {
+              type: "reply",
+              reply: { id: "periodo_tarde", title: "Tarde" },
+            },
+            {
+              type: "reply",
+              reply: { id: "periodo_noite", title: "Noite" },
+            },
+          ]
+        : [
+            {
+              type: "reply",
+              reply: {
+                id: "primeiro_atendimento",
+                title: "Primeiro atendimento",
+              },
+            },
+            {
+              type: "reply",
+              reply: { id: "paciente_retorno", title: "Já sou paciente" },
+            },
+          ];
+
+  const response = await fetch(
+    `https://graph.facebook.com/${GRAPH_API_VERSION}/${phoneNumberId}/messages`,
+    {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${accessToken}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        messaging_product: "whatsapp",
+        recipient_type: "individual",
+        to: normalizeRecipient(to),
+        type: "interactive",
+        interactive: {
+          type: "button",
+          body: { text: body },
+          action: { buttons },
+        },
+      }),
+    },
+  );
+
+  if (!response.ok) {
+    const detail = await response.text();
+    console.error("whatsapp_qualification_send_failed", {
+      status: response.status,
+      detail,
+    });
+    throw new Error(`Falha ao enviar qualificação: ${response.status}`);
+  }
+}
+
 async function sendSchedulingTemplate(to: string) {
   const accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
   const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
@@ -1038,20 +1309,44 @@ export async function POST(request: Request) {
 
     const previousService =
       (previousLead?.serviceInterest as LeadService | undefined) || "unknown";
-    const classification = classifyLeadInteraction(
-      messageBody,
-      message.type || "unknown",
-      previousService,
-      previousLead?.lastInteractionKind,
-    );
+    const normalizedMessage = normalize(messageBody || "");
+    const qualification = messageBody
+      ? findQualificationStep(
+          normalizedMessage,
+          previousService,
+          previousLead?.lastInteractionKind,
+          previousLead?.preferredPeriod,
+        )
+      : null;
+    const classification = qualification
+      ? {
+          serviceInterest: qualification.serviceInterest,
+          source: "direct" as const,
+          stage: (qualification.complete
+            ? "qualified"
+            : qualification.serviceInterest === "unknown"
+              ? "new"
+              : "informed") as LeadStage,
+          interactionKind: qualification.interactionKind,
+          preferredPeriod: qualification.preferredPeriod,
+          appointmentType: qualification.appointmentType,
+          marketingConsent: null,
+        }
+      : classifyLeadInteraction(
+          messageBody,
+          message.type || "unknown",
+          previousService,
+          previousLead?.lastInteractionKind,
+        );
     const reply =
-      messageBody
+      qualification?.reply ||
+      (messageBody
         ? findNaturalReply(
             messageBody,
             previousService,
             previousLead?.lastInteractionKind,
           ) || unknownMessage
-        : unsupportedMessage;
+        : unsupportedMessage);
 
     try {
       await recordWhatsappLead({
@@ -1066,22 +1361,28 @@ export async function POST(request: Request) {
     }
 
     try {
-      const normalizedMessage = normalize(messageBody || "");
-      const schedulingConfirmed = isSchedulingConfirmation(
-        normalizedMessage,
-        previousLead?.lastInteractionKind,
-      );
       const shouldShowMenu =
         menuCommands.has(normalizedMessage) || reply === unknownMessage;
 
-      if (schedulingConfirmed) {
+      if (qualification?.complete) {
+        await sendText(message.from, reply);
         try {
           await sendSchedulingTemplate(message.from);
         } catch {
           await sendText(
             message.from,
-            `${reply}\n\n${schedulingUrl(classification.serviceInterest)}`,
+            schedulingUrl(classification.serviceInterest),
           );
+        }
+      } else if (qualification?.prompt) {
+        try {
+          await sendQualificationButtons(
+            message.from,
+            qualification.prompt,
+            reply,
+          );
+        } catch {
+          await sendText(message.from, reply);
         }
       } else if (shouldShowMenu) {
         try {

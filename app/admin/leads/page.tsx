@@ -23,10 +23,26 @@ const stageLabels: Record<string, string> = {
   archived: "Arquivado",
 };
 
+const periodLabels: Record<string, string> = {
+  manha: "Manhã",
+  tarde: "Tarde",
+  noite: "Noite",
+};
+
+const appointmentTypeLabels: Record<string, string> = {
+  primeira_consulta: "Primeiro atendimento",
+  retorno: "Já é paciente",
+};
+
 const interactionLabels: Record<string, string> = {
   menu: "Abriu o menu",
   service_interest: "Consultou um serviço",
   scheduling: "Solicitou agendamento",
+  scheduling_intent: "Iniciou o agendamento",
+  qualification_service: "Escolhendo o serviço",
+  qualification_period: "Informou preferência de período",
+  qualification_appointment: "Identificando o atendimento",
+  scheduling_confirmed: "Agendamento qualificado",
   marketing_opt_in: "Aceitou novidades",
   marketing_opt_out: "Cancelou novidades",
   unrecognized_text: "Mensagem livre",
@@ -189,8 +205,20 @@ export default async function WhatsAppLeadsPage({
               ? lead.phone
               : `55${lead.phone}`;
             const firstName = lead.profileName?.split(" ")[0] || "tudo bem";
+            const qualificationDetails = [
+              serviceLabels[lead.serviceInterest] || lead.serviceInterest,
+              lead.preferredPeriod
+                ? `preferência pelo período da ${periodLabels[lead.preferredPeriod]?.toLowerCase() || lead.preferredPeriod}`
+                : null,
+              lead.appointmentType
+                ? appointmentTypeLabels[lead.appointmentType]?.toLowerCase() ||
+                  lead.appointmentType
+                : null,
+            ]
+              .filter(Boolean)
+              .join(", ");
             const message = encodeURIComponent(
-              `Olá, ${firstName}! Aqui é do Atendimento Ludgero Sangaletti. Você entrou em contato para saber mais sobre nossos serviços. Como posso ajudar a dar continuidade?`,
+              `Olá, ${firstName}! Aqui é da equipe Ludgero Sangaletti. Recebemos sua solicitação sobre ${qualificationDetails}. Vamos verificar o melhor horário para você.`,
             );
 
             return (
@@ -221,6 +249,24 @@ export default async function WhatsAppLeadsPage({
                   <div>
                     <dt>Contatos</dt>
                     <dd>{lead.interactionCount}</dd>
+                  </div>
+                  <div>
+                    <dt>Período preferido</dt>
+                    <dd>
+                      {lead.preferredPeriod
+                        ? periodLabels[lead.preferredPeriod] ||
+                          lead.preferredPeriod
+                        : "Não informado"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Tipo de atendimento</dt>
+                    <dd>
+                      {lead.appointmentType
+                        ? appointmentTypeLabels[lead.appointmentType] ||
+                          lead.appointmentType
+                        : "Não informado"}
+                    </dd>
                   </div>
                   <div>
                     <dt>Primeiro contato</dt>
