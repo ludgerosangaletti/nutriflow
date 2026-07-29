@@ -1,0 +1,1 @@
+ALTER TABLE `whatsapp_leads` ADD `preferred_day` text;

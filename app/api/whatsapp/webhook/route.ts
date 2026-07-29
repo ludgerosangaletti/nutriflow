@@ -6,12 +6,6 @@ import {
 } from "../../../whatsapp-leads";
 
 const GRAPH_API_VERSION = process.env.WHATSAPP_GRAPH_API_VERSION || "v23.0";
-const schedulingButtonUrls = {
-  presencial: "https://ludgerosangaletti.com.br/agendar/presencial",
-  mentoria: "https://ludgerosangaletti.com.br/agendar/mentoria",
-  avaliacao: "https://ludgerosangaletti.com.br/agendar/avaliacao",
-  geral: "https://ludgerosangaletti.com.br/agendar/geral",
-} as const;
 
 const triggers = {
   presencial: "gostaria de saber mais sobre os planos da consulta presencial",
@@ -306,16 +300,62 @@ function isSchedulingDoubt(
   return normalized === "2" && lastInteractionKind === "scheduling_intent";
 }
 
-function schedulingUrl(serviceInterest: LeadService) {
+function schedulingService(serviceInterest: LeadService) {
   return (
     serviceInterest === "presencial"
-      ? schedulingButtonUrls.presencial
+      ? "presencial"
       : serviceInterest === "mentoria"
-        ? schedulingButtonUrls.mentoria
+        ? "mentoria"
         : serviceInterest === "avaliacao"
-          ? schedulingButtonUrls.avaliacao
-          : schedulingButtonUrls.geral
+          ? "avaliacao"
+          : "geral"
   );
+}
+
+function schedulingSuffix(
+  serviceInterest: LeadService,
+  preferredPeriod?: string | null,
+  preferredDay?: string | null,
+  appointmentType?: string | null,
+) {
+  const service = schedulingService(serviceInterest);
+  const period = ["manha", "tarde", "noite"].includes(preferredPeriod || "")
+    ? preferredPeriod
+    : "combinar";
+  const appointment =
+    appointmentType === "primeira_consulta"
+      ? "primeira"
+      : appointmentType === "retorno"
+        ? "retorno"
+        : "nao-informado";
+  const day = [
+    "segunda",
+    "terca",
+    "quarta",
+    "quinta",
+    "sexta",
+    "sabado",
+    "domingo",
+    "flexivel",
+  ].includes(preferredDay || "")
+    ? preferredDay
+    : "flexivel";
+
+  return `${service}-${period}-${day}-${appointment}`;
+}
+
+function schedulingUrl(
+  serviceInterest: LeadService,
+  preferredPeriod?: string | null,
+  preferredDay?: string | null,
+  appointmentType?: string | null,
+) {
+  return `https://ludgerosangaletti.com.br/agendar/${schedulingSuffix(
+    serviceInterest,
+    preferredPeriod,
+    preferredDay,
+    appointmentType,
+  )}`;
 }
 
 function schedulingReply() {
@@ -326,13 +366,14 @@ Para falar com a equipe responsável e escolher o melhor horário, toque no bot�
 Ao abrir a conversa, a solicitação já estará preenchida. Envie a mensagem para continuar o atendimento.`;
 }
 
-type QualificationPrompt = "service" | "period" | "appointment_type";
+type QualificationPrompt = "service" | "period" | "day" | "appointment_type";
 
 type QualificationStep = {
   reply: string;
   interactionKind: string;
   serviceInterest: LeadService;
   preferredPeriod?: string | null;
+  preferredDay?: string | null;
   appointmentType?: string | null;
   prompt?: QualificationPrompt;
   complete?: boolean;
@@ -345,6 +386,10 @@ Escolha uma das opções abaixo.`;
 const periodQualificationReply = `Qual período costuma ser melhor para você?
 
 A equipe verificará os horários disponíveis dentro da sua preferência.`;
+
+const dayQualificationReply = `Qual dia da semana você prefere?
+
+Essa informação será encaminhada à equipe junto com sua preferência de período.`;
 
 const appointmentTypeQualificationReply = `Para finalizar, este será seu primeiro atendimento com o Ludgero ou você já é paciente?`;
 
@@ -360,6 +405,17 @@ const qualificationPeriodLabels: Record<string, string> = {
   noite: "Noite",
 };
 
+const qualificationDayLabels: Record<string, string> = {
+  segunda: "Segunda-feira",
+  terca: "Terça-feira",
+  quarta: "Quarta-feira",
+  quinta: "Quinta-feira",
+  sexta: "Sexta-feira",
+  sabado: "Sábado",
+  domingo: "Domingo",
+  flexivel: "Sem preferência",
+};
+
 const qualificationAppointmentLabels: Record<string, string> = {
   primeira_consulta: "Primeiro atendimento",
   retorno: "Já é paciente",
@@ -370,6 +426,7 @@ function findQualificationStep(
   previousService: LeadService,
   lastInteractionKind?: string | null,
   previousPeriod?: string | null,
+  previousDay?: string | null,
 ): QualificationStep | null {
   if (menuCommands.has(normalized)) return null;
 
@@ -383,6 +440,7 @@ function findQualificationStep(
         interactionKind: "qualification_service",
         serviceInterest: "unknown",
         preferredPeriod: null,
+        preferredDay: null,
         appointmentType: null,
         prompt: "service",
       };
@@ -393,6 +451,7 @@ function findQualificationStep(
       interactionKind: "qualification_period",
       serviceInterest: previousService,
       preferredPeriod: null,
+      preferredDay: null,
       appointmentType: null,
       prompt: "period",
     };
@@ -426,6 +485,7 @@ function findQualificationStep(
       interactionKind: "qualification_period",
       serviceInterest: selectedService,
       preferredPeriod: null,
+      preferredDay: null,
       appointmentType: null,
       prompt: "period",
     };
@@ -452,10 +512,61 @@ function findQualificationStep(
     }
 
     return {
+      reply: dayQualificationReply,
+      interactionKind: "qualification_day",
+      serviceInterest: previousService,
+      preferredPeriod,
+      preferredDay: null,
+      appointmentType: null,
+      prompt: "day",
+    };
+  }
+
+  if (lastInteractionKind === "qualification_day") {
+    const days: Record<string, string> = {
+      dia_segunda: "segunda",
+      segunda: "segunda",
+      "segunda feira": "segunda",
+      dia_terca: "terca",
+      terca: "terca",
+      "terca feira": "terca",
+      dia_quarta: "quarta",
+      quarta: "quarta",
+      "quarta feira": "quarta",
+      dia_quinta: "quinta",
+      quinta: "quinta",
+      "quinta feira": "quinta",
+      dia_sexta: "sexta",
+      sexta: "sexta",
+      "sexta feira": "sexta",
+      dia_sabado: "sabado",
+      sabado: "sabado",
+      dia_domingo: "domingo",
+      domingo: "domingo",
+      dia_flexivel: "flexivel",
+      flexivel: "flexivel",
+      "sem preferencia": "flexivel",
+      "qualquer dia": "flexivel",
+    };
+    const preferredDay = days[normalized];
+
+    if (!preferredDay) {
+      return {
+        reply: `Não consegui identificar o dia.\n\n${dayQualificationReply}`,
+        interactionKind: "qualification_day",
+        serviceInterest: previousService,
+        preferredPeriod: previousPeriod || undefined,
+        prompt: "day",
+      };
+    }
+
+    return {
       reply: appointmentTypeQualificationReply,
       interactionKind: "qualification_appointment",
       serviceInterest: previousService,
-      preferredPeriod,
+      preferredPeriod: previousPeriod || undefined,
+      preferredDay,
+      appointmentType: null,
       prompt: "appointment_type",
     };
   }
@@ -479,6 +590,7 @@ function findQualificationStep(
         interactionKind: "qualification_appointment",
         serviceInterest: previousService,
         preferredPeriod: previousPeriod || undefined,
+        preferredDay: previousDay || undefined,
         prompt: "appointment_type",
       };
     }
@@ -487,6 +599,8 @@ function findQualificationStep(
       qualificationServiceLabels[previousService] || "Atendimento";
     const periodLabel =
       qualificationPeriodLabels[previousPeriod || ""] || "A combinar";
+    const dayLabel =
+      qualificationDayLabels[previousDay || ""] || "Sem preferência";
     const appointmentLabel =
       qualificationAppointmentLabels[appointmentType] || appointmentType;
 
@@ -494,6 +608,7 @@ function findQualificationStep(
       reply: `Perfeito! Confirmei suas preferências: ✅
 
 • *Serviço:* ${serviceLabel}
+• *Dia preferido:* ${dayLabel}
 • *Período preferido:* ${periodLabel}
 • *Atendimento:* ${appointmentLabel}
 
@@ -501,6 +616,7 @@ Agora toque no botão de agendamento para falar com a equipe e escolher o melhor
       interactionKind: "scheduling_confirmed",
       serviceInterest: previousService,
       preferredPeriod: previousPeriod || undefined,
+      preferredDay: previousDay || undefined,
       appointmentType,
       complete: true,
     };
@@ -1156,7 +1272,8 @@ async function sendQualificationButtons(
               reply: { id: "periodo_noite", title: "Noite" },
             },
           ]
-        : [
+        : prompt === "appointment_type"
+          ? [
             {
               type: "reply",
               reply: {
@@ -1168,7 +1285,42 @@ async function sendQualificationButtons(
               type: "reply",
               reply: { id: "paciente_retorno", title: "Já sou paciente" },
             },
-          ];
+          ]
+          : [];
+
+  const interactive =
+    prompt === "day"
+      ? {
+          type: "list",
+          body: { text: body },
+          action: {
+            button: "Escolher dia",
+            sections: [
+              {
+                title: "Dia preferido",
+                rows: [
+                  { id: "dia_segunda", title: "Segunda-feira" },
+                  { id: "dia_terca", title: "Terça-feira" },
+                  { id: "dia_quarta", title: "Quarta-feira" },
+                  { id: "dia_quinta", title: "Quinta-feira" },
+                  { id: "dia_sexta", title: "Sexta-feira" },
+                  { id: "dia_sabado", title: "Sábado" },
+                  { id: "dia_domingo", title: "Domingo" },
+                  {
+                    id: "dia_flexivel",
+                    title: "Sem preferência",
+                    description: "A equipe pode sugerir o melhor dia",
+                  },
+                ],
+              },
+            ],
+          },
+        }
+      : {
+          type: "button",
+          body: { text: body },
+          action: { buttons },
+        };
 
   const response = await fetch(
     `https://graph.facebook.com/${GRAPH_API_VERSION}/${phoneNumberId}/messages`,
@@ -1183,11 +1335,7 @@ async function sendQualificationButtons(
         recipient_type: "individual",
         to: normalizeRecipient(to),
         type: "interactive",
-        interactive: {
-          type: "button",
-          body: { text: body },
-          action: { buttons },
-        },
+        interactive,
       }),
     },
   );
@@ -1202,7 +1350,13 @@ async function sendQualificationButtons(
   }
 }
 
-async function sendSchedulingTemplate(to: string) {
+async function sendSchedulingTemplate(
+  to: string,
+  serviceInterest: LeadService,
+  preferredPeriod?: string | null,
+  preferredDay?: string | null,
+  appointmentType?: string | null,
+) {
   const accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
   const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
   if (!accessToken || !phoneNumberId) {
@@ -1223,8 +1377,26 @@ async function sendSchedulingTemplate(to: string) {
         to: normalizeRecipient(to),
         type: "template",
         template: {
-          name: "agendamento_confirmado",
+          name: "agendamento_personalizado",
           language: { code: "pt_BR" },
+          components: [
+            {
+              type: "button",
+              sub_type: "url",
+              index: "0",
+              parameters: [
+                {
+                  type: "text",
+                  text: schedulingSuffix(
+                    serviceInterest,
+                    preferredPeriod,
+                    preferredDay,
+                    appointmentType,
+                  ),
+                },
+              ],
+            },
+          ],
         },
       }),
     },
@@ -1316,6 +1488,7 @@ export async function POST(request: Request) {
           previousService,
           previousLead?.lastInteractionKind,
           previousLead?.preferredPeriod,
+          previousLead?.preferredDay,
         )
       : null;
     const classification = qualification
@@ -1329,6 +1502,7 @@ export async function POST(request: Request) {
               : "informed") as LeadStage,
           interactionKind: qualification.interactionKind,
           preferredPeriod: qualification.preferredPeriod,
+          preferredDay: qualification.preferredDay,
           appointmentType: qualification.appointmentType,
           marketingConsent: null,
         }
@@ -1367,11 +1541,22 @@ export async function POST(request: Request) {
       if (qualification?.complete) {
         await sendText(message.from, reply);
         try {
-          await sendSchedulingTemplate(message.from);
+          await sendSchedulingTemplate(
+            message.from,
+            classification.serviceInterest,
+            classification.preferredPeriod,
+            classification.preferredDay,
+            classification.appointmentType,
+          );
         } catch {
           await sendText(
             message.from,
-            schedulingUrl(classification.serviceInterest),
+            schedulingUrl(
+              classification.serviceInterest,
+              classification.preferredPeriod,
+              classification.preferredDay,
+              classification.appointmentType,
+            ),
           );
         }
       } else if (qualification?.prompt) {

@@ -29,6 +29,17 @@ const periodLabels: Record<string, string> = {
   noite: "Noite",
 };
 
+const dayLabels: Record<string, string> = {
+  segunda: "Segunda-feira",
+  terca: "Terça-feira",
+  quarta: "Quarta-feira",
+  quinta: "Quinta-feira",
+  sexta: "Sexta-feira",
+  sabado: "Sábado",
+  domingo: "Domingo",
+  flexivel: "Sem preferência",
+};
+
 const appointmentTypeLabels: Record<string, string> = {
   primeira_consulta: "Primeiro atendimento",
   retorno: "Já é paciente",
@@ -41,6 +52,7 @@ const interactionLabels: Record<string, string> = {
   scheduling_intent: "Iniciou o agendamento",
   qualification_service: "Escolhendo o serviço",
   qualification_period: "Informou preferência de período",
+  qualification_day: "Informou preferência de dia",
   qualification_appointment: "Identificando o atendimento",
   scheduling_confirmed: "Agendamento qualificado",
   marketing_opt_in: "Aceitou novidades",
@@ -210,6 +222,9 @@ export default async function WhatsAppLeadsPage({
               lead.preferredPeriod
                 ? `preferência pelo período da ${periodLabels[lead.preferredPeriod]?.toLowerCase() || lead.preferredPeriod}`
                 : null,
+              lead.preferredDay
+                ? `dia preferido: ${dayLabels[lead.preferredDay]?.toLowerCase() || lead.preferredDay}`
+                : null,
               lead.appointmentType
                 ? appointmentTypeLabels[lead.appointmentType]?.toLowerCase() ||
                   lead.appointmentType
@@ -256,6 +271,14 @@ export default async function WhatsAppLeadsPage({
                       {lead.preferredPeriod
                         ? periodLabels[lead.preferredPeriod] ||
                           lead.preferredPeriod
+                        : "Não informado"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Dia preferido</dt>
+                    <dd>
+                      {lead.preferredDay
+                        ? dayLabels[lead.preferredDay] || lead.preferredDay
                         : "Não informado"}
                     </dd>
                   </div>

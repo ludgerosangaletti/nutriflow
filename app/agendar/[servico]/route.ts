@@ -1,23 +1,59 @@
-const destinations = {
-  presencial:
-    "https://wa.me/5542999876280?text=Ol%C3%A1%2C%20recebi%20as%20informa%C3%A7%C3%B5es%20pelo%20atendimento%20autom%C3%A1tico%20e%20quero%20agendar%20uma%20consulta%20presencial.",
-  mentoria:
-    "https://wa.me/5542999876280?text=Ol%C3%A1%2C%20recebi%20as%20informa%C3%A7%C3%B5es%20pelo%20atendimento%20autom%C3%A1tico%20e%20quero%20agendar%20uma%20sess%C3%A3o%20de%20mentoria.",
-  avaliacao:
-    "https://wa.me/5542999876280?text=Ol%C3%A1%2C%20recebi%20as%20informa%C3%A7%C3%B5es%20pelo%20atendimento%20autom%C3%A1tico%20e%20quero%20agendar%20uma%20avalia%C3%A7%C3%A3o%20f%C3%ADsica.",
-  geral:
-    "https://wa.me/5542999876280?text=Ol%C3%A1%2C%20recebi%20as%20informa%C3%A7%C3%B5es%20pelo%20atendimento%20autom%C3%A1tico%20e%20quero%20prosseguir%20com%20um%20agendamento.",
-} as const;
+const serviceMessages: Record<string, string> = {
+  presencial: "uma consulta presencial",
+  mentoria: "uma sessão de mentoria",
+  avaliacao: "uma avaliação física",
+  geral: "um atendimento",
+};
 
-type Service = keyof typeof destinations;
+const periodMessages: Record<string, string> = {
+  manha: "manhã",
+  tarde: "tarde",
+  noite: "noite",
+  combinar: "a combinar",
+};
+
+const dayMessages: Record<string, string> = {
+  segunda: "segunda-feira",
+  terca: "terça-feira",
+  quarta: "quarta-feira",
+  quinta: "quinta-feira",
+  sexta: "sexta-feira",
+  sabado: "sábado",
+  domingo: "domingo",
+  flexivel: "sem preferência",
+};
+
+const appointmentMessages: Record<string, string> = {
+  primeira: "Este será meu primeiro atendimento.",
+  retorno: "Já sou paciente.",
+  "nao-informado": "",
+};
 
 export async function GET(
   _request: Request,
   context: { params: Promise<{ servico: string }> },
 ) {
   const { servico } = await context.params;
-  const destination =
-    destinations[servico as Service] || destinations.geral;
+  const [
+    service = "geral",
+    period = "combinar",
+    day = "flexivel",
+    ...appointmentParts
+  ] = servico.split("-");
+  const appointment = appointmentParts.join("-") || "nao-informado";
+  const serviceMessage = serviceMessages[service] || serviceMessages.geral;
+  const periodMessage = periodMessages[period] || periodMessages.combinar;
+  const dayMessage = dayMessages[day] || dayMessages.flexivel;
+  const appointmentMessage = appointmentMessages[appointment] || "";
+  const message = [
+    `Olá! Recebi as informações pelo atendimento automático e quero agendar ${serviceMessage}.`,
+    `Meu dia de preferência é: ${dayMessage}.`,
+    `Minha preferência de período é: ${periodMessage}.`,
+    appointmentMessage,
+  ]
+    .filter(Boolean)
+    .join("\n");
+  const destination = `https://wa.me/5542999876280?text=${encodeURIComponent(message)}`;
 
   return Response.redirect(destination, 302);
 }

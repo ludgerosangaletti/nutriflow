@@ -230,6 +230,7 @@ export const whatsappLeads = sqliteTable(
     interactionCount: integer("interaction_count").notNull().default(1),
     lastInteractionKind: text("last_interaction_kind").notNull().default("text"),
     preferredPeriod: text("preferred_period"),
+    preferredDay: text("preferred_day"),
     appointmentType: text("appointment_type"),
     marketingOptIn: integer("marketing_opt_in", { mode: "boolean" })
       .notNull()

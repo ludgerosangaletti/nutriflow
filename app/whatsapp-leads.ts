@@ -19,6 +19,7 @@ export type LeadInteraction = {
   stage: LeadStage;
   interactionKind: string;
   preferredPeriod?: string | null;
+  preferredDay?: string | null;
   appointmentType?: string | null;
   marketingConsent: boolean | null;
 };
@@ -31,6 +32,7 @@ export async function getWhatsappLeadContext(waId: string) {
       serviceInterest: whatsappLeads.serviceInterest,
       lastInteractionKind: whatsappLeads.lastInteractionKind,
       preferredPeriod: whatsappLeads.preferredPeriod,
+      preferredDay: whatsappLeads.preferredDay,
       appointmentType: whatsappLeads.appointmentType,
     })
     .from(whatsappLeads)
@@ -57,6 +59,7 @@ export async function recordWhatsappLead(interaction: LeadInteraction) {
       stage: interaction.stage,
       lastInteractionKind: interaction.interactionKind.slice(0, 40),
       preferredPeriod: interaction.preferredPeriod || null,
+      preferredDay: interaction.preferredDay || null,
       appointmentType: interaction.appointmentType || null,
       marketingOptIn: interaction.marketingConsent === true,
       marketingOptInAt: interaction.marketingConsent === true ? now : null,
@@ -93,6 +96,10 @@ export async function recordWhatsappLead(interaction: LeadInteraction) {
           interaction.preferredPeriod === undefined
             ? sql`${whatsappLeads.preferredPeriod}`
             : interaction.preferredPeriod,
+        preferredDay:
+          interaction.preferredDay === undefined
+            ? sql`${whatsappLeads.preferredDay}`
+            : interaction.preferredDay,
         appointmentType:
           interaction.appointmentType === undefined
             ? sql`${whatsappLeads.appointmentType}`
