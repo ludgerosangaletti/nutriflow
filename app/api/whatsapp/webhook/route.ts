@@ -384,6 +384,219 @@ function findServiceInterest(normalized: string): LeadService {
   return "unknown";
 }
 
+function includesAny(normalized: string, terms: string[]) {
+  return terms.some((term) => normalized.includes(term));
+}
+
+function findFaqReply(
+  normalized: string,
+  serviceInterest: LeadService,
+): string | null {
+  if (
+    includesAny(normalized, [
+      "onde fica",
+      "qual endereco",
+      "localizacao",
+      "local da consulta",
+      "onde atende",
+    ])
+  ) {
+    if (serviceInterest === "online" || serviceInterest === "mentoria") {
+      return serviceInterest === "online"
+        ? `A consultoria on-line é realizada totalmente a distância, pela plataforma:
+https://ludgerosangaletti.com.br`
+        : "A mentoria é realizada por chamada on-line. As instruções de acesso são enviadas após a confirmação do agendamento.";
+    }
+
+    if (serviceInterest === "presencial" || serviceInterest === "avaliacao") {
+      return `O atendimento presencial é realizado em *Guarapuava–PR*.
+
+O endereço completo e as orientações de chegada são enviados pela equipe no momento da confirmação do horário.`;
+    }
+  }
+
+  if (
+    includesAny(normalized, [
+      "quanto tempo dura",
+      "qual a duracao",
+      "tempo de consulta",
+      "duracao da consulta",
+      "duracao da sessao",
+    ])
+  ) {
+    if (serviceInterest === "mentoria") {
+      return "A mentoria tem aproximadamente *50 minutos de duração* e é realizada por chamada on-line.";
+    }
+    if (serviceInterest === "online") {
+      return `A consultoria on-line é um acompanhamento realizado durante o período do plano contratado, e não uma chamada isolada.
+
+Você terá acesso ao planejamento, check-ins, metas, ajustes e acompanhamento pela Área do Paciente.`;
+    }
+    if (serviceInterest === "presencial" || serviceInterest === "avaliacao") {
+      return `O tempo reservado varia conforme o serviço e as necessidades da avaliação. A equipe informa a duração prevista junto com as opções de horário.
+
+Se já decidiu realizar o atendimento, responda *QUERO AGENDAR*.`;
+    }
+  }
+
+  if (
+    includesAny(normalized, [
+      "preciso levar exame",
+      "levar exames",
+      "precisa de exames",
+      "enviar exames",
+      "exames recentes",
+    ])
+  ) {
+    if (serviceInterest === "mentoria") {
+      return "A mentoria é uma sessão educativa e não exige exames. Caso sua dúvida dependa de avaliação clínica individual ou prescrição, a consulta será a modalidade mais adequada.";
+    }
+    if (serviceInterest === "online") {
+      return "Se você tiver exames recentes relacionados ao seu objetivo ou histórico de saúde, poderá enviá-los pela Área do Paciente após o cadastro. Eles ajudam na avaliação, mas você pode iniciar o processo mesmo sem exames, salvo orientação específica.";
+    }
+    return `Exames recentes não são obrigatórios para solicitar o agendamento, mas podem contribuir para uma avaliação mais completa.
+
+Caso você possua exames relacionados ao seu objetivo ou histórico de saúde, leve-os no dia da consulta.`;
+  }
+
+  if (
+    includesAny(normalized, [
+      "bioimpedancia",
+      "antropometria",
+      "avaliacao corporal",
+      "avaliacao fisica inclusa",
+    ])
+  ) {
+    if (serviceInterest === "presencial") {
+      return "Sim. A consulta presencial inclui avaliação física completa, antropometria e exame de bioimpedância, além do planejamento alimentar individualizado.";
+    }
+    if (serviceInterest === "avaliacao") {
+      return `A avaliação física inclui antropometria completa, circunferências, bioimpedância e análise dos resultados.
+
+O investimento é de *R$ 150,00*. Esse serviço não inclui consulta nutricional ou planejamento alimentar.`;
+    }
+    if (serviceInterest === "online") {
+      return "A consultoria on-line não inclui antropometria ou bioimpedância presencial. Se desejar somente essas medições, escolha *Avaliação física* no menu.";
+    }
+    if (serviceInterest === "mentoria") {
+      return "A mentoria não inclui antropometria, bioimpedância ou avaliação clínica. Ela é uma chamada educativa para esclarecimento de dúvidas.";
+    }
+  }
+
+  if (
+    includesAny(normalized, [
+      "forma de pagamento",
+      "formas de pagamento",
+      "como posso pagar",
+      "aceita cartao",
+      "pagar no cartao",
+      "parcel",
+      "pagar no pix",
+      "pagamento",
+    ])
+  ) {
+    if (serviceInterest === "presencial") {
+      return `Na consulta presencial:
+
+• *Plano mensal:* pagamento à vista, em dinheiro ou Pix.
+• *Pacotes trimestral e semestral:* à vista em dinheiro ou Pix, ou parcelados no cartão com os juros da maquininha.
+
+O parcelamento não está disponível para a modalidade mensal.`;
+    }
+    if (serviceInterest === "online") {
+      return "A consultoria on-line pode ser paga por Pix à vista ou cartão de crédito em até 12 vezes. Os juros do parcelamento são apresentados pela TON antes da confirmação.";
+    }
+    if (serviceInterest === "mentoria" || serviceInterest === "avaliacao") {
+      return `A forma de pagamento é confirmada pela equipe no momento do agendamento.
+
+O investimento é de *${serviceInterest === "mentoria" ? "R$ 200,00 por sessão" : "R$ 150,00"}*.`;
+    }
+  }
+
+  if (
+    includesAny(normalized, [
+      "tem horario",
+      "horarios disponiveis",
+      "qual horario",
+      "disponibilidade",
+      "posso remarcar",
+      "remarcar",
+      "reagendar",
+      "cancelar agendamento",
+    ])
+  ) {
+    if (serviceInterest === "online") {
+      return `A consultoria on-line não precisa de agendamento pelo WhatsApp. Os planos, cadastro e contratação estão disponíveis em:
+https://ludgerosangaletti.com.br`;
+    }
+    return `Os horários disponíveis, remarcações e eventuais cancelamentos são tratados pela equipe de agendamentos.
+
+Se você já decidiu prosseguir, responda *QUERO AGENDAR* para liberar o contato responsável.`;
+  }
+
+  if (
+    includesAny(normalized, [
+      "aceita convenio",
+      "atende convenio",
+      "pelo convenio",
+      "unimed",
+    ])
+  ) {
+    return `Os planos e valores apresentados neste atendimento são referentes ao serviço *particular*.
+
+Atendimentos vinculados a convênio seguem regras e canais próprios da operadora ou da unidade responsável e não são agendados por este fluxo.`;
+  }
+
+  if (
+    includesAny(normalized, [
+      "tem suporte",
+      "como funciona o suporte",
+      "acompanhamento depois",
+      "acompanhamento posterior",
+      "pos consulta",
+    ])
+  ) {
+    if (serviceInterest === "presencial") {
+      return "Sim. Os planos presenciais incluem acompanhamento e suporte durante todo o período contratado, além do cronograma de metas e objetivos.";
+    }
+    if (serviceInterest === "online") {
+      return "Sim. O acompanhamento on-line inclui check-ins, metas, evolução, ajustes e acesso aos materiais pela Área do Paciente durante o período contratado.";
+    }
+    if (serviceInterest === "mentoria") {
+      return "A mentoria é pontual e não inclui acompanhamento ou suporte após a sessão. Para acompanhamento individual contínuo, escolha a consulta presencial ou a consultoria on-line.";
+    }
+    if (serviceInterest === "avaliacao") {
+      return "A avaliação física é um serviço pontual e não inclui acompanhamento posterior ou planejamento alimentar.";
+    }
+  }
+
+  if (
+    includesAny(normalized, [
+      "qual plano recomenda",
+      "qual plano escolher",
+      "melhor plano",
+      "plano mais indicado",
+      "qual pacote",
+    ])
+  ) {
+    if (serviceInterest === "presencial") {
+      return `A escolha depende do tempo de acompanhamento que você procura:
+
+• *Mensal:* opção inicial, com pagamento à vista.
+• *Trimestral:* melhor equilíbrio entre período de acompanhamento e investimento.
+• *Semestral:* maior continuidade e melhor valor mensal.
+
+Os planos trimestral e semestral costumam favorecer resultados mais consistentes, pois permitem acompanhar a evolução e realizar ajustes por mais tempo.`;
+    }
+    if (serviceInterest === "online") {
+      return `Os planos e valores atualizados da consultoria on-line estão disponíveis no site. A melhor escolha depende do período em que você deseja receber acompanhamento:
+https://ludgerosangaletti.com.br`;
+    }
+  }
+
+  return null;
+}
+
 function findNaturalReply(
   message: string,
   previousService: LeadService = "unknown",
@@ -424,6 +637,23 @@ function findNaturalReply(
   if (isSchedulingRequest(normalized)) return replies.schedulingConfirmation;
 
   const serviceInterest = findServiceInterest(normalized);
+  const hasExplicitService =
+    Boolean(findTrigger(normalized)) ||
+    includesAny(normalized, [
+      "consulta presencial",
+      "consultoria online",
+      "consultoria on-line",
+      "consulta online",
+      "mentoria",
+      "avaliacao fisica",
+    ]);
+  const contextService =
+    previousService !== "unknown" && !hasExplicitService
+      ? previousService
+      : serviceInterest;
+  const faqReply = findFaqReply(normalized, contextService);
+  if (faqReply) return faqReply;
+
   if (serviceInterest !== "unknown") return replies[serviceInterest];
 
   if (
