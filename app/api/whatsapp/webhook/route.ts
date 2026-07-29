@@ -142,6 +142,14 @@ Você pode cancelar essa autorização a qualquer momento respondendo *PARAR PRO
   marketingOptOut: `Tudo certo. Seu número não receberá mais novidades ou promoções. ✅
 
 Você continua podendo usar este atendimento normalmente sempre que precisar.`,
+
+  patientArea: `Olá! Esta opção é destinada a quem já está em acompanhamento. 😊
+
+Na *Área do Paciente*, você pode acessar seu planejamento, documentos, metas, check-ins, evolução e solicitações de ajustes:
+https://ludgerosangaletti.com.br/area-cliente
+
+Se estiver com dificuldade para entrar, acesse:
+https://ludgerosangaletti.com.br/recuperar-senha`,
 } as const;
 
 type Trigger = keyof typeof triggers;
@@ -156,6 +164,7 @@ Para direcionarmos sua dúvida, responda com o número de uma opção:
 4️⃣ Avaliação física
 5️⃣ Já quero agendar
 6️⃣ Receber novidades e condições
+7️⃣ Já sou paciente
 
 Você também pode escrever *menu*, *início* ou *voltar* a qualquer momento.`;
 
@@ -192,6 +201,17 @@ const optionReplies = {
   "4": replies.avaliacao,
   "5": replies.schedulingConfirmation,
   "6": replies.marketingOptIn,
+  "7": replies.patientArea,
+} as const;
+
+const interactiveOptionReplies = {
+  consulta_presencial: replies.presencial,
+  consultoria_online: replies.online,
+  mentoria_individual: replies.mentoria,
+  avaliacao_fisica: replies.avaliacao,
+  quero_agendar: replies.schedulingConfirmation,
+  receber_novidades: replies.marketingOptIn,
+  ja_sou_paciente: replies.patientArea,
 } as const;
 
 type WhatsAppWebhook = {
@@ -206,6 +226,10 @@ type WhatsAppWebhook = {
           from?: string;
           type?: string;
           text?: { body?: string };
+          interactive?: {
+            button_reply?: { id?: string; title?: string };
+            list_reply?: { id?: string; title?: string };
+          };
         }>;
       };
     }>;
@@ -233,6 +257,7 @@ function findTrigger(message: string): Trigger | null {
 function isMarketingOptIn(normalized: string) {
   return (
     normalized === "6" ||
+    normalized === "receber_novidades" ||
     normalized === "quero receber novidades" ||
     normalized === "aceito receber novidades" ||
     normalized === "sim quero receber novidades"
@@ -250,6 +275,7 @@ function isMarketingOptOut(normalized: string) {
 function isSchedulingRequest(normalized: string) {
   return (
     normalized === "5" ||
+    normalized === "quero_agendar" ||
     normalized.includes("quero agendar") ||
     normalized.includes("quero marcar") ||
     normalized.includes("fazer agendamento") ||
@@ -306,6 +332,10 @@ function findServiceInterest(normalized: string): LeadService {
     "2": "online",
     "3": "mentoria",
     "4": "avaliacao",
+    consulta_presencial: "presencial",
+    consultoria_online: "online",
+    mentoria_individual: "mentoria",
+    avaliacao_fisica: "avaliacao",
   };
   if (optionServices[normalized]) return optionServices[normalized];
 
@@ -374,7 +404,13 @@ function findNaturalReply(
     return replies.onlineCheckout;
   }
 
-  const numericOption = normalized.match(/^[1-6]$/)?.[0] as
+  const interactiveOption =
+    interactiveOptionReplies[
+      normalized as keyof typeof interactiveOptionReplies
+    ];
+  if (interactiveOption) return interactiveOption;
+
+  const numericOption = normalized.match(/^[1-7]$/)?.[0] as
     | keyof typeof optionReplies
     | undefined;
 
@@ -560,6 +596,111 @@ async function sendText(to: string, body: string) {
   }
 }
 
+function firstName(profileName?: string) {
+  const name = profileName?.trim().split(/\s+/)[0];
+  return name && name.length <= 40 ? name : null;
+}
+
+async function sendInteractiveMenu(
+  to: string,
+  profileName?: string,
+  notUnderstood = false,
+) {
+  const accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
+  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+  if (!accessToken || !phoneNumberId) {
+    throw new Error("Configuração do WhatsApp incompleta.");
+  }
+
+  const name = firstName(profileName);
+  const greeting = name ? `Olá, ${name}! 👋` : "Olá! 👋";
+  const introduction = notUnderstood
+    ? "Não consegui identificar exatamente o que você procura. Escolha uma opção abaixo para eu direcionar seu atendimento."
+    : "Sou o assistente virtual da equipe Ludgero Sangaletti. Como posso ajudar?";
+
+  const response = await fetch(
+    `https://graph.facebook.com/${GRAPH_API_VERSION}/${phoneNumberId}/messages`,
+    {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${accessToken}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        messaging_product: "whatsapp",
+        recipient_type: "individual",
+        to: normalizeRecipient(to),
+        type: "interactive",
+        interactive: {
+          type: "list",
+          header: { type: "text", text: "Atendimento Ludgero Sangaletti" },
+          body: { text: `${greeting}\n\n${introduction}` },
+          footer: { text: "Você pode voltar ao menu a qualquer momento." },
+          action: {
+            button: "Ver opções",
+            sections: [
+              {
+                title: "Serviços",
+                rows: [
+                  {
+                    id: "consulta_presencial",
+                    title: "Consulta presencial",
+                    description: "Planos e acompanhamento presencial",
+                  },
+                  {
+                    id: "consultoria_online",
+                    title: "Consultoria on-line",
+                    description: "Planos e contratação pelo site",
+                  },
+                  {
+                    id: "mentoria_individual",
+                    title: "Mentoria individual",
+                    description: "Sessão on-line para esclarecer dúvidas",
+                  },
+                  {
+                    id: "avaliacao_fisica",
+                    title: "Avaliação física",
+                    description: "Antropometria e bioimpedância",
+                  },
+                ],
+              },
+              {
+                title: "Atendimento",
+                rows: [
+                  {
+                    id: "quero_agendar",
+                    title: "Quero agendar",
+                    description: "Prosseguir com um agendamento",
+                  },
+                  {
+                    id: "ja_sou_paciente",
+                    title: "Já sou paciente",
+                    description: "Acessar sua área e recursos",
+                  },
+                  {
+                    id: "receber_novidades",
+                    title: "Receber novidades",
+                    description: "Autorizar promoções e condições especiais",
+                  },
+                ],
+              },
+            ],
+          },
+        },
+      }),
+    },
+  );
+
+  if (!response.ok) {
+    const detail = await response.text();
+    console.error("whatsapp_menu_send_failed", {
+      status: response.status,
+      detail,
+    });
+    throw new Error(`Falha ao enviar menu: ${response.status}`);
+  }
+}
+
 async function sendSchedulingTemplate(to: string) {
   const accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
   const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
@@ -651,6 +792,11 @@ export async function POST(request: Request) {
   for (const message of messages) {
     if (!message.from) continue;
 
+    const messageBody =
+      message.text?.body ||
+      message.interactive?.list_reply?.id ||
+      message.interactive?.button_reply?.id;
+
     let previousLead: Awaited<ReturnType<typeof getWhatsappLeadContext>> = null;
     try {
       previousLead = await getWhatsappLeadContext(message.from);
@@ -663,15 +809,15 @@ export async function POST(request: Request) {
     const previousService =
       (previousLead?.serviceInterest as LeadService | undefined) || "unknown";
     const classification = classifyLeadInteraction(
-      message.text?.body,
+      messageBody,
       message.type || "unknown",
       previousService,
       previousLead?.lastInteractionKind,
     );
     const reply =
-      message.type === "text" && message.text?.body
+      messageBody
         ? findNaturalReply(
-            message.text.body,
+            messageBody,
             previousService,
             previousLead?.lastInteractionKind,
           ) || unknownMessage
@@ -690,13 +836,15 @@ export async function POST(request: Request) {
     }
 
     try {
-      const normalizedMessage = normalize(message.text?.body || "");
+      const normalizedMessage = normalize(messageBody || "");
       const schedulingConfirmed = isSchedulingConfirmation(
         normalizedMessage,
         previousLead?.lastInteractionKind,
       );
+      const shouldShowMenu =
+        menuCommands.has(normalizedMessage) || reply === unknownMessage;
 
-      if (message.type === "text" && schedulingConfirmed) {
+      if (schedulingConfirmed) {
         try {
           await sendSchedulingTemplate(message.from);
         } catch {
@@ -704,6 +852,16 @@ export async function POST(request: Request) {
             message.from,
             `${reply}\n\n${schedulingUrl(classification.serviceInterest)}`,
           );
+        }
+      } else if (shouldShowMenu) {
+        try {
+          await sendInteractiveMenu(
+            message.from,
+            message.profileName,
+            reply === unknownMessage,
+          );
+        } catch {
+          await sendText(message.from, reply);
         }
       } else {
         await sendText(message.from, reply);
