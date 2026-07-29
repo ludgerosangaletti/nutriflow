@@ -1,4 +1,4 @@
-import { sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { getDb } from "../db";
 import { whatsappLeads } from "../db/schema";
 
@@ -20,6 +20,21 @@ export type LeadInteraction = {
   interactionKind: string;
   marketingConsent: boolean | null;
 };
+
+export async function getWhatsappLeadContext(waId: string) {
+  const phone = waId.replace(/\D/g, "");
+  const db = getDb();
+  const [lead] = await db
+    .select({
+      serviceInterest: whatsappLeads.serviceInterest,
+      lastInteractionKind: whatsappLeads.lastInteractionKind,
+    })
+    .from(whatsappLeads)
+    .where(eq(whatsappLeads.waId, phone))
+    .limit(1);
+
+  return lead || null;
+}
 
 export async function recordWhatsappLead(interaction: LeadInteraction) {
   const db = getDb();

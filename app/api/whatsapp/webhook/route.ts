@@ -1,4 +1,5 @@
 import {
+  getWhatsappLeadContext,
   recordWhatsappLead,
   type LeadService,
   type LeadStage,
@@ -59,9 +60,7 @@ Os planos trimestral e semestral costumam ser os mais procurados por proporciona
 
 O parcelamento no cartão não está disponível para a modalidade mensal.
 
-*Quer prosseguir com o agendamento?*
-Clique abaixo:
-${schedulingUrls.presencial}
+Se você já decidiu agendar, responda *QUERO AGENDAR*. O contato da equipe de agendamentos será liberado após uma confirmação rápida.
 
 ${marketingInvitation}`,
 
@@ -99,9 +98,7 @@ Antes da sessão, você poderá informar o assunto e enviar as principais dúvid
 
 Os horários disponíveis e a forma de pagamento são confirmados pelo atendimento no momento do agendamento.
 
-*Quer prosseguir com o agendamento?*
-Clique abaixo:
-${schedulingUrls.mentoria}
+Se você já decidiu agendar, responda *QUERO AGENDAR*. O contato da equipe de agendamentos será liberado após uma confirmação rápida.
 
 ${marketingInvitation}`,
 
@@ -120,18 +117,27 @@ A avaliação inclui:
 
 Após o agendamento, você receberá as orientações de preparo para que as medidas e a bioimpedância sejam realizadas adequadamente. Os horários disponíveis e a forma de pagamento são confirmados pelo atendimento.
 
-*Quer prosseguir com o agendamento?*
-Clique abaixo:
-${schedulingUrls.avaliacao}
+Se você já decidiu agendar, responda *QUERO AGENDAR*. O contato da equipe de agendamentos será liberado após uma confirmação rápida.
 
 ${marketingInvitation}`,
 
-  agendamento: `Perfeito! 😊
+  schedulingConfirmation: `Perfeito! Antes de encaminhar você para a equipe de agendamentos, confirme:
 
-Para falar com o atendimento responsável e prosseguir com o agendamento, clique no link abaixo:
-${schedulingUrls.geral}
+*1 — Quero agendar agora*
+*2 — Ainda tenho uma dúvida*
 
-Ao abrir a conversa, a mensagem de solicitação já estará preenchida para você.`,
+O contato para atendimento humano será liberado somente após a confirmação da opção 1.`,
+
+  schedulingDoubt: `Sem problema! 😊
+
+Você pode enviar sua dúvida por texto ou escolher novamente o serviço para consultar as informações disponíveis.
+
+Responda *MENU* para ver novamente todas as opções.`,
+
+  onlineCheckout: `A consultoria on-line não precisa de agendamento pelo WhatsApp. 😊
+
+Você pode consultar os planos, fazer o cadastro e concluir a contratação diretamente em:
+https://ludgerosangaletti.com.br`,
 
   marketingOptIn: `Pronto! Seu número foi autorizado a receber novidades, condições especiais e promoções do *Atendimento Ludgero Sangaletti*. ✅
 
@@ -188,7 +194,7 @@ const optionReplies = {
   "2": replies.online,
   "3": replies.mentoria,
   "4": replies.avaliacao,
-  "5": replies.agendamento,
+  "5": replies.schedulingConfirmation,
   "6": replies.marketingOptIn,
 } as const;
 
@@ -256,6 +262,46 @@ function isSchedulingRequest(normalized: string) {
   );
 }
 
+function isSchedulingConfirmation(
+  normalized: string,
+  lastInteractionKind?: string | null,
+) {
+  if (
+    normalized === "confirmo agendamento" ||
+    normalized === "quero agendar agora" ||
+    normalized === "confirmar agendamento"
+  ) {
+    return true;
+  }
+
+  return normalized === "1" && lastInteractionKind === "scheduling_intent";
+}
+
+function isSchedulingDoubt(
+  normalized: string,
+  lastInteractionKind?: string | null,
+) {
+  return normalized === "2" && lastInteractionKind === "scheduling_intent";
+}
+
+function schedulingReply(serviceInterest: LeadService) {
+  const url =
+    serviceInterest === "presencial"
+      ? schedulingUrls.presencial
+      : serviceInterest === "mentoria"
+        ? schedulingUrls.mentoria
+        : serviceInterest === "avaliacao"
+          ? schedulingUrls.avaliacao
+          : schedulingUrls.geral;
+
+  return `Agendamento confirmado! ✅
+
+Para falar com a equipe responsável e escolher o melhor horário, toque no link abaixo:
+${url}
+
+Ao abrir a conversa, a solicitação já estará preenchida. Envie a mensagem para continuar o atendimento.`;
+}
+
 function findServiceInterest(normalized: string): LeadService {
   const optionServices: Record<string, LeadService> = {
     "1": "presencial",
@@ -310,8 +356,26 @@ function findServiceInterest(normalized: string): LeadService {
   return "unknown";
 }
 
-function findNaturalReply(message: string): string | null {
+function findNaturalReply(
+  message: string,
+  previousService: LeadService = "unknown",
+  lastInteractionKind?: string | null,
+): string | null {
   const normalized = normalize(message);
+
+  if (isSchedulingConfirmation(normalized, lastInteractionKind)) {
+    return schedulingReply(previousService);
+  }
+  if (isSchedulingDoubt(normalized, lastInteractionKind)) {
+    return replies.schedulingDoubt;
+  }
+  if (
+    previousService === "online" &&
+    isSchedulingRequest(normalized)
+  ) {
+    return replies.onlineCheckout;
+  }
+
   const numericOption = normalized.match(/^[1-6]$/)?.[0] as
     | keyof typeof optionReplies
     | undefined;
@@ -323,7 +387,7 @@ function findNaturalReply(message: string): string | null {
 
   const trigger = findTrigger(normalized);
   if (trigger) return replies[trigger];
-  if (isSchedulingRequest(normalized)) return replies.agendamento;
+  if (isSchedulingRequest(normalized)) return replies.schedulingConfirmation;
 
   const serviceInterest = findServiceInterest(normalized);
   if (serviceInterest !== "unknown") return replies[serviceInterest];
@@ -346,7 +410,12 @@ function findNaturalReply(message: string): string | null {
   return null;
 }
 
-function classifyLeadInteraction(messageBody?: string, messageType = "unknown") {
+function classifyLeadInteraction(
+  messageBody?: string,
+  messageType = "unknown",
+  previousService: LeadService = "unknown",
+  lastInteractionKind?: string | null,
+) {
   if (!messageBody) {
     return {
       serviceInterest: "unknown" as LeadService,
@@ -359,8 +428,20 @@ function classifyLeadInteraction(messageBody?: string, messageType = "unknown") 
 
   const normalized = normalize(messageBody);
   const trigger = findTrigger(normalized);
-  const serviceInterest = findServiceInterest(normalized);
-  const stage: LeadStage = isSchedulingRequest(normalized)
+  const detectedService = findServiceInterest(normalized);
+  const serviceInterest =
+    detectedService === "unknown" ? previousService : detectedService;
+  const schedulingConfirmed = isSchedulingConfirmation(
+    normalized,
+    lastInteractionKind,
+  );
+  const schedulingDoubt = isSchedulingDoubt(normalized, lastInteractionKind);
+  const schedulingIntent =
+    previousService !== "online" &&
+    !schedulingConfirmed &&
+    !schedulingDoubt &&
+    isSchedulingRequest(normalized);
+  const stage: LeadStage = schedulingConfirmed
     ? "qualified"
     : serviceInterest === "unknown"
       ? "new"
@@ -370,8 +451,14 @@ function classifyLeadInteraction(messageBody?: string, messageType = "unknown") 
     serviceInterest,
     source: trigger ? ("linktree" as const) : ("direct" as const),
     stage,
-    interactionKind: isSchedulingRequest(normalized)
-      ? "scheduling"
+    interactionKind: schedulingConfirmed
+      ? "scheduling_confirmed"
+      : schedulingDoubt
+        ? "scheduling_doubt"
+        : schedulingIntent
+          ? "scheduling_intent"
+          : previousService === "online" && isSchedulingRequest(normalized)
+            ? "online_checkout"
       : isMarketingOptIn(normalized)
         ? "marketing_opt_in"
         : isMarketingOptOut(normalized)
@@ -526,13 +613,30 @@ export async function POST(request: Request) {
   for (const message of messages) {
     if (!message.from) continue;
 
+    let previousLead: Awaited<ReturnType<typeof getWhatsappLeadContext>> = null;
+    try {
+      previousLead = await getWhatsappLeadContext(message.from);
+    } catch (error) {
+      console.error("whatsapp_lead_context_failed", {
+        error: error instanceof Error ? error.message : "Erro desconhecido",
+      });
+    }
+
+    const previousService =
+      (previousLead?.serviceInterest as LeadService | undefined) || "unknown";
     const classification = classifyLeadInteraction(
       message.text?.body,
       message.type || "unknown",
+      previousService,
+      previousLead?.lastInteractionKind,
     );
     const reply =
       message.type === "text" && message.text?.body
-        ? findNaturalReply(message.text.body) || unknownMessage
+        ? findNaturalReply(
+            message.text.body,
+            previousService,
+            previousLead?.lastInteractionKind,
+          ) || unknownMessage
         : unsupportedMessage;
 
     try {
