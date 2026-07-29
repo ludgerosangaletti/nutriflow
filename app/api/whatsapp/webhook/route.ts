@@ -1,3 +1,9 @@
+import {
+  recordWhatsappLead,
+  type LeadService,
+  type LeadStage,
+} from "../../../whatsapp-leads";
+
 const GRAPH_API_VERSION = process.env.WHATSAPP_GRAPH_API_VERSION || "v23.0";
 const schedulingUrls = {
   presencial:
@@ -16,6 +22,9 @@ const triggers = {
   mentoria: "gostaria de saber mais sobre os planos da mentoria de emagrecimento",
   avaliacao: "gostaria de agendar uma avaliacao fisica",
 } as const;
+
+const marketingInvitation =
+  "Para receber novidades e condições especiais quando estiverem disponíveis, responda *QUERO RECEBER NOVIDADES*.";
 
 const replies = {
   presencial: `Olá! Que bom receber seu interesse na consulta presencial 😊
@@ -52,7 +61,9 @@ O parcelamento no cartão não está disponível para a modalidade mensal.
 
 *Quer prosseguir com o agendamento?*
 Clique abaixo:
-${schedulingUrls.presencial}`,
+${schedulingUrls.presencial}
+
+${marketingInvitation}`,
 
   online: `Olá! Que bom receber seu interesse na consultoria on-line 😊
 
@@ -72,7 +83,9 @@ A consultoria on-line não inclui antropometria ou bioimpedância presencial. Ca
 Os planos, valores atualizados, cadastro e contratação estão disponíveis diretamente no site:
 https://ludgerosangaletti.com.br
 
-A contratação da consultoria on-line é concluída diretamente pela plataforma, sem necessidade de agendamento pelo WhatsApp.`,
+A contratação da consultoria on-line é concluída diretamente pela plataforma, sem necessidade de agendamento pelo WhatsApp.
+
+${marketingInvitation}`,
 
   mentoria: `Olá! Que bom receber seu interesse na mentoria individual 😊
 
@@ -88,7 +101,9 @@ Os horários disponíveis e a forma de pagamento são confirmados pelo atendimen
 
 *Quer prosseguir com o agendamento?*
 Clique abaixo:
-${schedulingUrls.mentoria}`,
+${schedulingUrls.mentoria}
+
+${marketingInvitation}`,
 
   avaliacao: `Olá! Que bom receber seu interesse na avaliação física 😊
 
@@ -107,7 +122,9 @@ Após o agendamento, você receberá as orientações de preparo para que as med
 
 *Quer prosseguir com o agendamento?*
 Clique abaixo:
-${schedulingUrls.avaliacao}`,
+${schedulingUrls.avaliacao}
+
+${marketingInvitation}`,
 
   agendamento: `Perfeito! 😊
 
@@ -115,6 +132,14 @@ Para falar com o atendimento responsável e prosseguir com o agendamento, clique
 ${schedulingUrls.geral}
 
 Ao abrir a conversa, a mensagem de solicitação já estará preenchida para você.`,
+
+  marketingOptIn: `Pronto! Seu número foi autorizado a receber novidades, condições especiais e promoções do *Atendimento Ludgero Sangaletti*. ✅
+
+Você pode cancelar essa autorização a qualquer momento respondendo *PARAR PROMOÇÕES*.`,
+
+  marketingOptOut: `Tudo certo. Seu número não receberá mais novidades ou promoções. ✅
+
+Você continua podendo usar este atendimento normalmente sempre que precisar.`,
 } as const;
 
 type Trigger = keyof typeof triggers;
@@ -128,6 +153,7 @@ Para direcionarmos sua dúvida, responda com o número de uma opção:
 3️⃣ Mentoria individual
 4️⃣ Avaliação física
 5️⃣ Já quero agendar
+6️⃣ Receber novidades e condições
 
 Você também pode escrever *menu*, *início* ou *voltar* a qualquer momento.`;
 
@@ -163,12 +189,17 @@ const optionReplies = {
   "3": replies.mentoria,
   "4": replies.avaliacao,
   "5": replies.agendamento,
+  "6": replies.marketingOptIn,
 } as const;
 
 type WhatsAppWebhook = {
   entry?: Array<{
     changes?: Array<{
       value?: {
+        contacts?: Array<{
+          wa_id?: string;
+          profile?: { name?: string };
+        }>;
         messages?: Array<{
           from?: string;
           type?: string;
@@ -197,27 +228,45 @@ function findTrigger(message: string): Trigger | null {
   return (match?.[0] as Trigger | undefined) || null;
 }
 
-function findNaturalReply(message: string): string | null {
-  const normalized = normalize(message);
-  const numericOption = normalized.match(/^[1-5]$/)?.[0] as
-    | keyof typeof optionReplies
-    | undefined;
+function isMarketingOptIn(normalized: string) {
+  return (
+    normalized === "6" ||
+    normalized === "quero receber novidades" ||
+    normalized === "aceito receber novidades" ||
+    normalized === "sim quero receber novidades"
+  );
+}
 
-  if (numericOption) return optionReplies[numericOption];
-  if (menuCommands.has(normalized)) return menu;
+function isMarketingOptOut(normalized: string) {
+  return (
+    normalized === "parar promocoes" ||
+    normalized === "nao quero receber novidades" ||
+    normalized === "cancelar novidades"
+  );
+}
 
-  const trigger = findTrigger(normalized);
-  if (trigger) return replies[trigger];
-
-  if (
+function isSchedulingRequest(normalized: string) {
+  return (
+    normalized === "5" ||
     normalized.includes("quero agendar") ||
     normalized.includes("quero marcar") ||
     normalized.includes("fazer agendamento") ||
     normalized === "agendar" ||
     normalized === "agendamento"
-  ) {
-    return replies.agendamento;
-  }
+  );
+}
+
+function findServiceInterest(normalized: string): LeadService {
+  const optionServices: Record<string, LeadService> = {
+    "1": "presencial",
+    "2": "online",
+    "3": "mentoria",
+    "4": "avaliacao",
+  };
+  if (optionServices[normalized]) return optionServices[normalized];
+
+  const trigger = findTrigger(normalized);
+  if (trigger) return trigger;
 
   if (
     normalized.includes("avaliacao fisica") ||
@@ -226,7 +275,7 @@ function findNaturalReply(message: string): string | null {
     normalized.includes("bioimpedancia") ||
     normalized.includes("antropometria")
   ) {
-    return replies.avaliacao;
+    return "avaliacao";
   }
 
   if (
@@ -234,7 +283,7 @@ function findNaturalReply(message: string): string | null {
     normalized.includes("valor da mentoria") ||
     normalized.includes("quanto custa a mentoria")
   ) {
-    return replies.mentoria;
+    return "mentoria";
   }
 
   if (
@@ -245,7 +294,7 @@ function findNaturalReply(message: string): string | null {
     normalized.includes("valor da consultoria") ||
     normalized.includes("quanto custa online")
   ) {
-    return replies.online;
+    return "online";
   }
 
   if (
@@ -255,8 +304,29 @@ function findNaturalReply(message: string): string | null {
     normalized.includes("quanto custa a consulta") ||
     normalized.includes("pacote presencial")
   ) {
-    return replies.presencial;
+    return "presencial";
   }
+
+  return "unknown";
+}
+
+function findNaturalReply(message: string): string | null {
+  const normalized = normalize(message);
+  const numericOption = normalized.match(/^[1-6]$/)?.[0] as
+    | keyof typeof optionReplies
+    | undefined;
+
+  if (numericOption) return optionReplies[numericOption];
+  if (menuCommands.has(normalized)) return menu;
+  if (isMarketingOptIn(normalized)) return replies.marketingOptIn;
+  if (isMarketingOptOut(normalized)) return replies.marketingOptOut;
+
+  const trigger = findTrigger(normalized);
+  if (trigger) return replies[trigger];
+  if (isSchedulingRequest(normalized)) return replies.agendamento;
+
+  const serviceInterest = findServiceInterest(normalized);
+  if (serviceInterest !== "unknown") return replies[serviceInterest];
 
   if (
     normalized.includes("valor") ||
@@ -274,6 +344,49 @@ function findNaturalReply(message: string): string | null {
   }
 
   return null;
+}
+
+function classifyLeadInteraction(messageBody?: string, messageType = "unknown") {
+  if (!messageBody) {
+    return {
+      serviceInterest: "unknown" as LeadService,
+      source: "direct" as const,
+      stage: "new" as LeadStage,
+      interactionKind: messageType,
+      marketingConsent: null,
+    };
+  }
+
+  const normalized = normalize(messageBody);
+  const trigger = findTrigger(normalized);
+  const serviceInterest = findServiceInterest(normalized);
+  const stage: LeadStage = isSchedulingRequest(normalized)
+    ? "qualified"
+    : serviceInterest === "unknown"
+      ? "new"
+      : "informed";
+
+  return {
+    serviceInterest,
+    source: trigger ? ("linktree" as const) : ("direct" as const),
+    stage,
+    interactionKind: isSchedulingRequest(normalized)
+      ? "scheduling"
+      : isMarketingOptIn(normalized)
+        ? "marketing_opt_in"
+        : isMarketingOptOut(normalized)
+          ? "marketing_opt_out"
+          : serviceInterest !== "unknown"
+            ? "service_interest"
+            : menuCommands.has(normalized)
+              ? "menu"
+              : "unrecognized_text",
+    marketingConsent: isMarketingOptIn(normalized)
+      ? true
+      : isMarketingOptOut(normalized)
+        ? false
+        : null,
+  };
 }
 
 function normalizeRecipient(value: string) {
@@ -399,16 +512,40 @@ export async function POST(request: Request) {
   const messages =
     payload.entry?.flatMap(
       (entry) =>
-        entry.changes?.flatMap((change) => change.value?.messages || []) || [],
+        entry.changes?.flatMap((change) => {
+          const contacts = change.value?.contacts || [];
+          return (change.value?.messages || []).map((message) => ({
+            ...message,
+            profileName: contacts.find(
+              (contact) => contact.wa_id === message.from,
+            )?.profile?.name,
+          }));
+        }) || [],
     ) || [];
 
   for (const message of messages) {
     if (!message.from) continue;
 
+    const classification = classifyLeadInteraction(
+      message.text?.body,
+      message.type || "unknown",
+    );
     const reply =
       message.type === "text" && message.text?.body
         ? findNaturalReply(message.text.body) || unknownMessage
         : unsupportedMessage;
+
+    try {
+      await recordWhatsappLead({
+        waId: message.from,
+        profileName: message.profileName,
+        ...classification,
+      });
+    } catch (error) {
+      console.error("whatsapp_lead_record_failed", {
+        error: error instanceof Error ? error.message : "Erro desconhecido",
+      });
+    }
 
     try {
       await sendText(message.from, reply);

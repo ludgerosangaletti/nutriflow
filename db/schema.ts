@@ -216,3 +216,35 @@ export const adjustmentRequests = sqliteTable(
     closedAt: text("closed_at"),
   },
 );
+
+export const whatsappLeads = sqliteTable(
+  "whatsapp_leads",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    waId: text("wa_id").notNull(),
+    phone: text("phone").notNull(),
+    profileName: text("profile_name"),
+    serviceInterest: text("service_interest").notNull().default("unknown"),
+    source: text("source").notNull().default("direct"),
+    stage: text("stage").notNull().default("new"),
+    interactionCount: integer("interaction_count").notNull().default(1),
+    lastInteractionKind: text("last_interaction_kind").notNull().default("text"),
+    marketingOptIn: integer("marketing_opt_in", { mode: "boolean" })
+      .notNull()
+      .default(false),
+    marketingOptInAt: text("marketing_opt_in_at"),
+    marketingOptOutAt: text("marketing_opt_out_at"),
+    qualifiedAt: text("qualified_at"),
+    firstContactAt: text("first_contact_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    lastContactAt: text("last_contact_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("whatsapp_leads_wa_id_unique").on(table.waId),
+  ],
+);

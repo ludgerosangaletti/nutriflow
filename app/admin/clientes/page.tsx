@@ -91,9 +91,12 @@ export default async function AdminClients() {
     <main className="portal-shell">
       <header className="portal-header">
         <Link className="portal-brand" href="/">Gestão da consultoria</Link>
-        <form action="/auth/sair" method="post">
-          <button className="auth-signout" type="submit">Sair</button>
-        </form>
+        <nav className="admin-header-actions" aria-label="Navegação administrativa">
+          <Link href="/admin/leads">Leads do WhatsApp</Link>
+          <form action="/auth/sair" method="post">
+            <button className="auth-signout" type="submit">Sair</button>
+          </form>
+        </nav>
       </header>
       <section className="admin-panel">
         <div className="admin-hero">
