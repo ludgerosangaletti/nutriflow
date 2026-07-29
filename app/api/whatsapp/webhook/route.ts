@@ -6,15 +6,11 @@ import {
 } from "../../../whatsapp-leads";
 
 const GRAPH_API_VERSION = process.env.WHATSAPP_GRAPH_API_VERSION || "v23.0";
-const schedulingUrls = {
-  presencial:
-    "https://wa.me/5542999876280?text=Ol%C3%A1%2C%20recebi%20as%20informa%C3%A7%C3%B5es%20pelo%20atendimento%20autom%C3%A1tico%20e%20quero%20agendar%20uma%20consulta%20presencial.",
-  mentoria:
-    "https://wa.me/5542999876280?text=Ol%C3%A1%2C%20recebi%20as%20informa%C3%A7%C3%B5es%20pelo%20atendimento%20autom%C3%A1tico%20e%20quero%20agendar%20uma%20sess%C3%A3o%20de%20mentoria.",
-  avaliacao:
-    "https://wa.me/5542999876280?text=Ol%C3%A1%2C%20recebi%20as%20informa%C3%A7%C3%B5es%20pelo%20atendimento%20autom%C3%A1tico%20e%20quero%20agendar%20uma%20avalia%C3%A7%C3%A3o%20f%C3%ADsica.",
-  geral:
-    "https://wa.me/5542999876280?text=Ol%C3%A1%2C%20recebi%20as%20informa%C3%A7%C3%B5es%20pelo%20atendimento%20autom%C3%A1tico%20e%20quero%20prosseguir%20com%20um%20agendamento.",
+const schedulingButtonUrls = {
+  presencial: "https://ludgerosangaletti.com.br/agendar/presencial",
+  mentoria: "https://ludgerosangaletti.com.br/agendar/mentoria",
+  avaliacao: "https://ludgerosangaletti.com.br/agendar/avaliacao",
+  geral: "https://ludgerosangaletti.com.br/agendar/geral",
 } as const;
 
 const triggers = {
@@ -287,12 +283,12 @@ function isSchedulingDoubt(
 function schedulingUrl(serviceInterest: LeadService) {
   return (
     serviceInterest === "presencial"
-      ? schedulingUrls.presencial
+      ? schedulingButtonUrls.presencial
       : serviceInterest === "mentoria"
-        ? schedulingUrls.mentoria
+        ? schedulingButtonUrls.mentoria
         : serviceInterest === "avaliacao"
-          ? schedulingUrls.avaliacao
-          : schedulingUrls.geral
+          ? schedulingButtonUrls.avaliacao
+          : schedulingButtonUrls.geral
   );
 }
 
@@ -710,11 +706,18 @@ export async function POST(request: Request) {
       );
 
       if (message.type === "text" && schedulingConfirmed) {
-        await sendSchedulingButton(
-          message.from,
-          reply,
-          classification.serviceInterest,
-        );
+        try {
+          await sendSchedulingButton(
+            message.from,
+            reply,
+            classification.serviceInterest,
+          );
+        } catch {
+          await sendText(
+            message.from,
+            `${reply}\n\n${schedulingUrl(classification.serviceInterest)}`,
+          );
+        }
       } else {
         await sendText(message.from, reply);
       }
