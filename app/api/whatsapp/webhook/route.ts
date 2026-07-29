@@ -284,20 +284,22 @@ function isSchedulingDoubt(
   return normalized === "2" && lastInteractionKind === "scheduling_intent";
 }
 
-function schedulingReply(serviceInterest: LeadService) {
-  const url =
+function schedulingUrl(serviceInterest: LeadService) {
+  return (
     serviceInterest === "presencial"
       ? schedulingUrls.presencial
       : serviceInterest === "mentoria"
         ? schedulingUrls.mentoria
         : serviceInterest === "avaliacao"
           ? schedulingUrls.avaliacao
-          : schedulingUrls.geral;
+          : schedulingUrls.geral
+  );
+}
 
+function schedulingReply() {
   return `Agendamento confirmado! ✅
 
-Para falar com a equipe responsável e escolher o melhor horário, toque no link abaixo:
-${url}
+Para falar com a equipe responsável e escolher o melhor horário, toque no botão abaixo.
 
 Ao abrir a conversa, a solicitação já estará preenchida. Envie a mensagem para continuar o atendimento.`;
 }
@@ -364,7 +366,7 @@ function findNaturalReply(
   const normalized = normalize(message);
 
   if (isSchedulingConfirmation(normalized, lastInteractionKind)) {
-    return schedulingReply(previousService);
+    return schedulingReply();
   }
   if (isSchedulingDoubt(normalized, lastInteractionKind)) {
     return replies.schedulingDoubt;
@@ -562,6 +564,55 @@ async function sendText(to: string, body: string) {
   }
 }
 
+async function sendSchedulingButton(
+  to: string,
+  body: string,
+  serviceInterest: LeadService,
+) {
+  const accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
+  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+  if (!accessToken || !phoneNumberId) {
+    throw new Error("Configuração do WhatsApp incompleta.");
+  }
+
+  const response = await fetch(
+    `https://graph.facebook.com/${GRAPH_API_VERSION}/${phoneNumberId}/messages`,
+    {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${accessToken}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        messaging_product: "whatsapp",
+        recipient_type: "individual",
+        to: normalizeRecipient(to),
+        type: "interactive",
+        interactive: {
+          type: "cta_url",
+          body: { text: body },
+          action: {
+            name: "cta_url",
+            parameters: {
+              display_text: "Continuar agendamento",
+              url: schedulingUrl(serviceInterest),
+            },
+          },
+        },
+      }),
+    },
+  );
+
+  if (!response.ok) {
+    const detail = await response.text();
+    console.error("whatsapp_cta_send_failed", {
+      status: response.status,
+      detail,
+    });
+    throw new Error(`Falha ao enviar botão de agendamento: ${response.status}`);
+  }
+}
+
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const mode = url.searchParams.get("hub.mode");
@@ -652,7 +703,21 @@ export async function POST(request: Request) {
     }
 
     try {
-      await sendText(message.from, reply);
+      const normalizedMessage = normalize(message.text?.body || "");
+      const schedulingConfirmed = isSchedulingConfirmation(
+        normalizedMessage,
+        previousLead?.lastInteractionKind,
+      );
+
+      if (message.type === "text" && schedulingConfirmed) {
+        await sendSchedulingButton(
+          message.from,
+          reply,
+          classification.serviceInterest,
+        );
+      } else {
+        await sendText(message.from, reply);
+      }
     } catch (error) {
       console.error("whatsapp_reply_failed", {
         error: error instanceof Error ? error.message : "Erro desconhecido",
