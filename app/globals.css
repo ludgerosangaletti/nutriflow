@@ -6643,6 +6643,44 @@ button:disabled {
   text-decoration: none;
 }
 
+.lead-card-actions {
+  align-items: center;
+  display: flex;
+  gap: 9px;
+}
+
+.lead-delete-control {
+  display: grid;
+  gap: 4px;
+  justify-items: center;
+}
+
+.lead-delete-control button {
+  border: 1px solid #d7d3ca;
+  border-radius: 999px;
+  background: #fff;
+  color: #7f302b;
+  cursor: pointer;
+  font-size: .7rem;
+  font-weight: 900;
+  padding: 10px 13px;
+}
+
+.lead-delete-control button:hover {
+  background: #faf1ef;
+  border-color: #c9aaa5;
+}
+
+.lead-delete-control button:disabled {
+  cursor: wait;
+  opacity: .55;
+}
+
+.lead-delete-control small {
+  color: #7f302b;
+  font-size: .6rem;
+}
+
 .lead-empty {
   border-radius: 20px;
   grid-column: 1 / -1;
@@ -6698,6 +6736,12 @@ button:disabled {
 
   .lead-contact-link {
     display: block;
+  }
+
+  .lead-card-actions {
+    align-items: stretch;
+    display: grid;
+    grid-template-columns: auto 1fr;
   }
 }
 .admin-patient-reset {

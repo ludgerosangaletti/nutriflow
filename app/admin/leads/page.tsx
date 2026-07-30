@@ -4,6 +4,7 @@ import { getDb } from "../../../db";
 import { whatsappLeads } from "../../../db/schema";
 import { requireAdmin } from "../../supabase/server";
 import LeadStatusControl from "./lead-status-control";
+import LeadDeleteButton from "./lead-delete-button";
 
 export const dynamic = "force-dynamic";
 
@@ -307,14 +308,20 @@ export default async function WhatsAppLeadsPage({
 
                 <footer>
                   <LeadStatusControl id={lead.id} initialStage={lead.stage} />
-                  <a
-                    className="lead-contact-link"
-                    href={`https://wa.me/${phone}?text=${message}`}
-                    rel="noreferrer"
-                    target="_blank"
-                  >
-                    Continuar no WhatsApp →
-                  </a>
+                  <div className="lead-card-actions">
+                    <LeadDeleteButton
+                      id={lead.id}
+                      label={lead.profileName || formatPhone(lead.phone)}
+                    />
+                    <a
+                      className="lead-contact-link"
+                      href={`https://wa.me/${phone}?text=${message}`}
+                      rel="noreferrer"
+                      target="_blank"
+                    >
+                      Continuar no WhatsApp →
+                    </a>
+                  </div>
                 </footer>
               </article>
             );
