@@ -6700,3 +6700,145 @@ button:disabled {
     display: block;
   }
 }
+.admin-patient-reset {
+  margin: 18px 0 26px;
+  border: 1px solid #deddd7;
+  border-radius: 22px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.admin-patient-reset > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 22px 26px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.admin-patient-reset > summary::-webkit-details-marker {
+  display: none;
+}
+
+.admin-patient-reset > summary div {
+  display: grid;
+  gap: 5px;
+}
+
+.admin-patient-reset > summary span {
+  color: #8a342f;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.admin-patient-reset > summary strong {
+  font-size: 1rem;
+}
+
+.admin-patient-reset > summary i {
+  color: #8a342f;
+  font-style: normal;
+  font-size: 1.35rem;
+}
+
+.admin-patient-reset-body {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.15fr) minmax(220px, 1fr);
+  gap: 20px;
+  padding: 0 26px 26px;
+  border-top: 1px solid #ebe9e3;
+}
+
+.admin-patient-reset-body > div:first-child {
+  grid-row: span 2;
+  padding: 22px;
+  border-radius: 16px;
+  background: #faf3f1;
+}
+
+.admin-patient-reset-body h3 {
+  margin: 0 0 8px;
+}
+
+.admin-patient-reset-body p {
+  margin: 0;
+  color: #666;
+  line-height: 1.55;
+}
+
+.admin-patient-reset-body label {
+  display: grid;
+  align-content: end;
+  gap: 7px;
+  padding-top: 20px;
+  color: #656565;
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.admin-patient-reset-body select,
+.admin-patient-reset-body input {
+  min-height: 52px;
+  width: 100%;
+  border: 1px solid #d8d6cf;
+  border-radius: 12px;
+  background: #fff;
+  padding: 0 14px;
+  color: #111;
+  font: inherit;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.admin-reset-button {
+  justify-self: start;
+  min-height: 48px;
+  border: 0;
+  border-radius: 12px;
+  background: #8a342f;
+  padding: 0 18px;
+  color: #fff;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.admin-reset-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.admin-patient-reset-body > p[role="status"] {
+  grid-column: 2;
+  color: #8a342f;
+  font-weight: 700;
+}
+
+@media (max-width: 760px) {
+  .admin-patient-reset > summary,
+  .admin-patient-reset-body {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+
+  .admin-patient-reset-body {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-patient-reset-body > div:first-child {
+    grid-row: auto;
+  }
+
+  .admin-patient-reset-body > p[role="status"] {
+    grid-column: 1;
+  }
+
+  .admin-reset-button {
+    width: 100%;
+  }
+}

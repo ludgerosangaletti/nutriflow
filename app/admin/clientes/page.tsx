@@ -12,6 +12,7 @@ import { daysRemaining, hasActiveAccess } from "../../access";
 import { requireAdmin } from "../../supabase/server";
 import ApprovalButton from "./approval-button";
 import InPersonInviteForm from "./in-person-invite-form";
+import PatientResetPanel from "./patient-reset-panel";
 
 export const dynamic = "force-dynamic";
 
@@ -398,6 +399,13 @@ export default async function AdminClients() {
           </p>
           <InPersonInviteForm />
         </details>
+        <PatientResetPanel
+          patients={rows.map((client) => ({
+            email: client.email,
+            modality: client.modality,
+            name: client.name,
+          }))}
+        />
         <div className="admin-table-wrap">
           <table className="admin-table">
             <thead>
