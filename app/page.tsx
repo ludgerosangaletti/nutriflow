@@ -14,6 +14,14 @@ const WhatsAppIcon = () => (
   </svg>
 );
 
+const InstagramIcon = () => (
+  <svg aria-hidden="true" viewBox="0 0 24 24" className="instagram-icon">
+    <rect x="3.5" y="3.5" width="17" height="17" rx="5" />
+    <circle cx="12" cy="12" r="3.8" />
+    <circle cx="17.4" cy="6.7" r=".8" className="instagram-dot" />
+  </svg>
+);
+
 const Check = () => (
   <svg aria-hidden="true" viewBox="0 0 24 24" className="icon icon-check">
     <path d="m5 12 4 4L19 6" />
@@ -297,13 +305,31 @@ export default function Home() {
             <li><Check /> Atuação em educação em saúde e palestras</li>
           </ul>
 
-          <a
-            className="button button-outline"
-            href="#comprar"
-          >
-            Escolher meu plano
-            <ArrowUpRight />
-          </a>
+          <div className="authority-actions">
+            <a
+              className="button button-outline"
+              href="#comprar"
+            >
+              Escolher meu plano
+              <ArrowUpRight />
+            </a>
+            <a
+              className="instagram-follow"
+              href="https://www.instagram.com/ludgerosangaletti/"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Seguir Ludgero Sangaletti no Instagram"
+            >
+              <span className="instagram-follow-icon">
+                <InstagramIcon />
+              </span>
+              <span>
+                <small>Acompanhe conteúdos e bastidores</small>
+                <strong>@ludgerosangaletti</strong>
+              </span>
+              <ArrowUpRight />
+            </a>
+          </div>
         </div>
 
         <div className="authority-proof">
@@ -437,6 +463,13 @@ export default function Home() {
         </a>
         <p>CRN-8 11719 · Atendimento nutricional individualizado</p>
         <nav className="footer-legal" aria-label="Documentos legais">
+          <a
+            href="https://www.instagram.com/ludgerosangaletti/"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Instagram
+          </a>
           <a href="/politica-de-privacidade">Privacidade</a>
           <a href="/termos-de-uso">Termos</a>
           <a href="/exclusao-de-dados">Exclusão de dados</a>
