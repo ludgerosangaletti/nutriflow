@@ -1261,15 +1261,6 @@ async function notifyAdminAboutAppointment(
 }
 
 async function handleAppointmentResponse(from: string, normalized: string) {
-  const db = getDb();
-  const allClients = await db.select().from(clients);
-  const client = allClients.find(
-    (item) =>
-      item.modality === "in_person" &&
-      normalizeBrazilPhone(item.whatsapp) === normalizeBrazilPhone(from),
-  );
-  if (!client?.nextAppointmentAt) return false;
-
   const isConfirm = new Set([
     "confirmar retorno",
     "confirmar horario",
@@ -1287,6 +1278,28 @@ async function handleAppointmentResponse(from: string, normalized: string) {
   ]).has(normalized);
   const selectedSlot = slotFromId(normalized);
   if (!isConfirm && !isReschedule && !isCancel && !selectedSlot) return false;
+
+  const db = getDb();
+  const allClients = await db.select().from(clients);
+  const client = allClients.find(
+    (item) =>
+      item.modality === "in_person" &&
+      normalizeBrazilPhone(item.whatsapp) === normalizeBrazilPhone(from),
+  );
+  if (!client) {
+    await sendText(
+      from,
+      "Não encontrei um cadastro de paciente presencial vinculado a este WhatsApp. Confira se este é o mesmo número informado no seu cadastro ou fale diretamente com o Ludgero.",
+    );
+    return true;
+  }
+  if (!client.nextAppointmentAt) {
+    await sendText(
+      from,
+      "No momento, você não possui uma próxima consulta agendada. Para combinar um novo retorno, fale diretamente com o Ludgero pelo WhatsApp de atendimento.",
+    );
+    return true;
+  }
 
   const now = new Date().toISOString();
   if (isConfirm) {
