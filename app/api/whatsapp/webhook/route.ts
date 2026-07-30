@@ -161,7 +161,49 @@ Na *Área do Paciente*, você pode acessar seu planejamento, documentos, metas, 
 https://ludgerosangaletti.com.br/area-cliente
 
 Se estiver com dificuldade para entrar, acesse:
-https://ludgerosangaletti.com.br/recuperar-senha`,
+https://ludgerosangaletti.com.br/recuperar-senha
+
+Para consultar tudo o que o assistente virtual pode fazer, responda *AJUDA*.`,
+
+  capabilities: `*O que você pode resolver por aqui* 🤖
+
+Você pode escrever naturalmente ou usar os atalhos abaixo:
+
+📅 *Consultas e retornos*
+• *QUERO AGENDAR* — iniciar um novo agendamento;
+• *CONFIRMAR RETORNO* — confirmar sua próxima consulta presencial;
+• *REMARCAR RETORNO* — consultar horários e solicitar uma mudança;
+• *CANCELAR RETORNO* — solicitar o cancelamento.
+
+👤 *Para quem já é paciente*
+• *ÁREA DO PACIENTE* — acessar plano, documentos, check-ins e demais recursos;
+• *ESQUECI MINHA SENHA* — abrir a recuperação de acesso;
+• Você também pode perguntar sobre protocolo, check-in, fotos ou solicitações de ajustes.
+
+🥗 *Serviços e contratação*
+• Pergunte sobre consulta presencial, consultoria on-line, mentoria ou avaliação física;
+• Consulte valores, formas de pagamento e o que está incluído;
+• A contratação da consultoria on-line é feita pelo site.
+
+📣 *Preferências*
+• *QUERO RECEBER NOVIDADES* — autorizar comunicações;
+• *PARAR PROMOÇÕES* — cancelar essa autorização.
+
+👨‍⚕️ *Precisa falar com uma pessoa?*
+Responda *ATENDIMENTO HUMANO*. Para informações clínicas, urgências ou situações que o chatbot não consiga resolver, fale diretamente com o Ludgero.
+
+Digite *MENU* para voltar às opções principais.`,
+
+  humanSupport: `Certo. Para situações que precisam de análise individual, informações clínicas ou algo que o chatbot não conseguiu resolver, fale com o Ludgero pelo WhatsApp humano:
+https://wa.me/5542999876280
+
+Se a sua necessidade for somente agendar um novo atendimento, responda *QUERO AGENDAR* para continuar por aqui.`,
+
+  passwordRecovery: `Você pode criar uma nova senha com segurança neste endereço:
+https://ludgerosangaletti.com.br/recuperar-senha
+
+Depois da alteração, volte à Área do Paciente:
+https://ludgerosangaletti.com.br/area-cliente`,
 } as const;
 
 type Trigger = keyof typeof triggers;
@@ -177,8 +219,9 @@ Para direcionarmos sua dúvida, responda com o número de uma opção:
 5️⃣ Já quero agendar
 6️⃣ Receber novidades e condições
 7️⃣ Já sou paciente
+8️⃣ O que posso fazer por aqui
 
-Você também pode escrever *menu*, *início* ou *voltar* a qualquer momento.`;
+Você também pode escrever *menu*, *ajuda* ou *voltar* a qualquer momento.`;
 
 const unknownMessage = `Não consegui identificar qual atendimento você procura.
 
@@ -198,7 +241,6 @@ const menuCommands = new Set([
   "voltar",
   "comecar",
   "recomecar",
-  "ajuda",
   "oi",
   "ola",
   "bom dia",
@@ -214,6 +256,7 @@ const optionReplies = {
   "5": replies.schedulingConfirmation,
   "6": replies.marketingOptIn,
   "7": replies.patientArea,
+  "8": replies.capabilities,
 } as const;
 
 const interactiveOptionReplies = {
@@ -224,6 +267,7 @@ const interactiveOptionReplies = {
   quero_agendar: replies.schedulingConfirmation,
   receber_novidades: replies.marketingOptIn,
   ja_sou_paciente: replies.patientArea,
+  o_que_posso_fazer: replies.capabilities,
 } as const;
 
 type WhatsAppWebhook = {
@@ -294,6 +338,119 @@ function isSchedulingRequest(normalized: string) {
     normalized === "agendar" ||
     normalized === "agendamento"
   );
+}
+
+function isCapabilitiesRequest(normalized: string) {
+  return (
+    normalized === "8" ||
+    normalized === "o_que_posso_fazer" ||
+    normalized === "ajuda" ||
+    normalized === "comandos" ||
+    normalized === "funcionalidades" ||
+    normalized === "o que voce faz" ||
+    normalized === "o que posso fazer" ||
+    normalized === "como usar o chatbot" ||
+    normalized === "como funciona o chatbot"
+  );
+}
+
+function isPatientAreaRequest(normalized: string) {
+  return includesAny(normalized, [
+    "area do paciente",
+    "area do cliente",
+    "meu painel",
+    "meu protocolo",
+    "meu plano alimentar",
+    "meus documentos",
+    "acessar minha conta",
+    "entrar na minha conta",
+  ]);
+}
+
+function isPasswordRecoveryRequest(normalized: string) {
+  return includesAny(normalized, [
+    "esqueci minha senha",
+    "esqueci a senha",
+    "recuperar senha",
+    "redefinir senha",
+    "trocar minha senha",
+    "nao consigo entrar",
+    "problema no login",
+  ]);
+}
+
+function isHumanSupportRequest(normalized: string) {
+  return includesAny(normalized, [
+    "atendimento humano",
+    "falar com humano",
+    "falar com uma pessoa",
+    "falar com atendente",
+    "falar com ludgero",
+    "whatsapp humano",
+    "preciso de ajuda humana",
+  ]);
+}
+
+function findPatientResourceReply(normalized: string) {
+  if (includesAny(normalized, ["check-in", "check in", "fazer checkin"])) {
+    return `Seu check-in semanal pode ser preenchido aqui:
+https://ludgerosangaletti.com.br/check-in
+
+Entre com a mesma conta utilizada na Área do Paciente.`;
+  }
+  if (
+    includesAny(normalized, [
+      "solicitar ajuste",
+      "pedido de ajuste",
+      "solicitacao de ajuste",
+      "ajustar dieta",
+      "ajustar plano",
+    ])
+  ) {
+    return `Você pode enviar uma solicitação de ajuste diretamente pela plataforma:
+https://ludgerosangaletti.com.br/ajustes
+
+Descreva o motivo com clareza e anexe um arquivo, se necessário.`;
+  }
+  if (
+    includesAny(normalized, [
+      "meu protocolo",
+      "plano alimentar",
+      "meus documentos",
+      "baixar protocolo",
+      "baixar plano",
+    ])
+  ) {
+    return `Seus protocolos e documentos publicados estão disponíveis aqui:
+https://ludgerosangaletti.com.br/documentos
+
+O acesso exige o login da Área do Paciente.`;
+  }
+  if (
+    includesAny(normalized, [
+      "enviar fotos",
+      "minhas fotos",
+      "fotos de evolucao",
+      "evolucao corporal",
+    ])
+  ) {
+    return `O envio opcional de fotos e o acompanhamento corporal ficam disponíveis em:
+https://ludgerosangaletti.com.br/evolucao
+
+Envie as imagens apenas se estiver confortável e seguindo as orientações da plataforma.`;
+  }
+  if (
+    includesAny(normalized, [
+      "minhas metas",
+      "meta definida",
+      "acompanhar meta",
+      "progresso da meta",
+    ])
+  ) {
+    return `Suas metas e o progresso registrado podem ser consultados aqui:
+https://ludgerosangaletti.com.br/metas`;
+  }
+  return null;
 }
 
 function isSchedulingConfirmation(
@@ -940,12 +1097,18 @@ function findNaturalReply(
     ];
   if (interactiveOption) return interactiveOption;
 
-  const numericOption = normalized.match(/^[1-7]$/)?.[0] as
+  const numericOption = normalized.match(/^[1-8]$/)?.[0] as
     | keyof typeof optionReplies
     | undefined;
 
   if (numericOption) return optionReplies[numericOption];
   if (menuCommands.has(normalized)) return menu;
+  if (isCapabilitiesRequest(normalized)) return replies.capabilities;
+  if (isPasswordRecoveryRequest(normalized)) return replies.passwordRecovery;
+  const patientResourceReply = findPatientResourceReply(normalized);
+  if (patientResourceReply) return patientResourceReply;
+  if (isPatientAreaRequest(normalized)) return replies.patientArea;
+  if (isHumanSupportRequest(normalized)) return replies.humanSupport;
   if (isMarketingOptIn(normalized)) return replies.marketingOptIn;
   if (isMarketingOptOut(normalized)) return replies.marketingOptOut;
 
@@ -1278,15 +1441,24 @@ async function handleAppointmentResponse(from: string, normalized: string) {
   const isConfirm = new Set([
     "confirmar retorno",
     "confirmar horario",
+    "confirmar consulta",
     "confirmo meu retorno",
+    "confirmo minha consulta",
     "confirmar_retorno",
   ]).has(normalized);
   const isReschedule = new Set([
     "solicitar outro horario",
+    "mudar horario",
+    "trocar horario",
+    "reagendar consulta",
+    "remarcar consulta",
     "remarcar retorno",
     "remarcar_retorno",
   ]).has(normalized);
   const isCancel = new Set([
+    "cancelar consulta",
+    "desmarcar consulta",
+    "desmarcar retorno",
     "cancelar retorno",
     "cancelar_retorno",
   ]).has(normalized);
@@ -1525,6 +1697,11 @@ async function sendInteractiveMenu(
                     id: "receber_novidades",
                     title: "Receber novidades",
                     description: "Autorizar promoções e condições especiais",
+                  },
+                  {
+                    id: "o_que_posso_fazer",
+                    title: "O que posso fazer",
+                    description: "Ver comandos e recursos do chatbot",
                   },
                 ],
               },
