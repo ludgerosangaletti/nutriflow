@@ -18,7 +18,9 @@ export default function GoogleCalendarSettings() {
   const [saving, setSaving] = useState(false);
 
   async function load() {
-    const response = await fetch("/api/admin/integracoes/google-agenda");
+    const response = await fetch("/api/admin/integracoes/google-agenda", {
+      cache: "no-store",
+    });
     const payload = (await response.json()) as Status;
     setStatus(payload);
   }
@@ -32,12 +34,13 @@ export default function GoogleCalendarSettings() {
     setSaving(true);
     setMessage("");
     const form = new FormData(event.currentTarget);
+    const calendarId = String(form.get("calendarId") || "");
     const response = await fetch("/api/admin/integracoes/google-agenda", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         action: "save_credentials",
-        calendarId: form.get("calendarId"),
+        calendarId,
         clientId: form.get("clientId"),
         clientSecret: form.get("clientSecret"),
       }),
@@ -49,6 +52,15 @@ export default function GoogleCalendarSettings() {
       return;
     }
     setMessage("Credenciais protegidas e salvas. Agora autorize a agenda.");
+    setStatus((current) => ({
+      configured: true,
+      connected: false,
+      calendarId,
+      status: "credentials_saved",
+      connectedAt: current?.connectedAt || null,
+      lastSyncAt: current?.lastSyncAt || null,
+      lastSyncError: null,
+    }));
     event.currentTarget.reset();
     await load();
   }

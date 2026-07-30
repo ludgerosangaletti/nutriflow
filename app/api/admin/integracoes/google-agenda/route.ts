@@ -9,15 +9,18 @@ export async function GET() {
   const admin = await getAdminSession();
   if (!admin) return Response.json({ error: "Não autorizado." }, { status: 403 });
   const settings = await getGoogleCalendarSettings();
-  return Response.json({
-    configured: Boolean(settings),
-    connected: settings?.status === "connected",
-    calendarId: settings?.calendarId || "",
-    status: settings?.status || "not_configured",
-    connectedAt: settings?.connectedAt || null,
-    lastSyncAt: settings?.lastSyncAt || null,
-    lastSyncError: settings?.lastSyncError || null,
-  });
+  return Response.json(
+    {
+      configured: Boolean(settings),
+      connected: settings?.status === "connected",
+      calendarId: settings?.calendarId || "",
+      status: settings?.status || "not_configured",
+      connectedAt: settings?.connectedAt || null,
+      lastSyncAt: settings?.lastSyncAt || null,
+      lastSyncError: settings?.lastSyncError || null,
+    },
+    { headers: { "cache-control": "no-store, max-age=0" } },
+  );
 }
 
 export async function POST(request: Request) {
