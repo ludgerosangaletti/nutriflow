@@ -1200,7 +1200,7 @@ async function notifyAdminAboutAppointment(
     client.name?.trim() || client.email.split("@")[0]?.trim() || "Paciente";
   try {
     const response = await fetch(
-      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/appointment-reminder-email`,
+      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/appointment-change-email`,
       {
         method: "POST",
         headers: {
@@ -1223,7 +1223,7 @@ async function notifyAdminAboutAppointment(
     const responseBody = await response.text();
     if (!response.ok) {
       throw new Error(
-        `appointment-reminder-email respondeu ${response.status}: ${responseBody.slice(0, 500)}`,
+        `appointment-change-email respondeu ${response.status}: ${responseBody.slice(0, 500)}`,
       );
     }
   } catch (error) {
