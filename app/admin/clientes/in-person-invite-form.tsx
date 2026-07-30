@@ -29,9 +29,12 @@ export default function InPersonInviteForm() {
       });
       const result = (await response.json().catch(() => ({}))) as {
         error?: string;
+        invite?: { id?: string; sent?: boolean };
       };
       if (!response.ok) throw new Error(result.error || "Não foi possível criar o convite.");
-      setMessage("Paciente cadastrado e convite enviado por e-mail.");
+      setMessage(
+        `Paciente cadastrado e convite enviado por e-mail.${result.invite?.id ? ` Código do envio: ${result.invite.id}` : ""}`,
+      );
       formElement.reset();
       window.setTimeout(() => window.location.reload(), 1200);
     } catch (error) {

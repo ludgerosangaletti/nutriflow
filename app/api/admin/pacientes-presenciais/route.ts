@@ -30,6 +30,11 @@ async function sendInvite(
     id?: string;
   };
   if (!response.ok) throw new Error(result.error || "Falha ao enviar o convite.");
+  if (!result.id) {
+    throw new Error(
+      "O provedor de e-mail não confirmou o envio. Tente novamente em instantes.",
+    );
+  }
   return result;
 }
 

@@ -23,7 +23,8 @@ export default function InPersonCareManager(props: Props) {
   const [message, setMessage] = useState("");
 
   async function request(payload: Record<string, unknown>) {
-    setSaving(String(payload.action));
+    const action = String(payload.action);
+    setSaving(action);
     setMessage("");
     try {
       const response = await fetch("/api/admin/pacientes-presenciais", {
@@ -31,9 +32,22 @@ export default function InPersonCareManager(props: Props) {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ email: props.email, ...payload }),
       });
-      const result = (await response.json().catch(() => ({}))) as { error?: string };
+      const result = (await response.json().catch(() => ({}))) as {
+        error?: string;
+        invite?: { id?: string; sent?: boolean };
+      };
       if (!response.ok) throw new Error(result.error || "Não foi possível concluir a ação.");
-      setMessage("Alteração salva com sucesso.");
+      if (action === "resend_invite") {
+        setMessage(
+          `Convite reenviado por e-mail.${result.invite?.id ? ` Código do envio: ${result.invite.id}` : ""}`,
+        );
+        return;
+      }
+      setMessage(
+        action === "end_access"
+          ? "Acesso encerrado com sucesso."
+          : "Dados do atendimento atualizados com sucesso.",
+      );
       window.setTimeout(() => window.location.reload(), 900);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Não foi possível concluir a ação.");
