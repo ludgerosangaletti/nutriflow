@@ -453,28 +453,68 @@ export default function Home() {
         <ArrowUpRight />
       </a>
 
-      <footer>
-        <a className="brand" href="#inicio" aria-label="Voltar ao início">
-          <span className="brand-mark" aria-hidden="true" />
-          <span className="brand-copy">
-            <strong>Ludgero Sangaletti</strong>
-            <small>Nutrição clínica &amp; esportiva</small>
-          </span>
-        </a>
-        <p>CRN-8 11719 · Atendimento nutricional individualizado</p>
-        <nav className="footer-legal" aria-label="Documentos legais">
-          <a
-            href="https://www.instagram.com/ludgerosangaletti/"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Instagram
+      <footer className="site-footer">
+        <div className="footer-main">
+          <div className="footer-brand-column">
+            <a className="brand" href="#inicio" aria-label="Voltar ao início">
+              <span className="brand-mark" aria-hidden="true" />
+              <span className="brand-copy">
+                <strong>Ludgero Sangaletti</strong>
+                <small>Nutrição clínica &amp; esportiva</small>
+              </span>
+            </a>
+            <p className="footer-description">
+              Estratégias nutricionais individualizadas para saúde, composição
+              corporal e performance.
+            </p>
+            <span className="footer-registration">CRN-8 11719</span>
+          </div>
+
+          <nav className="footer-column" aria-label="Navegação do site">
+            <span className="footer-label">Navegação</span>
+            <a href="#beneficios">Como funciona</a>
+            <a href="#autoridade">Sobre mim</a>
+            <a href="#comprar">Planos online</a>
+            <a href="/area-cliente">Área do paciente</a>
+          </nav>
+
+          <nav className="footer-column" aria-label="Informações e documentos">
+            <span className="footer-label">Informações</span>
+            <a href="/politica-de-privacidade">Política de privacidade</a>
+            <a href="/termos-de-uso">Termos de uso</a>
+            <a href="/exclusao-de-dados">Exclusão de dados</a>
+          </nav>
+
+          <div className="footer-social-column">
+            <span className="footer-label">Acompanhe</span>
+            <a
+              className="footer-instagram"
+              href="https://www.instagram.com/ludgerosangaletti/"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Acompanhar Ludgero Sangaletti no Instagram"
+            >
+              <span className="footer-instagram-icon">
+                <InstagramIcon />
+              </span>
+              <span>
+                <small>Instagram</small>
+                <strong>@ludgerosangaletti</strong>
+              </span>
+              <ArrowUpRight />
+            </a>
+            <p className="footer-social-copy">
+              Conteúdos sobre nutrição, saúde e performance.
+            </p>
+          </div>
+        </div>
+
+        <div className="footer-bottom">
+          <p>© 2026 Ludgero Sangaletti · Atendimento nutricional individualizado</p>
+          <a href="#inicio" className="footer-top">
+            Voltar ao topo <span aria-hidden="true">↑</span>
           </a>
-          <a href="/politica-de-privacidade">Privacidade</a>
-          <a href="/termos-de-uso">Termos</a>
-          <a href="/exclusao-de-dados">Exclusão de dados</a>
-        </nav>
-        <a href="#inicio" className="footer-top">Voltar ao topo ↑</a>
+        </div>
       </footer>
     </main>
   );
