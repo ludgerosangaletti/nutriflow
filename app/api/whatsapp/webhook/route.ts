@@ -4,6 +4,19 @@ import {
   type LeadService,
   type LeadStage,
 } from "../../../whatsapp-leads";
+import { eq } from "drizzle-orm";
+import { getDb } from "../../../../db";
+import {
+  appointmentChangeRequests,
+  clients,
+} from "../../../../db/schema";
+import {
+  availableAppointmentSlots,
+  formatAppointment,
+  normalizeBrazilPhone,
+  slotFromId,
+  slotId,
+} from "../../../appointment-scheduling";
 
 const GRAPH_API_VERSION = process.env.WHATSAPP_GRAPH_API_VERSION || "v23.0";
 
@@ -1125,6 +1138,255 @@ async function sendText(to: string, body: string) {
   }
 }
 
+async function sendReturnSlots(to: string, slots: string[]) {
+  const accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
+  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+  if (!accessToken || !phoneNumberId) {
+    throw new Error("Configuração do WhatsApp incompleta.");
+  }
+  const response = await fetch(
+    `https://graph.facebook.com/${GRAPH_API_VERSION}/${phoneNumberId}/messages`,
+    {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${accessToken}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        messaging_product: "whatsapp",
+        recipient_type: "individual",
+        to: normalizeRecipient(to),
+        type: "interactive",
+        interactive: {
+          type: "list",
+          body: {
+            text: "Escolha um horário disponível. A alteração será enviada ao Ludgero e só será efetivada após a aprovação dele.",
+          },
+          footer: { text: "Consultas com duração de 1 hora" },
+          action: {
+            button: "Ver horários",
+            sections: [
+              {
+                title: "Próximos horários",
+                rows: slots.map((slot) => ({
+                  id: slotId(slot),
+                  title: formatAppointment(slot),
+                  description: "Solicitar este horário",
+                })),
+              },
+            ],
+          },
+        },
+      }),
+    },
+  );
+  if (!response.ok) {
+    throw new Error(`Falha ao enviar horários: ${response.status}`);
+  }
+}
+
+async function notifyAdminAboutAppointment(
+  client: typeof clients.$inferSelect,
+  action: string,
+  requestedAppointmentAt?: string | null,
+) {
+  const appointmentAt = requestedAppointmentAt || client.nextAppointmentAt;
+  try {
+    await fetch(
+      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/appointment-reminder-email`,
+      {
+        method: "POST",
+        headers: {
+          authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY}`,
+          "content-type": "application/json",
+          "x-checkin-reminder-secret": process.env.CHECKIN_REMINDER_SECRET || "",
+        },
+        body: JSON.stringify({
+          kind: "patient_action",
+          email: client.email,
+          name: client.name,
+          whatsapp: client.whatsapp,
+          appointmentAt: client.nextAppointmentAt,
+          requestedAppointmentAt,
+          action,
+          location: client.appointmentLocation || "Guarapuava — PR",
+        }),
+      },
+    );
+  } catch (error) {
+    console.error("appointment_admin_email_failed", error);
+  }
+
+  const templateName = process.env.WHATSAPP_ADMIN_RETURN_TEMPLATE_NAME;
+  const accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
+  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+  if (!templateName || !accessToken || !phoneNumberId || !appointmentAt) return;
+  try {
+    await fetch(
+      `https://graph.facebook.com/${GRAPH_API_VERSION}/${phoneNumberId}/messages`,
+      {
+        method: "POST",
+        headers: {
+          authorization: `Bearer ${accessToken}`,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          messaging_product: "whatsapp",
+          to: "5542999876280",
+          type: "template",
+          template: {
+            name: templateName,
+            language: { code: "pt_BR" },
+            components: [
+              {
+                type: "body",
+                parameters: [
+                  { type: "text", text: client.name },
+                  { type: "text", text: action },
+                  { type: "text", text: formatAppointment(appointmentAt) },
+                ],
+              },
+            ],
+          },
+        }),
+      },
+    );
+  } catch (error) {
+    console.error("appointment_admin_whatsapp_failed", error);
+  }
+}
+
+async function handleAppointmentResponse(from: string, normalized: string) {
+  const db = getDb();
+  const allClients = await db.select().from(clients);
+  const client = allClients.find(
+    (item) =>
+      item.modality === "in_person" &&
+      normalizeBrazilPhone(item.whatsapp) === normalizeBrazilPhone(from),
+  );
+  if (!client?.nextAppointmentAt) return false;
+
+  const isConfirm = new Set([
+    "confirmar retorno",
+    "confirmar horario",
+    "confirmo meu retorno",
+    "confirmar_retorno",
+  ]).has(normalized);
+  const isReschedule = new Set([
+    "solicitar outro horario",
+    "remarcar retorno",
+    "remarcar_retorno",
+  ]).has(normalized);
+  const isCancel = new Set([
+    "cancelar retorno",
+    "cancelar_retorno",
+  ]).has(normalized);
+  const selectedSlot = slotFromId(normalized);
+  if (!isConfirm && !isReschedule && !isCancel && !selectedSlot) return false;
+
+  const now = new Date().toISOString();
+  if (isConfirm) {
+    await db
+      .update(clients)
+      .set({
+        appointmentStatus: "confirmed",
+        appointmentConfirmedAt: now,
+        appointmentConfirmationSource: "whatsapp_chatbot",
+        updatedAt: now,
+      })
+      .where(eq(clients.email, client.email));
+    await sendText(
+      from,
+      `Retorno confirmado ✅\n\nData e horário: *${formatAppointment(client.nextAppointmentAt)}*.\n\nO Ludgero também foi avisado.`,
+    );
+    await notifyAdminAboutAppointment(client, "Retorno confirmado");
+    return true;
+  }
+
+  if (isCancel) {
+    await db.insert(appointmentChangeRequests).values({
+      clientEmail: client.email,
+      currentAppointmentAt: client.nextAppointmentAt,
+      action: "cancel",
+      status: "pending",
+      source: "whatsapp",
+      updatedAt: now,
+    });
+    await db
+      .update(clients)
+      .set({ appointmentStatus: "cancellation_requested", updatedAt: now })
+      .where(eq(clients.email, client.email));
+    await sendText(
+      from,
+      "Sua solicitação de cancelamento foi enviada ao Ludgero. O horário só será alterado após a confirmação dele.",
+    );
+    await notifyAdminAboutAppointment(client, "Cancelamento solicitado");
+    return true;
+  }
+
+  const occupiedClients = allClients
+    .map((item) => item.nextAppointmentAt)
+    .filter((value): value is string => Boolean(value));
+  const pending = await db
+    .select()
+    .from(appointmentChangeRequests)
+    .where(eq(appointmentChangeRequests.status, "pending"));
+  const occupied = [
+    ...occupiedClients,
+    ...pending
+      .map((item) => item.requestedAppointmentAt)
+      .filter((value): value is string => Boolean(value)),
+  ];
+  const slots = availableAppointmentSlots(occupied);
+
+  if (isReschedule) {
+    if (!slots.length) {
+      await sendText(
+        from,
+        "Não encontrei horários livres neste momento. O Ludgero foi avisado e fará o alinhamento diretamente com você.",
+      );
+      await notifyAdminAboutAppointment(client, "Remarcação sem horários livres");
+      return true;
+    }
+    await sendReturnSlots(from, slots);
+    return true;
+  }
+
+  if (selectedSlot) {
+    if (!slots.includes(selectedSlot)) {
+      await sendText(
+        from,
+        "Esse horário não está mais disponível. Responda *REMARCAR RETORNO* para consultar as opções atualizadas.",
+      );
+      return true;
+    }
+    await db.insert(appointmentChangeRequests).values({
+      clientEmail: client.email,
+      currentAppointmentAt: client.nextAppointmentAt,
+      requestedAppointmentAt: selectedSlot,
+      action: "reschedule",
+      status: "pending",
+      source: "whatsapp",
+      updatedAt: now,
+    });
+    await db
+      .update(clients)
+      .set({ appointmentStatus: "reschedule_requested", updatedAt: now })
+      .where(eq(clients.email, client.email));
+    await sendText(
+      from,
+      `Solicitação enviada ✅\n\nNovo horário solicitado: *${formatAppointment(selectedSlot)}*.\n\nA mudança depende da aprovação do Ludgero. Você receberá a confirmação após a análise.`,
+    );
+    await notifyAdminAboutAppointment(
+      client,
+      "Remarcação solicitada",
+      selectedSlot,
+    );
+    return true;
+  }
+  return false;
+}
+
 function firstName(profileName?: string) {
   const name = profileName?.trim().split(/\s+/)[0];
   return name && name.length <= 40 ? name : null;
@@ -1482,6 +1744,23 @@ export async function POST(request: Request) {
     const previousService =
       (previousLead?.serviceInterest as LeadService | undefined) || "unknown";
     const normalizedMessage = normalize(messageBody || "");
+    try {
+      if (
+        messageBody &&
+        (await handleAppointmentResponse(message.from, normalizedMessage))
+      ) {
+        continue;
+      }
+    } catch (error) {
+      console.error("appointment_response_failed", {
+        error: error instanceof Error ? error.message : "Erro desconhecido",
+      });
+      await sendText(
+        message.from,
+        "Não consegui concluir essa ação agora. O Ludgero foi avisado para fazer o alinhamento diretamente com você.",
+      ).catch(() => undefined);
+      continue;
+    }
     const qualification = messageBody
       ? findQualificationStep(
           normalizedMessage,

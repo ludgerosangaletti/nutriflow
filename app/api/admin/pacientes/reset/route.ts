@@ -100,6 +100,12 @@ export async function DELETE(request: Request) {
   }
 
   await env.DB.batch([
+    env.DB.prepare(
+      "DELETE FROM appointment_change_requests WHERE client_email = ?",
+    ).bind(email),
+    env.DB.prepare(
+      "DELETE FROM appointment_reminders WHERE client_email = ?",
+    ).bind(email),
     env.DB.prepare("DELETE FROM goal_progress WHERE client_email = ?").bind(email),
     env.DB.prepare("DELETE FROM goals WHERE client_email = ?").bind(email),
     env.DB.prepare("DELETE FROM adjustment_requests WHERE client_email = ?").bind(

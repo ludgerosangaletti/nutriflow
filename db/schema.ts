@@ -29,6 +29,9 @@ export const clients = sqliteTable(
     accessExpiresAt: text("access_expires_at"),
     nextAppointmentAt: text("next_appointment_at"),
     appointmentLocation: text("appointment_location"),
+    appointmentStatus: text("appointment_status").notNull().default("scheduled"),
+    appointmentConfirmedAt: text("appointment_confirmed_at"),
+    appointmentConfirmationSource: text("appointment_confirmation_source"),
     formStatus: text("form_status").notNull().default("not_started"),
     createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
     updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
@@ -179,6 +182,7 @@ export const appointmentReminders = sqliteTable(
     adminProviderId: text("admin_provider_id"),
     whatsappStatus: text("whatsapp_status").notNull().default("not_configured"),
     whatsappProviderId: text("whatsapp_provider_id"),
+    pendingAlertSentAt: text("pending_alert_sent_at"),
     error: text("error"),
     sentAt: text("sent_at"),
     createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
@@ -190,6 +194,23 @@ export const appointmentReminders = sqliteTable(
       table.appointmentAt,
     ),
   ],
+);
+
+export const appointmentChangeRequests = sqliteTable(
+  "appointment_change_requests",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    clientEmail: text("client_email").notNull(),
+    currentAppointmentAt: text("current_appointment_at").notNull(),
+    requestedAppointmentAt: text("requested_appointment_at"),
+    action: text("action").notNull().default("reschedule"),
+    status: text("status").notNull().default("pending"),
+    source: text("source").notNull().default("whatsapp"),
+    adminNote: text("admin_note"),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    resolvedAt: text("resolved_at"),
+  },
 );
 
 export const goals = sqliteTable(

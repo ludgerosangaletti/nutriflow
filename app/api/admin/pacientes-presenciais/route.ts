@@ -1,13 +1,44 @@
 import { eq } from "drizzle-orm";
 import { getDb } from "../../../../db";
-import { clients } from "../../../../db/schema";
+import { appointmentChangeRequests, clients } from "../../../../db/schema";
 import { calculateAccessPeriod } from "../../../access";
 import { getAdminSession } from "../../../supabase/server";
+import {
+  formatAppointment,
+  normalizeBrazilPhone,
+} from "../../../appointment-scheduling";
 
 const allowedPlans = ["mensal", "trimestral", "semestral"];
 
 function validEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+async function notifyPatientDecision(
+  whatsapp: string,
+  message: string,
+) {
+  const accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
+  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+  if (!accessToken || !phoneNumberId || !whatsapp) return false;
+  const response = await fetch(
+    `https://graph.facebook.com/v23.0/${phoneNumberId}/messages`,
+    {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${accessToken}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        messaging_product: "whatsapp",
+        recipient_type: "individual",
+        to: normalizeBrazilPhone(whatsapp),
+        type: "text",
+        text: { body: message },
+      }),
+    },
+  );
+  return response.ok;
 }
 
 async function sendInvite(
@@ -48,6 +79,7 @@ export async function POST(request: Request) {
     startsAt?: string;
     nextAppointmentAt?: string;
     appointmentLocation?: string;
+    requestId?: number;
   };
   const email = String(body.email || "").trim().toLowerCase();
   const plan = String(body.plan || "");
@@ -185,6 +217,98 @@ export async function PATCH(request: Request) {
     return Response.json({ ok: true });
   }
 
+  if (
+    body.action === "approve_appointment_request" ||
+    body.action === "reject_appointment_request"
+  ) {
+    const requestId = Number(body.requestId);
+    if (!Number.isInteger(requestId) || requestId <= 0) {
+      return Response.json({ error: "Solicitação inválida." }, { status: 400 });
+    }
+    const [changeRequest] = await db
+      .select()
+      .from(appointmentChangeRequests)
+      .where(eq(appointmentChangeRequests.id, requestId))
+      .limit(1);
+    if (
+      !changeRequest ||
+      changeRequest.clientEmail !== client.email ||
+      changeRequest.status !== "pending"
+    ) {
+      return Response.json(
+        { error: "Solicitação pendente não encontrada." },
+        { status: 404 },
+      );
+    }
+    const approved = body.action === "approve_appointment_request";
+    if (
+      approved &&
+      changeRequest.action === "reschedule" &&
+      changeRequest.requestedAppointmentAt
+    ) {
+      const occupied = await db.select().from(clients);
+      const conflict = occupied.some(
+        (item) =>
+          item.email !== client.email &&
+          item.nextAppointmentAt &&
+          Math.abs(
+            new Date(item.nextAppointmentAt).getTime() -
+              new Date(changeRequest.requestedAppointmentAt!).getTime(),
+          ) < 3_600_000,
+      );
+      if (conflict) {
+        return Response.json(
+          { error: "O horário foi ocupado por outro paciente." },
+          { status: 409 },
+        );
+      }
+    }
+    await db
+      .update(appointmentChangeRequests)
+      .set({
+        status: approved ? "approved" : "rejected",
+        resolvedAt: now,
+        updatedAt: now,
+      })
+      .where(eq(appointmentChangeRequests.id, requestId));
+    if (approved) {
+      await db
+        .update(clients)
+        .set({
+          nextAppointmentAt:
+            changeRequest.action === "cancel"
+              ? null
+              : changeRequest.requestedAppointmentAt,
+          appointmentStatus:
+            changeRequest.action === "cancel" ? "cancelled" : "scheduled",
+          appointmentConfirmedAt: null,
+          appointmentConfirmationSource: null,
+          updatedAt: now,
+        })
+        .where(eq(clients.email, client.email));
+    } else {
+      await db
+        .update(clients)
+        .set({ appointmentStatus: "scheduled", updatedAt: now })
+        .where(eq(clients.email, client.email));
+    }
+    const decisionMessage = approved
+      ? changeRequest.action === "cancel"
+        ? "Seu cancelamento foi aprovado pelo Ludgero. Quando desejar reagendar, entre em contato pelo chatbot."
+        : `Sua remarcação foi aprovada ✅\n\nNovo retorno: *${formatAppointment(changeRequest.requestedAppointmentAt!)}*.`
+      : "Sua solicitação de alteração não foi aprovada. O horário original permanece reservado. Se precisar, entre em contato para alinhar diretamente.";
+    const patientNotified = await notifyPatientDecision(
+      client.whatsapp,
+      decisionMessage,
+    ).catch(() => false);
+    return Response.json({
+      ok: true,
+      message: approved
+        ? `Solicitação aprovada.${patientNotified ? " Paciente avisado no WhatsApp." : " O aviso pelo WhatsApp não foi entregue; faça o contato manual."}`
+        : `Solicitação recusada.${patientNotified ? " Paciente avisado no WhatsApp." : " O aviso pelo WhatsApp não foi entregue; faça o contato manual."}`,
+    });
+  }
+
   if (body.action === "update_care") {
     const plan = String(body.plan || "");
     const startsAt = new Date(String(body.startsAt || ""));
@@ -205,6 +329,20 @@ export async function PATCH(request: Request) {
         accessStartedAt: access.startedAt,
         accessExpiresAt: access.expiresAt,
         nextAppointmentAt: nextAppointmentAt?.toISOString() || null,
+        appointmentStatus:
+          nextAppointmentAt?.toISOString() === client.nextAppointmentAt
+            ? client.appointmentStatus
+            : nextAppointmentAt
+              ? "scheduled"
+              : "not_scheduled",
+        appointmentConfirmedAt:
+          nextAppointmentAt?.toISOString() === client.nextAppointmentAt
+            ? client.appointmentConfirmedAt
+            : null,
+        appointmentConfirmationSource:
+          nextAppointmentAt?.toISOString() === client.nextAppointmentAt
+            ? client.appointmentConfirmationSource
+            : null,
         appointmentLocation:
           String(body.appointmentLocation || "").trim().slice(0, 180) ||
           client.appointmentLocation,

@@ -4,8 +4,8 @@ import { getDb } from "../../../../db";
 import { appointmentReminders, clients } from "../../../../db/schema";
 import { hasActiveAccess } from "../../../access";
 
-const MIN_HOURS_BEFORE = 24;
-const MAX_HOURS_BEFORE = 72;
+const MIN_HOURS_BEFORE = 48;
+const MAX_HOURS_BEFORE = 96;
 
 function safeEqual(received: string, expected: string) {
   if (received.length !== expected.length) return false;
@@ -34,9 +34,6 @@ async function sendWhatsAppReminder(client: {
     timeZone: "America/Sao_Paulo",
   }).format(new Date(client.nextAppointmentAt));
   const firstName = client.name.trim().split(/\s+/)[0] || "Paciente";
-  const confirmationText = encodeURIComponent(
-    `Olá, Ludgero! Sou ${client.name}. Confirmo meu retorno agendado para ${appointment}.`,
-  );
   const recipient = client.whatsapp.replace(/\D/g, "");
   const response = await fetch(
     `https://graph.facebook.com/v23.0/${phoneNumberId}/messages`,
@@ -64,12 +61,6 @@ async function sendWhatsAppReminder(client: {
                 { type: "text", text: firstName },
                 { type: "text", text: appointment },
               ],
-            },
-            {
-              type: "button",
-              sub_type: "url",
-              index: "0",
-              parameters: [{ type: "text", text: confirmationText }],
             },
           ],
         },
@@ -109,7 +100,7 @@ export async function POST(request: Request) {
     }
     const hours =
       (new Date(client.nextAppointmentAt).getTime() - now.getTime()) / 3_600_000;
-    return hours >= MIN_HOURS_BEFORE && hours <= MAX_HOURS_BEFORE;
+    return hours > 0 && hours <= MAX_HOURS_BEFORE;
   });
   const results: Array<{
     email: string;
@@ -130,6 +121,81 @@ export async function POST(request: Request) {
         ),
       )
       .limit(1);
+    const hoursBefore =
+      (new Date(appointmentAt).getTime() - now.getTime()) / 3_600_000;
+    if (!existing && hoursBefore <= MIN_HOURS_BEFORE) {
+      try {
+        const pendingResponse = await fetch(
+          `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/appointment-reminder-email`,
+          {
+            method: "POST",
+            headers: {
+              authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY}`,
+              "content-type": "application/json",
+              "x-checkin-reminder-secret": expectedSecret,
+            },
+            body: JSON.stringify({
+              kind: "pending_admin",
+              email: client.email,
+              name: client.name,
+              whatsapp: client.whatsapp,
+              appointmentAt,
+              location: client.appointmentLocation || "Guarapuava — PR",
+            }),
+          },
+        );
+        if (!pendingResponse.ok) throw new Error("Alerta administrativo recusado.");
+        const alertedAt = new Date().toISOString();
+        await db.insert(appointmentReminders).values({
+          clientEmail: client.email,
+          appointmentAt,
+          status: "manual_follow_up",
+          pendingAlertSentAt: alertedAt,
+          updatedAt: alertedAt,
+        });
+      } catch (error) {
+        console.error("appointment_late_alert_failed", error);
+      }
+      results.push({ email: client.email, status: "skipped" });
+      continue;
+    }
+    if (
+      existing?.status === "sent" &&
+      hoursBefore <= 48 &&
+      client.appointmentStatus !== "confirmed" &&
+      !existing.pendingAlertSentAt
+    ) {
+      try {
+        const pendingResponse = await fetch(
+          `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/appointment-reminder-email`,
+          {
+            method: "POST",
+            headers: {
+              authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY}`,
+              "content-type": "application/json",
+              "x-checkin-reminder-secret": expectedSecret,
+            },
+            body: JSON.stringify({
+              kind: "pending_admin",
+              email: client.email,
+              name: client.name,
+              whatsapp: client.whatsapp,
+              appointmentAt,
+              location: client.appointmentLocation || "Guarapuava — PR",
+            }),
+          },
+        );
+        if (!pendingResponse.ok) throw new Error("Alerta administrativo recusado.");
+        await db
+          .update(appointmentReminders)
+          .set({ pendingAlertSentAt: new Date().toISOString() })
+          .where(eq(appointmentReminders.id, existing.id));
+      } catch (error) {
+        console.error("appointment_pending_alert_failed", error);
+      }
+      results.push({ email: client.email, status: "skipped" });
+      continue;
+    }
     if (existing?.status === "sent") {
       results.push({ email: client.email, status: "skipped" });
       continue;
@@ -196,6 +262,16 @@ export async function POST(request: Request) {
             updatedAt: sentAt,
           },
         });
+      await db
+        .update(clients)
+        .set({
+          appointmentStatus:
+            client.appointmentStatus === "confirmed"
+              ? "confirmed"
+              : "awaiting_confirmation",
+          updatedAt: sentAt,
+        })
+        .where(eq(clients.email, client.email));
       results.push({
         email: client.email,
         status: "sent",

@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import Link from "next/link";
 import { getDb } from "../../../../db";
-import { adjustmentRequests, anamneses, checkIns, clients, goalProgress, goals, patientDocuments, progressPhotos } from "../../../../db/schema";
+import { adjustmentRequests, anamneses, appointmentChangeRequests, checkIns, clients, goalProgress, goals, patientDocuments, progressPhotos } from "../../../../db/schema";
 import { requireAdmin } from "../../../supabase/server";
 import { fieldLabels, sections, type Answers } from "../../../anamnese/questions";
 import DocumentUploadForm from "./document-upload-form";
@@ -14,6 +14,7 @@ import ProgressCharts from "../../../progress-charts";
 import RenewalEmailTest from "./renewal-email-test";
 import { daysRemaining, hasActiveAccess } from "../../../access";
 import InPersonCareManager from "./in-person-care-manager";
+import AppointmentRequests from "./appointment-requests";
 
 export const dynamic = "force-dynamic";
 
@@ -56,6 +57,12 @@ export default async function ClientAnswers({
   const patientGoals = await db.select().from(goals).where(eq(goals.clientEmail, email));
   const patientGoalProgress = await db.select().from(goalProgress).where(eq(goalProgress.clientEmail, email));
   const patientAdjustments = await db.select().from(adjustmentRequests).where(eq(adjustmentRequests.clientEmail, email));
+  const appointmentRequests = row.client.modality === "in_person"
+    ? await db
+        .select()
+        .from(appointmentChangeRequests)
+        .where(eq(appointmentChangeRequests.clientEmail, email))
+    : [];
   const angleLabels: Record<string, string> = {
     front: "Frente",
     side: "Lado",
@@ -161,6 +168,11 @@ export default async function ClientAnswers({
               inviteStatus={row.client.inviteStatus}
               nextAppointmentAt={row.client.nextAppointmentAt}
               plan={row.client.plan}
+            />
+            <AppointmentRequests
+              appointmentStatus={row.client.appointmentStatus}
+              email={row.client.email}
+              requests={appointmentRequests}
             />
           </div>
         ) : null}

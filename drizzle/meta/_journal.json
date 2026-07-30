@@ -127,6 +127,13 @@
       "when": 1785428521633,
       "tag": "0017_closed_infant_terrible",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "6",
+      "when": 1785437961523,
+      "tag": "0018_wise_black_tarantula",
+      "breakpoints": true
     }
   ]
 }
