@@ -36,6 +36,7 @@ Deno.serve(async (request) => {
   const body = (await request.json().catch(() => null)) as {
     email?: string;
     name?: string;
+    modality?: string;
   } | null;
   if (!body?.email || !body.email.includes("@") || !body.name) {
     return json({ error: "Dados do paciente inválidos." }, 400);
@@ -46,6 +47,10 @@ Deno.serve(async (request) => {
   if (!apiKey || !fromEmail) return json({ error: "E-mail não configurado." }, 500);
 
   const firstName = escapeHtml(body.name.trim().split(/\s+/)[0] || "paciente");
+  const context =
+    body.modality === "in_person"
+      ? "Ele ajuda a acompanhar como você está entre as consultas presenciais e sinaliza pontos que merecem atenção no próximo retorno."
+      : "Ele ajuda a acompanhar sua evolução, identificar dificuldades e orientar os próximos ajustes da sua estratégia alimentar.";
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
@@ -68,7 +73,7 @@ Deno.serve(async (request) => {
 <h1 style="font-size:25px;line-height:1.2;margin:0 0 18px">Como foi sua semana?</h1>
 <p style="font-size:16px;line-height:1.6;margin:0 0 14px">Olá, ${firstName}!</p>
 <p style="font-size:16px;line-height:1.6;margin:0 0 14px">Seu check-in desta semana já está disponível na Área do Paciente.</p>
-<p style="font-size:16px;line-height:1.6;margin:0 0 24px">O preenchimento leva cerca de 3 minutos e ajuda a acompanhar sua evolução, identificar dificuldades e orientar os próximos ajustes da sua estratégia alimentar.</p>
+<p style="font-size:16px;line-height:1.6;margin:0 0 24px">O preenchimento leva cerca de 3 minutos. ${context}</p>
 <a href="https://ludgerosangaletti.com.br/check-in" style="display:inline-block;background:#ffeb00;color:#111;text-decoration:none;font-weight:800;padding:15px 24px;border-radius:10px">Preencher check-in semanal</a>
 <p style="font-size:14px;line-height:1.6;color:#555;margin:26px 0 0">Responda considerando como foram seus últimos sete dias. Quanto mais sinceras e completas forem as informações, mais individualizado poderá ser o acompanhamento.</p>
 <p style="font-size:13px;line-height:1.5;color:#777;margin:24px 0 0">Esta é uma mensagem automática enviada somente durante a vigência do seu plano. Não é necessário respondê-la.</p>

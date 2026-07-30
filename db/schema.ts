@@ -168,6 +168,30 @@ export const renewalReminders = sqliteTable(
   ],
 );
 
+export const appointmentReminders = sqliteTable(
+  "appointment_reminders",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    clientEmail: text("client_email").notNull(),
+    appointmentAt: text("appointment_at").notNull(),
+    status: text("status").notNull().default("pending"),
+    patientProviderId: text("patient_provider_id"),
+    adminProviderId: text("admin_provider_id"),
+    whatsappStatus: text("whatsapp_status").notNull().default("not_configured"),
+    whatsappProviderId: text("whatsapp_provider_id"),
+    error: text("error"),
+    sentAt: text("sent_at"),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("appointment_reminders_client_date_unique").on(
+      table.clientEmail,
+      table.appointmentAt,
+    ),
+  ],
+);
+
 export const goals = sqliteTable(
   "goals",
   {

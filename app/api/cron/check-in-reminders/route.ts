@@ -31,7 +31,11 @@ export async function POST(request: Request) {
   const db = getDb();
   const weekStart = currentWeekStart();
   const allClients = await db.select().from(clients);
-  const activeClients = allClients.filter((client) => hasActiveAccess(client));
+  const activeClients = allClients.filter(
+    (client) =>
+      hasActiveAccess(client) &&
+      (client.modality !== "in_person" || Boolean(client.profileCompletedAt)),
+  );
   const results: Array<{ email: string; status: "sent" | "skipped" | "failed"; error?: string }> = [];
 
   for (const client of activeClients) {
@@ -65,7 +69,11 @@ export async function POST(request: Request) {
             "content-type": "application/json",
             "x-checkin-reminder-secret": expectedSecret,
           },
-          body: JSON.stringify({ email: client.email, name: client.name }),
+          body: JSON.stringify({
+            email: client.email,
+            name: client.name,
+            modality: client.modality,
+          }),
         },
       );
       const payload = (await response.json().catch(() => ({}))) as {
