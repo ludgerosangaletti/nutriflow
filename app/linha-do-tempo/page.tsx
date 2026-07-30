@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { getDb } from "../../db";
 import {
   adjustmentRequests,
@@ -21,6 +22,7 @@ export default async function TimelinePage() {
   const user = await requirePatient("/linha-do-tempo");
   const db = getDb();
   const [client] = await db.select().from(clients).where(eq(clients.authUserId, user.id)).limit(1);
+  if (client?.modality === "in_person") redirect("/area-cliente");
 
   if (!client) {
     return <main className="portal-shell"><section className="empty-state"><h1>Cadastro não encontrado.</h1></section></main>;

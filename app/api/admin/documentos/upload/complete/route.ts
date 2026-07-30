@@ -52,7 +52,7 @@ export async function POST(request: Request) {
     totalParts !== Math.ceil(fileSize / maxChunkSize) ||
     !fileName.toLowerCase().endsWith(".pdf") ||
     !email ||
-    !["protocol", "auxiliary"].includes(documentType) ||
+    !["protocol", "auxiliary", "physical_assessment"].includes(documentType) ||
     !title ||
     !version
   ) {
@@ -136,6 +136,18 @@ export async function POST(request: Request) {
           and(
             eq(patientDocuments.clientEmail, client.email),
             eq(patientDocuments.documentType, "protocol"),
+            ne(patientDocuments.id, document.id),
+          ),
+        );
+    }
+    if (documentType === "physical_assessment") {
+      await db
+        .update(patientDocuments)
+        .set({ isCurrent: false })
+        .where(
+          and(
+            eq(patientDocuments.clientEmail, client.email),
+            eq(patientDocuments.documentType, "physical_assessment"),
             ne(patientDocuments.id, document.id),
           ),
         );

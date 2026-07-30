@@ -46,7 +46,11 @@ export async function GET(request: Request) {
         authUserId: user.id,
         name: name || existing.name,
         whatsapp: whatsapp || existing.whatsapp,
-        plan,
+        plan: existing.modality === "in_person" ? existing.plan : plan,
+        inviteStatus:
+          existing.modality === "in_person" && !existing.profileCompletedAt
+            ? "accepted"
+            : existing.inviteStatus,
         updatedAt: new Date().toISOString(),
       })
       .where(eq(clients.email, user.email));

@@ -4812,6 +4812,343 @@ button:disabled {
   }
 }
 
+/* Presencial: convite, gestão e primeira experiência */
+.admin-in-person-create {
+  background: linear-gradient(135deg, #111 0%, #242419 100%);
+  border-radius: 22px;
+  color: #fff;
+  margin: 26px 0;
+  overflow: hidden;
+}
+
+.admin-in-person-create > summary {
+  align-items: center;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  list-style: none;
+  padding: 24px 28px;
+}
+
+.admin-in-person-create > summary::-webkit-details-marker {
+  display: none;
+}
+
+.admin-in-person-create > summary div,
+.admin-in-person-create > summary span,
+.admin-in-person-create > summary strong {
+  display: block;
+}
+
+.admin-in-person-create > summary span {
+  color: #ffea00;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+}
+
+.admin-in-person-create > summary strong {
+  font-size: 17px;
+}
+
+.admin-in-person-create > summary i {
+  align-items: center;
+  background: #ffea00;
+  border-radius: 50%;
+  color: #111;
+  display: flex;
+  font-size: 18px;
+  font-style: normal;
+  height: 38px;
+  justify-content: center;
+  width: 38px;
+}
+
+.admin-in-person-create > p {
+  color: #bdbdb4;
+  font-size: 12px;
+  margin: 0;
+  padding: 0 28px;
+}
+
+.in-person-invite-form {
+  padding: 22px 28px 28px;
+}
+
+.in-person-invite-form > div {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: 1.4fr 0.7fr 0.8fr 1fr;
+}
+
+.in-person-invite-form label,
+.in-person-care-manager label {
+  color: #8b8b83;
+  display: flex;
+  flex-direction: column;
+  font-size: 9px;
+  font-weight: 900;
+  gap: 8px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.in-person-invite-form input,
+.in-person-invite-form select {
+  background: #fff;
+  border: 0;
+  border-radius: 10px;
+  color: #111;
+  min-height: 46px;
+  padding: 0 13px;
+}
+
+.in-person-invite-form .invite-location-field {
+  grid-column: 1 / -1;
+}
+
+.in-person-invite-form .admin-action {
+  background: #ffea00;
+  color: #111;
+  margin-top: 16px;
+}
+
+.in-person-invite-form > p {
+  color: #fff;
+  font-size: 12px;
+  margin: 14px 0 0;
+}
+
+.patient-modality-badge {
+  border: 1px solid #d6d5ce;
+  border-radius: 999px;
+  display: inline-flex;
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  padding: 7px 10px;
+  text-transform: uppercase;
+}
+
+.patient-modality-badge.is-in_person {
+  background: #fff8a8;
+  border-color: #e4d900;
+}
+
+.first-access-grid {
+  align-items: start;
+}
+
+.first-access-benefits {
+  display: grid;
+  gap: 13px;
+  list-style: none;
+  margin: 32px 0 0;
+  padding: 0;
+}
+
+.first-access-benefits li {
+  align-items: center;
+  color: #4f4f4a;
+  display: flex;
+  font-size: 13px;
+  gap: 11px;
+}
+
+.first-access-benefits li::before {
+  align-items: center;
+  background: #ffea00;
+  border-radius: 50%;
+  color: #111;
+  content: "✓";
+  display: inline-flex;
+  flex: 0 0 auto;
+  font-size: 10px;
+  font-weight: 900;
+  height: 22px;
+  justify-content: center;
+  width: 22px;
+}
+
+.profile-name-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: 1fr 1fr;
+}
+
+.in-person-care-manager {
+  background: #f5f4ee;
+  border: 1px solid #dcdad1;
+  border-radius: 22px;
+  padding: 28px;
+}
+
+.in-person-care-manager > header {
+  align-items: start;
+  display: flex;
+  gap: 20px;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.in-person-care-manager > header span {
+  color: #77776e;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.in-person-care-manager > header h2 {
+  font-size: 26px;
+  margin: 7px 0 0;
+}
+
+.in-person-care-manager > header b {
+  background: #ffea00;
+  border-radius: 999px;
+  font-size: 9px;
+  padding: 9px 13px;
+  text-transform: uppercase;
+}
+
+.in-person-care-manager form {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: 0.7fr 0.9fr 1.1fr 1.3fr auto;
+}
+
+.in-person-care-manager input,
+.in-person-care-manager select {
+  background: #fff;
+  border: 1px solid #d9d8d1;
+  border-radius: 10px;
+  min-height: 44px;
+  padding: 0 11px;
+}
+
+.in-person-care-manager .admin-action {
+  align-self: end;
+  min-height: 44px;
+}
+
+.in-person-care-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.in-person-care-actions button {
+  background: #fff;
+  border: 1px solid #cccac1;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 850;
+  padding: 12px 15px;
+}
+
+.in-person-care-actions button.is-danger {
+  color: #9d2920;
+}
+
+.in-person-care-manager > p {
+  font-size: 12px;
+  margin: 14px 0 0;
+}
+
+.in-person-appointment {
+  align-items: center;
+  background: #111;
+  border-radius: 20px;
+  color: #fff;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 18px;
+  padding: 24px 28px;
+}
+
+.in-person-appointment span,
+.in-person-appointment strong,
+.in-person-appointment p {
+  display: block;
+}
+
+.in-person-appointment span {
+  color: #ffea00;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.in-person-appointment strong {
+  font-size: 20px;
+  margin-top: 7px;
+  text-transform: capitalize;
+}
+
+.in-person-appointment p {
+  color: #bcbcb5;
+  font-size: 12px;
+  margin: 7px 0 0;
+}
+
+.in-person-appointment > b {
+  background: #ffea00;
+  border-radius: 999px;
+  color: #111;
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  padding: 9px 13px;
+  text-transform: uppercase;
+}
+
+@media (max-width: 980px) {
+  .in-person-invite-form > div,
+  .in-person-care-manager form {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .in-person-care-manager .admin-action {
+    width: 100%;
+  }
+}
+
+@media (max-width: 700px) {
+  .admin-in-person-create > summary,
+  .in-person-invite-form {
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+
+  .admin-in-person-create > p {
+    padding: 0 20px;
+  }
+
+  .in-person-invite-form > div,
+  .in-person-care-manager form,
+  .profile-name-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .in-person-care-manager {
+    padding: 21px;
+  }
+
+  .in-person-care-manager > header,
+  .in-person-appointment {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .in-person-care-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;

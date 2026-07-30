@@ -54,10 +54,15 @@ export default async function DocumentsPage() {
       </header>
       <section className="documents-heading">
         <p className="section-kicker">Seus documentos</p>
-        <h1>Protocolo e materiais.</h1>
+        <h1>
+          {client.modality === "in_person"
+            ? "Protocolo e avaliação física."
+            : "Protocolo e materiais."}
+        </h1>
         <p>
-          Este é o canal oficial dos documentos da sua consultoria. Sempre use
-          a versão marcada como atual.
+          {client.modality === "in_person"
+            ? "Acesse os arquivos disponibilizados após seus atendimentos presenciais. Sempre use a versão marcada como atual."
+            : "Este é o canal oficial dos documentos da sua consultoria. Sempre use a versão marcada como atual."}
         </p>
       </section>
 
@@ -69,6 +74,8 @@ export default async function DocumentsPage() {
               <span>
                 {document.documentType === "protocol"
                   ? "Protocolo alimentar"
+                  : document.documentType === "physical_assessment"
+                    ? "Avaliação física"
                   : "Material auxiliar"}
               </span>
               <strong>{document.title}</strong>

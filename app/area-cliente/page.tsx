@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import type { CSSProperties } from "react";
 import { getDb } from "../../db";
 import {
@@ -93,6 +94,211 @@ export default async function ClientArea() {
 
   const active = hasActiveAccess(client);
   const currentDocuments = documents.filter((document) => document.isCurrent);
+  if (client.modality === "in_person" && !client.profileCompletedAt) {
+    redirect("/primeiro-acesso");
+  }
+
+  if (client.modality === "in_person") {
+    const currentProtocol = currentDocuments.find(
+      (document) => document.documentType === "protocol",
+    );
+    const currentAssessment = currentDocuments.find(
+      (document) => document.documentType === "physical_assessment",
+    );
+    const openAdjustment = patientAdjustments.find(
+      (item) => !["adjusted", "closed"].includes(item.status),
+    );
+    const answeredAdjustment = patientAdjustments.find(
+      (item) => item.status === "answered",
+    );
+    const checkInDoneThisWeek = patientCheckIns.some(
+      (item) => item.weekStart === currentWeekStart(),
+    );
+    const nextAppointment =
+      client.nextAppointmentAt &&
+      new Date(client.nextAppointmentAt).getTime() > Date.now()
+        ? new Date(client.nextAppointmentAt)
+        : null;
+    const nextAction = (() => {
+      if (!active) {
+        return {
+          eyebrow: "Acesso encerrado",
+          title: "Fale com o nutricionista",
+          description:
+            "A vigência do seu acompanhamento terminou. Entre em contato para organizar a continuidade.",
+          href: "https://wa.me/5542999889176",
+          button: "Conversar pelo WhatsApp",
+        };
+      }
+      if (answeredAdjustment) {
+        return {
+          eyebrow: "Nova orientação disponível",
+          title: "Confira a resposta à sua solicitação",
+          description:
+            "Sua solicitação foi analisada e já possui uma orientação disponível.",
+          href: "/ajustes",
+          button: "Ver resposta",
+        };
+      }
+      if (!currentProtocol) {
+        return {
+          eyebrow: "Após o atendimento",
+          title: "Seu protocolo está sendo preparado",
+          description:
+            "Assim que o documento for publicado, ele aparecerá aqui e você será avisado.",
+          href: "/documentos",
+          button: "Ver documentos",
+        };
+      }
+      if (!checkInDoneThisWeek) {
+        return {
+          eyebrow: patientCheckIns.length ? "Ação desta semana" : "Acompanhamento",
+          title: patientCheckIns.length
+            ? "Envie seu check-in"
+            : "Faça seu primeiro check-in",
+          description:
+            "O registro ajuda a organizar dificuldades e necessidades entre as consultas.",
+          href: "/check-in",
+          button: "Responder check-in",
+        };
+      }
+      return {
+        eyebrow: "Tudo em dia",
+        title: nextAppointment ? "Sua próxima consulta está agendada" : "Acompanhamento atualizado",
+        description: nextAppointment
+          ? `O próximo encontro será em ${new Intl.DateTimeFormat("pt-BR", {
+              dateStyle: "long",
+              timeStyle: "short",
+              timeZone: "America/Sao_Paulo",
+            }).format(nextAppointment)}.`
+          : "Seus registros estão atualizados. Consulte seus documentos quando precisar.",
+        href: "/documentos",
+        button: "Abrir documentos",
+      };
+    })();
+
+    return (
+      <main className="portal-shell patient-home in-person-home">
+        <header className="portal-header">
+          <Link className="portal-brand" href="/">Ludgero Sangaletti</Link>
+          <form action="/auth/sair" method="post">
+            <button className="auth-signout" type="submit">Sair</button>
+          </form>
+        </header>
+        <section className="dashboard patient-dashboard">
+          <header className="patient-welcome">
+            <div>
+              <p className="section-kicker">Área do Paciente · Presencial</p>
+              <h1>Olá, {client.name.split(" ")[0]}.</h1>
+              <p>Seu acompanhamento presencial, organizado também no ambiente digital.</p>
+            </div>
+            <div className={`patient-plan-status ${!active ? "is-expired" : ""}`}>
+              <span>Atendimento presencial · {client.plan}</span>
+              <strong>{active ? "Acompanhamento ativo" : "Vigência encerrada"}</strong>
+            </div>
+          </header>
+
+          {nextAppointment ? (
+            <section className="in-person-appointment">
+              <div>
+                <span>Próxima consulta</span>
+                <strong>
+                  {new Intl.DateTimeFormat("pt-BR", {
+                    weekday: "long",
+                    day: "2-digit",
+                    month: "long",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    timeZone: "America/Sao_Paulo",
+                  }).format(nextAppointment)}
+                </strong>
+                <p>{client.appointmentLocation || "Guarapuava — PR"}</p>
+              </div>
+              <b>Presencial</b>
+            </section>
+          ) : null}
+
+          <section className="patient-next-action">
+            <div className="next-action-number" aria-hidden="true">→</div>
+            <div>
+              <span>{nextAction.eyebrow}</span>
+              <h2>{nextAction.title}</h2>
+              <p>{nextAction.description}</p>
+            </div>
+            <Link className="button patient-action-button" href={nextAction.href}>
+              {nextAction.button}
+            </Link>
+          </section>
+
+          {active && client.accessStartedAt && client.accessExpiresAt ? (
+            <AccessCountdown
+              expiresAt={client.accessExpiresAt}
+              startedAt={client.accessStartedAt}
+            />
+          ) : null}
+
+          <section className="patient-section-heading">
+            <div>
+              <span>Seu acompanhamento</span>
+              <h2>Informações e recursos principais</h2>
+            </div>
+            <p>Use este espaço entre as consultas sempre que precisar.</p>
+          </section>
+
+          <div className="patient-primary-grid in-person-resource-grid">
+            <Link className="patient-feature-card" href="/documentos">
+              <span>01 · Protocolo alimentar</span>
+              <strong>{currentProtocol ? "Disponível para download" : "Em elaboração"}</strong>
+              <p>Acesse a versão mais recente da sua estratégia alimentar.</p>
+              <b>Abrir protocolo →</b>
+            </Link>
+            <Link className="patient-feature-card" href="/documentos">
+              <span>02 · Avaliação física</span>
+              <strong>{currentAssessment ? "Arquivo disponível" : "Aguardando publicação"}</strong>
+              <p>Consulte o PDF disponibilizado após sua avaliação presencial.</p>
+              <b>Ver avaliação →</b>
+            </Link>
+            <Link
+              className={`patient-feature-card ${!checkInDoneThisWeek ? "is-priority" : ""}`}
+              href="/check-in"
+            >
+              <span>03 · Check-in periódico</span>
+              <strong>{checkInDoneThisWeek ? "Enviado nesta semana" : "Disponível"}</strong>
+              <p>{patientCheckIns.length} check-in(s) registrado(s).</p>
+              <b>Acessar check-in →</b>
+            </Link>
+            <Link className="patient-feature-card" href="/ajustes">
+              <span>04 · Solicitação de ajustes</span>
+              <strong>{openAdjustment ? "Solicitação em andamento" : "Nenhuma solicitação aberta"}</strong>
+              <p>Organize dúvidas e dificuldades entre os atendimentos.</p>
+              <b>Acessar ajustes →</b>
+            </Link>
+          </div>
+
+          <section className="patient-section-heading patient-resources-heading">
+            <div>
+              <span>Registro opcional</span>
+              <h2>Fotos de acompanhamento</h2>
+            </div>
+          </section>
+          <nav className="patient-resource-list" aria-label="Recursos presenciais">
+            <Link href="/evolucao">
+              <div>
+                <span>Registro fotográfico opcional</span>
+                <strong>
+                  {photos.length
+                    ? `${Map.groupBy(photos, (photo) => photo.period).size} período(s) registrado(s)`
+                    : "Nenhuma foto enviada"}
+                </strong>
+              </div>
+              <b>Acessar fotos →</b>
+            </Link>
+          </nav>
+        </section>
+      </main>
+    );
+  }
+
   const activeGoals = patientGoals.filter((goal) => goal.status === "active");
   const openAdjustment = patientAdjustments.find((item) => !["adjusted", "closed"].includes(item.status));
   const answeredAdjustment = patientAdjustments.find((item) => item.status === "answered");

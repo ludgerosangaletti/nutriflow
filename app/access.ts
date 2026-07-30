@@ -11,7 +11,7 @@ const planMonths: Record<PlanId, number> = {
 };
 
 export function calculateAccessPeriod(plan: string, start = new Date()) {
-  const months = isPlanId(plan) ? planMonths[plan] : 1;
+  const months = plan === "semestral" ? 6 : isPlanId(plan) ? planMonths[plan] : 1;
   const expires = new Date(start);
   expires.setUTCMonth(expires.getUTCMonth() + months);
   return {

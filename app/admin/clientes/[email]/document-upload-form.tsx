@@ -43,7 +43,13 @@ async function uploadChunk(
   throw new Error(lastError);
 }
 
-export default function DocumentUploadForm({ email }: { email: string }) {
+export default function DocumentUploadForm({
+  email,
+  inPerson = false,
+}: {
+  email: string;
+  inPerson?: boolean;
+}) {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [progress, setProgress] = useState(0);
@@ -149,7 +155,11 @@ export default function DocumentUploadForm({ email }: { email: string }) {
           Tipo
           <select defaultValue="protocol" name="documentType">
             <option value="protocol">Protocolo alimentar</option>
-            <option value="auxiliary">Material auxiliar</option>
+            {inPerson ? (
+              <option value="physical_assessment">Avaliação física</option>
+            ) : (
+              <option value="auxiliary">Material auxiliar</option>
+            )}
           </select>
         </label>
         <label>

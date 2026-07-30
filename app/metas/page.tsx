@@ -1,5 +1,6 @@
 import { asc, desc, eq } from "drizzle-orm";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { getDb } from "../../db";
 import { clients, goalProgress, goals } from "../../db/schema";
 import { hasActiveAccess } from "../access";
@@ -38,6 +39,7 @@ export default async function GoalsPage() {
   const user = await requirePatient("/metas");
   const db = getDb();
   const [client] = await db.select().from(clients).where(eq(clients.authUserId, user.id)).limit(1);
+  if (client?.modality === "in_person") redirect("/area-cliente");
   if (!client || !hasActiveAccess(client)) return <main className="portal-shell"><section className="empty-state"><h1>Metas indisponíveis.</h1><p>Aguarde a confirmação do pagamento ou renove seu plano.</p><Link className="button button-dark" href="/area-cliente">Voltar</Link></section></main>;
 
   const patientGoals = await db.select().from(goals).where(eq(goals.clientEmail, client.email)).orderBy(asc(goals.createdAt));

@@ -66,8 +66,12 @@ export default async function ProgressPage() {
 
       <section className="progress-hero">
         <div>
-          <p className="section-kicker">Acompanhamento corporal</p>
-          <h1>Seu registro de evolução.</h1>
+          <p className="section-kicker">Registro fotográfico</p>
+          <h1>
+            {client.modality === "in_person"
+              ? "Suas fotos de acompanhamento."
+              : "Seu registro de evolução."}
+          </h1>
           <p>
             Este espaço é totalmente opcional. Envie as imagens somente se
             você se sentir confortável. Elas serão utilizadas para acompanhar

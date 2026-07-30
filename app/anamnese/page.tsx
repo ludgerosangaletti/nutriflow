@@ -1,4 +1,5 @@
 import { eq } from "drizzle-orm";
+import { redirect } from "next/navigation";
 import { getDb } from "../../db";
 import { anamneses, clients } from "../../db/schema";
 import { hasActiveAccess } from "../access";
@@ -16,6 +17,7 @@ export default async function AnamnesePage() {
     .from(clients)
     .where(eq(clients.authUserId, user.id))
     .limit(1);
+  if (client?.modality === "in_person") redirect("/area-cliente");
 
   if (!client || !hasActiveAccess(client)) {
     return (

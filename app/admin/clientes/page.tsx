@@ -11,6 +11,7 @@ import {
 import { daysRemaining, hasActiveAccess } from "../../access";
 import { requireAdmin } from "../../supabase/server";
 import ApprovalButton from "./approval-button";
+import InPersonInviteForm from "./in-person-invite-form";
 
 export const dynamic = "force-dynamic";
 
@@ -383,11 +384,26 @@ export default async function AdminClients() {
           </div>
           <p>Abra um paciente para consultar histórico, documentos e acompanhamento.</p>
         </header>
+        <details className="admin-in-person-create">
+          <summary>
+            <div>
+              <span>Novo atendimento presencial</span>
+              <strong>Cadastrar paciente e enviar convite</strong>
+            </div>
+            <i aria-hidden="true">＋</i>
+          </summary>
+          <p>
+            Informe o e-mail e a vigência. O paciente receberá um link para
+            completar os dados e cadastrar a própria senha.
+          </p>
+          <InPersonInviteForm />
+        </details>
         <div className="admin-table-wrap">
           <table className="admin-table">
             <thead>
               <tr>
                 <th>Paciente</th>
+                <th>Modalidade</th>
                 <th>Plano</th>
                 <th>Status</th>
                 <th>Vigência</th>
@@ -399,6 +415,11 @@ export default async function AdminClients() {
               {rows.map((client) => (
                 <tr id={`paciente-${client.id}`} key={client.id}>
                   <td><strong>{client.name}</strong><small>{client.email}</small></td>
+                  <td>
+                    <span className={`patient-modality-badge is-${client.modality}`}>
+                      {client.modality === "in_person" ? "Presencial" : "Online"}
+                    </span>
+                  </td>
                   <td>{client.plan}</td>
                   <td>
                     {hasActiveAccess(client)
@@ -413,7 +434,14 @@ export default async function AdminClients() {
                       : "Não iniciada"}
                   </td>
                   <td>
-                    {client.formStatus === "submitted" ? (
+                    {client.modality === "in_person" ? (
+                      client.profileCompletedAt ? "Conta ativa" : ({
+                        sent: "Convite enviado",
+                        failed: "Falha no convite",
+                        sending: "Enviando convite",
+                        accepted: "Cadastro pendente",
+                      } as Record<string, string>)[client.inviteStatus] || "Convite pendente"
+                    ) : client.formStatus === "submitted" ? (
                       <Link
                         className="admin-response-link"
                         href={`/admin/clientes/${encodeURIComponent(client.email)}`}
@@ -423,19 +451,28 @@ export default async function AdminClients() {
                     ) : client.formStatus === "draft" ? "Em preenchimento" : "Não iniciada"}
                   </td>
                   <td>
-                    <ApprovalButton
-                      email={client.email}
-                      approved={client.paymentStatus === "approved"}
-                      expired={
-                        client.paymentStatus === "approved" &&
-                        !hasActiveAccess(client)
-                      }
-                    />
+                    {client.modality === "in_person" ? (
+                      <Link
+                        className="admin-response-link"
+                        href={`/admin/clientes/${encodeURIComponent(client.email)}`}
+                      >
+                        Abrir prontuário
+                      </Link>
+                    ) : (
+                      <ApprovalButton
+                        email={client.email}
+                        approved={client.paymentStatus === "approved"}
+                        expired={
+                          client.paymentStatus === "approved" &&
+                          !hasActiveAccess(client)
+                        }
+                      />
+                    )}
                   </td>
                 </tr>
               ))}
               {!rows.length ? (
-                <tr><td colSpan={6}>Nenhum cadastro recebido até o momento.</td></tr>
+                <tr><td colSpan={7}>Nenhum cadastro recebido até o momento.</td></tr>
               ) : null}
             </tbody>
           </table>

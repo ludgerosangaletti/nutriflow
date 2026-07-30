@@ -13,6 +13,7 @@ import { buildTimeline } from "../../../timeline";
 import ProgressCharts from "../../../progress-charts";
 import RenewalEmailTest from "./renewal-email-test";
 import { daysRemaining, hasActiveAccess } from "../../../access";
+import InPersonCareManager from "./in-person-care-manager";
 
 export const dynamic = "force-dynamic";
 
@@ -70,6 +71,7 @@ export default async function ClientAnswers({
     adjustments: patientAdjustments,
   });
   const activeAccess = hasActiveAccess(row.client);
+  const isInPerson = row.client.modality === "in_person";
   const remainingDays = row.client.accessExpiresAt
     ? daysRemaining(row.client.accessExpiresAt)
     : null;
@@ -111,10 +113,17 @@ export default async function ClientAnswers({
           </aside>
         </div>
         <div className="admin-patient-stats">
-          <a href="#anamnese">
-            <span>Anamnese</span>
-            <strong>{row.anamnesis?.status === "submitted" ? "Enviada" : "Pendente"}</strong>
-          </a>
+          {isInPerson ? (
+            <a href="#dados-presenciais">
+              <span>Convite</span>
+              <strong>{row.client.inviteStatus === "accepted" ? "Aceito" : "Pendente"}</strong>
+            </a>
+          ) : (
+            <a href="#anamnese">
+              <span>Anamnese</span>
+              <strong>{row.anamnesis?.status === "submitted" ? "Enviada" : "Pendente"}</strong>
+            </a>
+          )}
           <a href="#documentos">
             <span>Documentos</span>
             <strong>{documents.length}</strong>
@@ -129,12 +138,13 @@ export default async function ClientAnswers({
           </a>
         </div>
         <nav className="admin-patient-nav" aria-label="Seções do paciente">
-          <a href="#documentos">Documentos</a>
+          {isInPerson ? <a href="#dados-presenciais">Atendimento</a> : null}
+          <a href="#documentos">{isInPerson ? "Protocolo e avaliação" : "Documentos"}</a>
           <a href="#check-ins">Check-ins</a>
           <a href="#ajustes">Ajustes</a>
-          <a href="#metas">Metas</a>
-          <a href="#evolucao">Evolução</a>
-          <a href="#anamnese">Anamnese</a>
+          <a href="#evolucao">{isInPerson ? "Fotos" : "Evolução"}</a>
+          {!isInPerson ? <a href="#metas">Metas</a> : null}
+          {!isInPerson ? <a href="#anamnese">Anamnese</a> : null}
         </nav>
         <details className="admin-tools">
           <summary>Ferramentas administrativas <span>Teste de e-mail de renovação</span></summary>
@@ -142,7 +152,19 @@ export default async function ClientAnswers({
         </details>
       </section>
       <div className="response-sections">
-        <details className="response-section admin-charts-section">
+        {isInPerson ? (
+          <div id="dados-presenciais">
+            <InPersonCareManager
+              accessStartedAt={row.client.accessStartedAt}
+              appointmentLocation={row.client.appointmentLocation}
+              email={row.client.email}
+              inviteStatus={row.client.inviteStatus}
+              nextAppointmentAt={row.client.nextAppointmentAt}
+              plan={row.client.plan}
+            />
+          </div>
+        ) : null}
+        {!isInPerson ? <details className="response-section admin-charts-section">
           <summary className="admin-section-summary">
             <div><p className="section-kicker">Evolução em gráficos</p><h2>Visão clínica do período</h2></div>
             <strong>{patientCheckIns.length} check-in(s)</strong>
@@ -154,7 +176,7 @@ export default async function ClientAnswers({
             goalProgress={patientGoalProgress}
             goals={patientGoals}
           />
-        </details>
+        </details> : null}
         <details className="response-section admin-timeline-section">
           <summary className="admin-section-summary">
             <div><p className="section-kicker">Histórico da consultoria</p><h2>Linha do tempo</h2></div>
@@ -170,7 +192,7 @@ export default async function ClientAnswers({
             requests={patientAdjustments}
           />
         </details>
-        <details className="response-section admin-goals-section" id="metas">
+        {!isInPerson ? <details className="response-section admin-goals-section" id="metas">
           <summary className="admin-section-summary">
             <div><p className="section-kicker">Metas em conjunto</p><h2>Objetivos do paciente</h2></div>
             <strong>{activeGoalCount}/3 ativas</strong>
@@ -184,7 +206,7 @@ export default async function ClientAnswers({
               progressCount: patientGoalProgress.filter((item) => item.goalId === goal.id).length,
             }))}
           />
-        </details>
+        </details> : null}
         <details className="response-section admin-checkin-section" id="check-ins" open={newCheckInCount > 0}>
           <summary className="admin-section-summary"><div><p className="section-kicker">Acompanhamento periódico</p><h2>Check-ins semanais</h2></div><strong>{newCheckInCount} novo(s)</strong><i aria-hidden="true">⌄</i></summary>
           {!patientCheckIns.length ? <p>Nenhum check-in enviado até o momento.</p> : (
@@ -206,15 +228,16 @@ export default async function ClientAnswers({
         </details>
         <details className="response-section admin-documents-section" id="documentos">
           <summary className="admin-section-summary">
-            <div><p className="section-kicker">Materiais</p><h2>Documentos do paciente</h2></div>
+            <div><p className="section-kicker">{isInPerson ? "Atendimento presencial" : "Materiais"}</p><h2>{isInPerson ? "Protocolo e avaliação física" : "Documentos do paciente"}</h2></div>
             <strong>{documents.length} arquivo(s)</strong>
             <i aria-hidden="true">⌄</i>
           </summary>
           <p>
-            Publique o protocolo e os materiais auxiliares. Uma nova versão do
-            protocolo substitui a anterior como versão atual.
+            {isInPerson
+              ? "Publique o protocolo alimentar e a avaliação física em PDF. A versão mais recente de cada categoria será destacada para o paciente."
+              : "Publique o protocolo e os materiais auxiliares. Uma nova versão do protocolo substitui a anterior como versão atual."}
           </p>
-          <DocumentUploadForm email={row.client.email} />
+          <DocumentUploadForm email={row.client.email} inPerson={isInPerson} />
           <div className="admin-document-list">
             {documents
               .toSorted((a, b) => b.publishedAt.localeCompare(a.publishedAt))
@@ -222,7 +245,7 @@ export default async function ClientAnswers({
                 const whatsapp = row.client.whatsapp.replace(/\D/g, "");
                 const phone = whatsapp.startsWith("55") ? whatsapp : `55${whatsapp}`;
                 const message = encodeURIComponent(
-                  `Olá, ${row.client.name.split(" ")[0]}! Seu ${document.documentType === "protocol" ? "protocolo alimentar" : "material auxiliar"} já está disponível na Área do Paciente: https://ludgerosangaletti.com.br/area-cliente`,
+                  `Olá, ${row.client.name.split(" ")[0]}! Seu ${document.documentType === "protocol" ? "protocolo alimentar" : document.documentType === "physical_assessment" ? "arquivo de avaliação física" : "material auxiliar"} já está disponível na Área do Paciente: https://ludgerosangaletti.com.br/area-cliente`,
                 );
                 return (
                   <article key={document.id}>
@@ -252,7 +275,7 @@ export default async function ClientAnswers({
             {!documents.length ? <p>Nenhum documento publicado.</p> : null}
           </div>
         </details>
-        <details className="response-section admin-anamnesis-section" id="anamnese">
+        {!isInPerson ? <details className="response-section admin-anamnesis-section" id="anamnese">
           <summary className="admin-section-summary">
             <div><p className="section-kicker">Dados clínicos</p><h2>Anamnese completa</h2></div>
             <strong>{sections.length} seção(ões)</strong>
@@ -277,10 +300,10 @@ export default async function ClientAnswers({
               </details>
             ))}
           </div>
-        </details>
+        </details> : null}
         <details className="response-section admin-photo-section" id="evolucao">
           <summary className="admin-section-summary">
-            <div><p className="section-kicker">Comparativo visual</p><h2>Evolução corporal</h2></div>
+            <div><p className="section-kicker">Registro fotográfico</p><h2>{isInPerson ? "Fotos de acompanhamento" : "Evolução corporal"}</h2></div>
             <strong>{photos.length} foto(s)</strong>
             <i aria-hidden="true">⌄</i>
           </summary>
