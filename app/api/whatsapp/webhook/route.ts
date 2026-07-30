@@ -12,6 +12,7 @@ import {
 } from "../../../../db/schema";
 import {
   availableAppointmentSlots,
+  brazilPhonesMatch,
   formatAppointment,
   normalizeBrazilPhone,
   slotFromId,
@@ -1284,7 +1285,7 @@ async function handleAppointmentResponse(from: string, normalized: string) {
   const client = allClients.find(
     (item) =>
       item.modality === "in_person" &&
-      normalizeBrazilPhone(item.whatsapp) === normalizeBrazilPhone(from),
+      brazilPhonesMatch(item.whatsapp || "", from),
   );
   if (!client) {
     await sendText(

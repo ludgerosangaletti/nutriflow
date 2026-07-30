@@ -8,8 +8,28 @@ const DAY_SLOTS: Record<number, string[]> = {
 
 export function normalizeBrazilPhone(value: string) {
   const digits = value.replace(/\D/g, "");
-  if (digits.startsWith("55")) return digits;
+  if ((digits.length === 12 || digits.length === 13) && digits.startsWith("55")) {
+    return digits;
+  }
   return digits ? `55${digits}` : "";
+}
+
+function brazilPhoneComparisonKey(value: string) {
+  const normalized = normalizeBrazilPhone(value);
+  const national = normalized.startsWith("55") ? normalized.slice(2) : normalized;
+
+  // A Meta ainda pode entregar alguns números brasileiros antigos sem o
+  // nono dígito. Para identificação, comparamos DDD + os 8 dígitos finais.
+  if (national.length === 11 && national[2] === "9") {
+    return `${national.slice(0, 2)}${national.slice(3)}`;
+  }
+  return national;
+}
+
+export function brazilPhonesMatch(first: string, second: string) {
+  const firstKey = brazilPhoneComparisonKey(first);
+  const secondKey = brazilPhoneComparisonKey(second);
+  return Boolean(firstKey && secondKey && firstKey === secondKey);
 }
 
 export function formatAppointment(value: string | Date) {
