@@ -6886,3 +6886,66 @@ button:disabled {
     width: 100%;
   }
 }
+.activation-page {
+  min-height: 100vh;
+}
+
+.activation-card {
+  width: min(620px, calc(100% - 32px));
+  margin: clamp(48px, 10vh, 110px) auto;
+  border: 1px solid #dddcd5;
+  border-radius: 28px;
+  background: #fff;
+  padding: clamp(28px, 5vw, 52px);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, .08);
+}
+
+.activation-card h1 {
+  margin: 16px 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(2.2rem, 6vw, 4.2rem);
+  font-weight: 400;
+  line-height: .98;
+}
+
+.activation-card > p:not(.section-kicker) {
+  color: #626262;
+  font-size: 1rem;
+  line-height: 1.65;
+}
+
+.activation-card form {
+  margin: 28px 0 18px;
+}
+
+.activation-card button {
+  width: 100%;
+  min-height: 58px;
+  border: 0;
+  border-radius: 14px;
+  background: #ffe900;
+  color: #111;
+  cursor: pointer;
+  font-weight: 900;
+}
+
+.activation-card small {
+  display: block;
+  color: #777;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.activation-secondary-link {
+  display: inline-flex;
+  margin-top: 18px;
+  color: #111;
+  font-weight: 800;
+}
+
+@media (max-width: 620px) {
+  .activation-card {
+    margin-top: 34px;
+    border-radius: 22px;
+  }
+}

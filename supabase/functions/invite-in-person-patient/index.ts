@@ -57,8 +57,11 @@ Deno.serve(async (request) => {
   );
   const redirectTo =
     "https://ludgerosangaletti.com.br/auth/callback?next=/primeiro-acesso";
+  let linkType: "invite" | "magiclink" = body?.resend
+    ? "magiclink"
+    : "invite";
   let linkResult = await service.auth.admin.generateLink({
-    type: body?.resend ? "magiclink" : "invite",
+    type: linkType,
     email,
     options: {
       redirectTo,
@@ -66,13 +69,15 @@ Deno.serve(async (request) => {
     },
   });
   if (linkResult.error && !body?.resend) {
+    linkType = "magiclink";
     linkResult = await service.auth.admin.generateLink({
-      type: "magiclink",
+      type: linkType,
       email,
       options: { redirectTo },
     });
   }
-  if (linkResult.error || !linkResult.data.properties?.action_link) {
+  const tokenHash = linkResult.data.properties?.hashed_token;
+  if (linkResult.error || !tokenHash) {
     return json(
       { error: linkResult.error?.message || "Não foi possível criar o convite." },
       502,
@@ -84,7 +89,9 @@ Deno.serve(async (request) => {
   if (!apiKey || !fromEmail) {
     return json({ error: "Configuração de e-mail incompleta." }, 500);
   }
-  const actionLink = escapeHtml(linkResult.data.properties.action_link);
+  const actionLink = escapeHtml(
+    `https://ludgerosangaletti.com.br/ativar-conta?token_hash=${encodeURIComponent(tokenHash)}&type=${linkType}`,
+  );
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
