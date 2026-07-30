@@ -237,8 +237,19 @@ ${menu}`;
 
 const menuCommands = new Set([
   "menu",
+  "menu principal",
+  "menu anterior",
+  "voltar ao menu",
+  "voltar para o menu",
+  "voltar_menu",
+  "outra opcao",
+  "escolher outra opcao",
+  "mudar opcao",
+  "nao era isso",
+  "opcao errada",
   "inicio",
   "voltar",
+  "retornar",
   "comecar",
   "recomecar",
   "oi",
@@ -247,6 +258,85 @@ const menuCommands = new Set([
   "boa tarde",
   "boa noite",
 ]);
+
+const menuOptionSynonyms: Record<keyof typeof optionReplies, Set<string>> = {
+  "1": new Set([
+    "consulta presencial",
+    "presencial",
+    "consulta no consultorio",
+    "atendimento presencial",
+    "consulta nutricional",
+    "consulta com nutricionista",
+    "quero consulta presencial",
+  ]),
+  "2": new Set([
+    "consultoria online",
+    "consultoria on-line",
+    "online",
+    "atendimento online",
+    "acompanhamento online",
+    "nutricionista online",
+    "consulta online",
+  ]),
+  "3": new Set([
+    "mentoria",
+    "mentoria individual",
+    "sessao de mentoria",
+    "orientacao individual",
+    "tirar duvidas",
+    "conversa com nutricionista",
+  ]),
+  "4": new Set([
+    "avaliacao",
+    "avaliacao fisica",
+    "avaliacao corporal",
+    "bioimpedancia",
+    "antropometria",
+    "medidas corporais",
+    "fazer avaliacao",
+  ]),
+  "5": new Set([
+    "agendar",
+    "agendamento",
+    "marcar consulta",
+    "marcar horario",
+    "reservar horario",
+    "quero marcar",
+    "quero agendar",
+  ]),
+  "6": new Set([
+    "receber novidades",
+    "quero novidades",
+    "receber promocoes",
+    "quero receber promocoes",
+    "aceito novidades",
+    "aceito receber novidades",
+  ]),
+  "7": new Set([
+    "ja sou paciente",
+    "sou paciente",
+    "area do paciente",
+    "minha conta",
+    "meu acompanhamento",
+    "acessar painel",
+    "acessar area do paciente",
+  ]),
+  "8": new Set([
+    "ajuda",
+    "o que posso fazer",
+    "o que voce faz",
+    "como funciona",
+    "ver comandos",
+    "ver opcoes",
+    "funcionalidades",
+  ]),
+};
+
+function menuOptionFromSynonym(normalized: string) {
+  return (Object.entries(menuOptionSynonyms).find(([, synonyms]) =>
+    synonyms.has(normalized),
+  )?.[0] || null) as keyof typeof optionReplies | null;
+}
 
 const optionReplies = {
   "1": replies.presencial,
@@ -556,17 +646,25 @@ type QualificationStep = {
 
 const serviceQualificationReply = `Perfeito! Para qual serviço você deseja solicitar o agendamento?
 
-Escolha uma das opções abaixo.`;
+Escolha uma das opções abaixo.
+
+Se não for o que deseja, responda *VOLTAR* para retornar ao menu principal.`;
 
 const periodQualificationReply = `Qual período costuma ser melhor para você?
 
-A equipe verificará os horários disponíveis dentro da sua preferência.`;
+A equipe verificará os horários disponíveis dentro da sua preferência.
+
+Se quiser escolher outra opção, responda *VOLTAR*.`;
 
 const dayQualificationReply = `Qual dia da semana você prefere?
 
-Essa informação será encaminhada à equipe junto com sua preferência de período.`;
+Essa informação será encaminhada à equipe junto com sua preferência de período.
 
-const appointmentTypeQualificationReply = `Para finalizar, este será seu primeiro atendimento com o Ludgero ou você já é paciente?`;
+Se quiser escolher outra opção, responda *VOLTAR*.`;
+
+const appointmentTypeQualificationReply = `Para finalizar, este será seu primeiro atendimento com o Ludgero ou você já é paciente?
+
+Se quiser escolher outra opção, responda *VOLTAR*.`;
 
 const qualificationServiceLabels: Record<string, string> = {
   presencial: "Consulta presencial",
@@ -633,18 +731,46 @@ function findQualificationStep(
   }
 
   if (lastInteractionKind === "qualification_service") {
-    const services: Record<string, LeadService> = {
-      agendar_presencial: "presencial",
-      consulta_presencial: "presencial",
-      "1": "presencial",
-      agendar_mentoria: "mentoria",
-      mentoria_individual: "mentoria",
-      "2": "mentoria",
-      agendar_avaliacao: "avaliacao",
-      avaliacao_fisica: "avaliacao",
-      "3": "avaliacao",
+    const serviceSynonyms: Record<LeadService, Set<string>> = {
+      presencial: new Set([
+        "agendar_presencial",
+        "consulta_presencial",
+        "1",
+        "presencial",
+        "consulta presencial",
+        "consulta",
+        "consultorio",
+        "atendimento presencial",
+        "consulta nutricional",
+      ]),
+      mentoria: new Set([
+        "agendar_mentoria",
+        "mentoria_individual",
+        "2",
+        "mentoria",
+        "mentoria individual",
+        "sessao de mentoria",
+        "tirar duvidas",
+        "orientacao",
+      ]),
+      avaliacao: new Set([
+        "agendar_avaliacao",
+        "avaliacao_fisica",
+        "3",
+        "avaliacao",
+        "avaliacao fisica",
+        "avaliacao corporal",
+        "bioimpedancia",
+        "antropometria",
+        "medidas",
+      ]),
+      online: new Set(),
+      unknown: new Set(),
     };
-    const selectedService = services[normalized];
+    const selectedService =
+      (Object.entries(serviceSynonyms).find(([, synonyms]) =>
+        synonyms.has(normalized),
+      )?.[0] as LeadService | undefined) || undefined;
 
     if (!selectedService) {
       return {
@@ -667,15 +793,38 @@ function findQualificationStep(
   }
 
   if (lastInteractionKind === "qualification_period") {
-    const periods: Record<string, string> = {
-      periodo_manha: "manha",
-      manha: "manha",
-      periodo_tarde: "tarde",
-      tarde: "tarde",
-      periodo_noite: "noite",
-      noite: "noite",
+    const periodSynonyms: Record<string, Set<string>> = {
+      manha: new Set([
+        "periodo_manha",
+        "manha",
+        "de manha",
+        "pela manha",
+        "matutino",
+        "cedo",
+        "primeiro horario",
+      ]),
+      tarde: new Set([
+        "periodo_tarde",
+        "tarde",
+        "de tarde",
+        "a tarde",
+        "pela tarde",
+        "vespertino",
+        "depois do almoco",
+      ]),
+      noite: new Set([
+        "periodo_noite",
+        "noite",
+        "de noite",
+        "a noite",
+        "pela noite",
+        "noturno",
+        "fim do dia",
+      ]),
     };
-    const preferredPeriod = periods[normalized];
+    const preferredPeriod = Object.entries(periodSynonyms).find(
+      ([, synonyms]) => synonyms.has(normalized),
+    )?.[0];
 
     if (!preferredPeriod) {
       return {
@@ -722,6 +871,22 @@ function findQualificationStep(
       flexivel: "flexivel",
       "sem preferencia": "flexivel",
       "qualquer dia": "flexivel",
+      seg: "segunda",
+      "2a": "segunda",
+      ter: "terca",
+      "3a": "terca",
+      qua: "quarta",
+      "4a": "quarta",
+      qui: "quinta",
+      "5a": "quinta",
+      sex: "sexta",
+      "6a": "sexta",
+      sab: "sabado",
+      dom: "domingo",
+      indiferente: "flexivel",
+      "tanto faz": "flexivel",
+      "qualquer um": "flexivel",
+      "dia util": "flexivel",
     };
     const preferredDay = days[normalized];
 
@@ -751,10 +916,22 @@ function findQualificationStep(
       primeiro_atendimento: "primeira_consulta",
       "primeira consulta": "primeira_consulta",
       "primeiro atendimento": "primeira_consulta",
+      "primeira vez": "primeira_consulta",
+      primeira: "primeira_consulta",
+      "sou novo paciente": "primeira_consulta",
+      "novo paciente": "primeira_consulta",
+      "nunca consultei": "primeira_consulta",
+      "ainda nao sou paciente": "primeira_consulta",
       "1": "primeira_consulta",
       paciente_retorno: "retorno",
       retorno: "retorno",
       "ja sou paciente": "retorno",
+      "sou paciente": "retorno",
+      "consulta de retorno": "retorno",
+      "novo retorno": "retorno",
+      acompanhamento: "retorno",
+      "ja consultei": "retorno",
+      "ja fui atendido": "retorno",
       "2": "retorno",
     };
     const appointmentType = appointmentTypes[normalized];
@@ -1096,6 +1273,9 @@ function findNaturalReply(
       normalized as keyof typeof interactiveOptionReplies
     ];
   if (interactiveOption) return interactiveOption;
+
+  const synonymOption = menuOptionFromSynonym(normalized);
+  if (synonymOption) return optionReplies[synonymOption];
 
   const numericOption = normalized.match(/^[1-8]$/)?.[0] as
     | keyof typeof optionReplies
@@ -1440,6 +1620,15 @@ async function notifyAdminAboutAppointment(
 async function handleAppointmentResponse(from: string, normalized: string) {
   const isConfirm = new Set([
     "confirmar retorno",
+    "confirmar",
+    "confirmado",
+    "confirmo",
+    "sim",
+    "sim confirmo",
+    "pode confirmar",
+    "esta confirmado",
+    "horario confirmado",
+    "consulta confirmada",
     "confirmar horario",
     "confirmar consulta",
     "confirmo meu retorno",
@@ -1448,6 +1637,14 @@ async function handleAppointmentResponse(from: string, normalized: string) {
   ]).has(normalized);
   const isReschedule = new Set([
     "solicitar outro horario",
+    "outro horario",
+    "quero outro horario",
+    "preciso de outro horario",
+    "nao posso nesse horario",
+    "nao consigo nesse horario",
+    "mudar consulta",
+    "reagendar",
+    "remarcar",
     "mudar horario",
     "trocar horario",
     "reagendar consulta",
@@ -1457,6 +1654,12 @@ async function handleAppointmentResponse(from: string, normalized: string) {
   ]).has(normalized);
   const isCancel = new Set([
     "cancelar consulta",
+    "cancelar",
+    "desmarcar",
+    "nao vou poder ir",
+    "nao poderei comparecer",
+    "nao posso comparecer",
+    "nao quero mais",
     "desmarcar consulta",
     "desmarcar retorno",
     "cancelar retorno",
@@ -1764,7 +1967,7 @@ async function sendQualificationButtons(
               reply: { id: "periodo_noite", title: "Noite" },
             },
           ]
-        : prompt === "appointment_type"
+      : prompt === "appointment_type"
           ? [
             {
               type: "reply",
@@ -1776,6 +1979,10 @@ async function sendQualificationButtons(
             {
               type: "reply",
               reply: { id: "paciente_retorno", title: "Já sou paciente" },
+            },
+            {
+              type: "reply",
+              reply: { id: "voltar_menu", title: "Voltar" },
             },
           ]
           : [];
@@ -1802,6 +2009,11 @@ async function sendQualificationButtons(
                     id: "dia_flexivel",
                     title: "Sem preferência",
                     description: "A equipe pode sugerir o melhor dia",
+                  },
+                  {
+                    id: "voltar_menu",
+                    title: "Voltar ao menu",
+                    description: "Escolher outra opção",
                   },
                 ],
               },
