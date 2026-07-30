@@ -15,14 +15,21 @@ function cookie(request: Request, name: string) {
 }
 
 function redirect(request: Request, query: string) {
-  return new Response(null, {
-    status: 302,
-    headers: {
-      location: new URL(`/admin/integracoes/google-agenda?${query}`, request.url).toString(),
-      "set-cookie":
-        "google_oauth_state=; Max-Age=0; Path=/api/integrations/google-calendar; HttpOnly; Secure; SameSite=Lax, google_oauth_verifier=; Max-Age=0; Path=/api/integrations/google-calendar; HttpOnly; Secure; SameSite=Lax",
-    },
+  const headers = new Headers({
+    location: new URL(
+      `/admin/integracoes/google-agenda?${query}`,
+      request.url,
+    ).toString(),
   });
+  headers.append(
+    "set-cookie",
+    "google_oauth_state=; Max-Age=0; Path=/api/integrations/google-calendar; HttpOnly; Secure; SameSite=Lax",
+  );
+  headers.append(
+    "set-cookie",
+    "google_oauth_verifier=; Max-Age=0; Path=/api/integrations/google-calendar; HttpOnly; Secure; SameSite=Lax",
+  );
+  return new Response(null, { status: 302, headers });
 }
 
 export async function GET(request: Request) {

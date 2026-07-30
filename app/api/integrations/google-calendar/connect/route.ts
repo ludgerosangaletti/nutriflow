@@ -38,14 +38,14 @@ export async function GET(request: Request) {
   authorization.searchParams.set("code_challenge", challenge);
   authorization.searchParams.set("code_challenge_method", "S256");
 
-  return new Response(null, {
-    status: 302,
-    headers: {
-      location: authorization.toString(),
-      "set-cookie": [
-        `google_oauth_state=${state}; Max-Age=600; Path=/api/integrations/google-calendar; HttpOnly; Secure; SameSite=Lax`,
-        `google_oauth_verifier=${verifier}; Max-Age=600; Path=/api/integrations/google-calendar; HttpOnly; Secure; SameSite=Lax`,
-      ].join(", "),
-    },
-  });
+  const headers = new Headers({ location: authorization.toString() });
+  headers.append(
+    "set-cookie",
+    `google_oauth_state=${state}; Max-Age=600; Path=/api/integrations/google-calendar; HttpOnly; Secure; SameSite=Lax`,
+  );
+  headers.append(
+    "set-cookie",
+    `google_oauth_verifier=${verifier}; Max-Age=600; Path=/api/integrations/google-calendar; HttpOnly; Secure; SameSite=Lax`,
+  );
+  return new Response(null, { status: 302, headers });
 }
