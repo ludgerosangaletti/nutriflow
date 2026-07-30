@@ -1196,8 +1196,10 @@ async function notifyAdminAboutAppointment(
   requestedAppointmentAt?: string | null,
 ) {
   const appointmentAt = requestedAppointmentAt || client.nextAppointmentAt;
+  const patientName =
+    client.name?.trim() || client.email.split("@")[0]?.trim() || "Paciente";
   try {
-    await fetch(
+    const response = await fetch(
       `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/appointment-reminder-email`,
       {
         method: "POST",
@@ -1209,17 +1211,28 @@ async function notifyAdminAboutAppointment(
         body: JSON.stringify({
           kind: "patient_action",
           email: client.email,
-          name: client.name,
-          whatsapp: client.whatsapp,
-          appointmentAt: client.nextAppointmentAt,
+          name: patientName,
+          whatsapp: client.whatsapp || "Não informado",
+          appointmentAt: client.nextAppointmentAt || requestedAppointmentAt,
           requestedAppointmentAt,
           action,
           location: client.appointmentLocation || "Guarapuava — PR",
         }),
       },
     );
+    const responseBody = await response.text();
+    if (!response.ok) {
+      throw new Error(
+        `appointment-reminder-email respondeu ${response.status}: ${responseBody.slice(0, 500)}`,
+      );
+    }
   } catch (error) {
-    console.error("appointment_admin_email_failed", error);
+    console.error("appointment_admin_email_failed", {
+      action,
+      clientEmail: client.email,
+      requestedAppointmentAt,
+      error: error instanceof Error ? error.message : String(error),
+    });
   }
 
   const templateName = process.env.WHATSAPP_ADMIN_RETURN_TEMPLATE_NAME;

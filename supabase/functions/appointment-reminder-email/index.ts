@@ -81,7 +81,6 @@ Deno.serve(async (request) => {
   if (
     !body?.email ||
     !body.email.includes("@") ||
-    !body.name ||
     !body.appointmentAt ||
     Number.isNaN(new Date(body.appointmentAt).getTime())
   ) {
@@ -95,8 +94,10 @@ Deno.serve(async (request) => {
     return json({ error: "Configuração de e-mail incompleta." }, 500);
   }
 
-  const name = escapeHtml(body.name.trim());
-  const firstName = escapeHtml(body.name.trim().split(/\s+/)[0] || "paciente");
+  const rawName =
+    body.name?.trim() || body.email.split("@")[0]?.trim() || "Paciente";
+  const name = escapeHtml(rawName);
+  const firstName = escapeHtml(rawName.split(/\s+/)[0] || "paciente");
   const email = escapeHtml(body.email);
   const whatsapp = escapeHtml(body.whatsapp || "Não informado");
   const location = escapeHtml(body.location || "Guarapuava — PR");
@@ -140,8 +141,8 @@ ${patientPhone ? `<a href="https://wa.me/${patientPhone}" style="display:inline-
         fromEmail,
         adminEmail,
         body.kind === "pending_admin"
-          ? `Confirmação pendente — ${body.name}`
-          : `${body.action || "Resposta do paciente"} — ${body.name}`,
+          ? `Confirmação pendente — ${rawName}`
+          : `${body.action || "Resposta do paciente"} — ${rawName}`,
         adminOnlyHtml,
       );
       return json({ ok: true, adminId });
@@ -179,7 +180,7 @@ ${patientPhone ? `<a href="https://wa.me/${patientPhone}" style="display:inline-
 <tr><td style="padding:7px"><strong>Retorno</strong></td><td style="padding:7px">${escapeHtml(appointment)}</td></tr>
 <tr><td style="padding:7px"><strong>Local</strong></td><td style="padding:7px">${location}</td></tr>
 </table>
-${patientPhone ? `<a href="https://wa.me/${patientPhone}?text=${encodeURIComponent(`Olá, ${body.name}! Estou entrando em contato para confirmar seu retorno previsto em ${appointment}.`)}" style="display:inline-block;background:#ffeb00;color:#111;text-decoration:none;font-weight:800;padding:15px 24px;border-radius:10px;margin-top:22px">Conversar com o paciente</a>` : ""}
+${patientPhone ? `<a href="https://wa.me/${patientPhone}?text=${encodeURIComponent(`Olá, ${rawName}! Estou entrando em contato para confirmar seu retorno previsto em ${appointment}.`)}" style="display:inline-block;background:#ffeb00;color:#111;text-decoration:none;font-weight:800;padding:15px 24px;border-radius:10px;margin-top:22px">Conversar com o paciente</a>` : ""}
 </td></tr></table></td></tr></table></body></html>`;
 
   try {
@@ -194,7 +195,7 @@ ${patientPhone ? `<a href="https://wa.me/${patientPhone}?text=${encodeURICompone
       apiKey,
       fromEmail,
       adminEmail,
-      `Retorno a confirmar — ${body.name}`,
+      `Retorno a confirmar — ${rawName}`,
       adminHtml,
     );
     return json({ ok: true, patientId, adminId });
