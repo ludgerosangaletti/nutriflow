@@ -7,6 +7,12 @@ import {
   formatAppointment,
   normalizeBrazilPhone,
 } from "../../../appointment-scheduling";
+import {
+  deletePatientCalendarEvent,
+  getGoogleCalendarSettings,
+  googleCalendarHasConflict,
+  upsertPatientCalendarEvent,
+} from "../../../google-calendar";
 
 const allowedPlans = ["mensal", "trimestral", "semestral"];
 
@@ -262,6 +268,46 @@ export async function PATCH(request: Request) {
           { status: 409 },
         );
       }
+      const googleSettings = await getGoogleCalendarSettings();
+      if (
+        googleSettings?.status === "connected" &&
+        (await googleCalendarHasConflict(
+          changeRequest.requestedAppointmentAt,
+          client.googleCalendarEventId,
+        ))
+      ) {
+        return Response.json(
+          { error: "O horário foi ocupado no Google Agenda." },
+          { status: 409 },
+        );
+      }
+    }
+    if (approved) {
+      const googleSettings = await getGoogleCalendarSettings();
+      if (googleSettings?.status === "connected") {
+        try {
+          if (changeRequest.action === "cancel") {
+            await deletePatientCalendarEvent(client.googleCalendarEventId);
+          } else if (changeRequest.requestedAppointmentAt) {
+            await upsertPatientCalendarEvent({
+              email: client.email,
+              name: client.name,
+              appointmentAt: changeRequest.requestedAppointmentAt,
+              existingEventId: client.googleCalendarEventId,
+            });
+          }
+        } catch (error) {
+          return Response.json(
+            {
+              error:
+                error instanceof Error
+                  ? `O Google Agenda recusou a alteração: ${error.message}`
+                  : "O Google Agenda recusou a alteração.",
+            },
+            { status: 502 },
+          );
+        }
+      }
     }
     await db
       .update(appointmentChangeRequests)
@@ -322,6 +368,40 @@ export async function PATCH(request: Request) {
     if (nextAppointmentAt && Number.isNaN(nextAppointmentAt.getTime())) {
       return Response.json({ error: "Data da próxima consulta inválida." }, { status: 400 });
     }
+    const appointmentChanged =
+      nextAppointmentAt?.toISOString() !== client.nextAppointmentAt;
+    const googleSettings = await getGoogleCalendarSettings();
+    let syncedGoogleEventId = client.googleCalendarEventId;
+    if (
+      appointmentChanged &&
+      nextAppointmentAt &&
+      googleSettings?.status === "connected"
+    ) {
+      if (
+        await googleCalendarHasConflict(
+          nextAppointmentAt.toISOString(),
+          client.googleCalendarEventId,
+        )
+      ) {
+        return Response.json(
+          { error: "Esse horário já está ocupado no Google Agenda." },
+          { status: 409 },
+        );
+      }
+      syncedGoogleEventId = await upsertPatientCalendarEvent({
+        email: client.email,
+        name: client.name,
+        appointmentAt: nextAppointmentAt.toISOString(),
+        existingEventId: client.googleCalendarEventId,
+      });
+    } else if (
+      appointmentChanged &&
+      !nextAppointmentAt &&
+      googleSettings?.status === "connected"
+    ) {
+      await deletePatientCalendarEvent(client.googleCalendarEventId);
+      syncedGoogleEventId = null;
+    }
     await db
       .update(clients)
       .set({
@@ -346,6 +426,11 @@ export async function PATCH(request: Request) {
         appointmentLocation:
           String(body.appointmentLocation || "").trim().slice(0, 180) ||
           client.appointmentLocation,
+        googleCalendarEventId: nextAppointmentAt ? syncedGoogleEventId : null,
+        googleCalendarSyncedAt:
+          appointmentChanged && googleSettings?.status === "connected"
+            ? now
+            : client.googleCalendarSyncedAt,
         updatedAt: now,
       })
       .where(eq(clients.email, email));

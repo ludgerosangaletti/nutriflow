@@ -17,6 +17,10 @@ import {
   slotFromId,
   slotId,
 } from "../../../appointment-scheduling";
+import {
+  getGoogleCalendarSettings,
+  listGoogleCalendarEvents,
+} from "../../../google-calendar";
 
 const GRAPH_API_VERSION = process.env.WHATSAPP_GRAPH_API_VERSION || "v23.0";
 
@@ -1337,6 +1341,28 @@ async function handleAppointmentResponse(from: string, normalized: string) {
       .map((item) => item.requestedAppointmentAt)
       .filter((value): value is string => Boolean(value)),
   ];
+  const googleSettings = await getGoogleCalendarSettings();
+  if (googleSettings?.status === "connected") {
+    try {
+      const googleEvents = await listGoogleCalendarEvents(
+        new Date(),
+        new Date(Date.now() + 29 * 86_400_000),
+      );
+      occupied.push(
+        ...googleEvents
+          .map((event) => event.start?.dateTime)
+          .filter((value): value is string => Boolean(value)),
+      );
+    } catch (error) {
+      console.error("google_calendar_availability_failed", error);
+      await sendText(
+        from,
+        "A agenda está temporariamente indisponível para consulta automática. O Ludgero foi avisado e fará o alinhamento diretamente com você.",
+      );
+      await notifyAdminAboutAppointment(client, "Falha ao consultar a agenda");
+      return true;
+    }
+  }
   const slots = availableAppointmentSlots(occupied);
 
   if (isReschedule) {

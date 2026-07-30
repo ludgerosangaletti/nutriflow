@@ -94,6 +94,7 @@ export default async function AdminClients() {
       <header className="portal-header">
         <Link className="portal-brand" href="/">Gestão da consultoria</Link>
         <nav className="admin-header-actions" aria-label="Navegação administrativa">
+          <Link href="/admin/integracoes/google-agenda">Google Agenda</Link>
           <Link href="/admin/leads">Leads do WhatsApp</Link>
           <form action="/auth/sair" method="post">
             <button className="auth-signout" type="submit">Sair</button>

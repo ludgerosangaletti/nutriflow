@@ -32,6 +32,8 @@ export const clients = sqliteTable(
     appointmentStatus: text("appointment_status").notNull().default("scheduled"),
     appointmentConfirmedAt: text("appointment_confirmed_at"),
     appointmentConfirmationSource: text("appointment_confirmation_source"),
+    googleCalendarEventId: text("google_calendar_event_id"),
+    googleCalendarSyncedAt: text("google_calendar_synced_at"),
     formStatus: text("form_status").notNull().default("not_started"),
     createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
     updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
@@ -41,6 +43,20 @@ export const clients = sqliteTable(
     uniqueIndex("clients_auth_user_id_unique").on(table.authUserId),
   ],
 );
+
+export const googleCalendarSettings = sqliteTable("google_calendar_settings", {
+  id: integer("id").primaryKey(),
+  calendarId: text("calendar_id").notNull(),
+  encryptedClientId: text("encrypted_client_id").notNull(),
+  encryptedClientSecret: text("encrypted_client_secret").notNull(),
+  encryptedRefreshToken: text("encrypted_refresh_token"),
+  status: text("status").notNull().default("credentials_saved"),
+  connectedAt: text("connected_at"),
+  lastSyncAt: text("last_sync_at"),
+  lastSyncError: text("last_sync_error"),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+});
 
 export const anamneses = sqliteTable(
   "anamneses",

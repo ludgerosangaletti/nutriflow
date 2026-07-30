@@ -12,6 +12,134 @@
   --line: rgba(10, 10, 10, 0.14);
 }
 
+.google-calendar-page {
+  max-width: 980px;
+}
+
+.google-calendar-page > h1 {
+  margin: 12px 0 16px;
+}
+
+.google-calendar-page > p:not(.section-kicker) {
+  max-width: 760px;
+  color: #66625b;
+  line-height: 1.65;
+}
+
+.google-calendar-settings {
+  display: grid;
+  gap: 18px;
+  margin-top: 32px;
+}
+
+.google-calendar-status,
+.google-calendar-form {
+  border: 1px solid #dedbd2;
+  border-radius: 24px;
+  background: #fff;
+  padding: 24px;
+}
+
+.google-calendar-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.google-calendar-status span,
+.google-calendar-form label {
+  color: #67635b;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.google-calendar-status strong {
+  display: block;
+  margin-top: 8px;
+  font-size: 1.4rem;
+}
+
+.google-calendar-status p {
+  margin: 6px 0 0;
+  color: #777269;
+}
+
+.google-calendar-status > b {
+  border-radius: 999px;
+  background: #f0eee8;
+  padding: 10px 16px;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+}
+
+.google-calendar-status > b.is-connected {
+  background: #dff4e5;
+  color: #176b35;
+}
+
+.google-calendar-form {
+  display: grid;
+  gap: 16px;
+}
+
+.google-calendar-form label {
+  display: grid;
+  gap: 8px;
+}
+
+.google-calendar-form input {
+  width: 100%;
+  border: 1px solid #d9d6ce;
+  border-radius: 14px;
+  background: #faf9f5;
+  padding: 15px 16px;
+  color: #111;
+  font: inherit;
+}
+
+.google-calendar-form button,
+.google-calendar-connect,
+.google-calendar-sync {
+  width: fit-content;
+  border: 0;
+  border-radius: 14px;
+  background: #111;
+  color: #fff;
+  padding: 14px 20px;
+  font-weight: 800;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.google-calendar-connect {
+  background: #ffe600;
+  color: #111;
+}
+
+.google-calendar-message {
+  margin: 0;
+  border-radius: 14px;
+  background: #f5f2e8;
+  padding: 14px 16px;
+}
+
+@media (max-width: 720px) {
+  .google-calendar-status {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .google-calendar-form button,
+  .google-calendar-connect,
+  .google-calendar-sync {
+    width: 100%;
+    text-align: center;
+  }
+}
+
 * {
   box-sizing: border-box;
 }

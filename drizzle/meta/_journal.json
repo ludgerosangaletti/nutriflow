@@ -134,6 +134,13 @@
       "when": 1785437961523,
       "tag": "0018_wise_black_tarantula",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "6",
+      "when": 1785441051513,
+      "tag": "0019_chilly_shriek",
+      "breakpoints": true
     }
   ]
 }
