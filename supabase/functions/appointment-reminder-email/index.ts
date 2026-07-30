@@ -119,6 +119,10 @@ Deno.serve(async (request) => {
   const cancelText = encodeURIComponent("CANCELAR RETORNO");
 
   if (body.kind === "pending_admin" || body.kind === "patient_action") {
+    const isRescheduleRequest =
+      body.kind === "patient_action" &&
+      body.action?.toLowerCase().includes("remarcação") &&
+      Boolean(body.requestedAppointmentAt);
     const action =
       body.kind === "pending_admin"
         ? "O paciente ainda não confirmou o retorno e a consulta está a 48 horas ou menos."
@@ -129,10 +133,16 @@ Deno.serve(async (request) => {
     const adminOnlyHtml = `<!doctype html><html lang="pt-BR"><body style="margin:0;background:#f4f4f2;font-family:Arial,sans-serif;color:#171717">
 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="padding:28px 12px"><tr><td align="center">
 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:620px;background:#fff;border-radius:18px;overflow:hidden">
-<tr><td style="background:#0b0b0b;padding:28px 34px;color:#fff"><div style="color:#ffeb00;font-size:12px;font-weight:800;letter-spacing:1.2px">AGENDA PRESENCIAL</div><div style="font-size:24px;font-weight:800;margin-top:8px">${body.kind === "pending_admin" ? "Confirmação pendente" : "Resposta recebida pelo chatbot"}</div></td></tr>
-<tr><td style="padding:34px"><p style="font-size:16px;line-height:1.6">${action}</p>
-<p><strong>Paciente:</strong> ${name}<br><strong>Retorno atual:</strong> ${escapeHtml(appointment)}${requested ? `<br><strong>Novo horário solicitado:</strong> ${escapeHtml(requested)}` : ""}</p>
-<a href="https://ludgerosangaletti.com.br/admin/clientes/${encodeURIComponent(body.email)}" style="display:inline-block;background:#ffeb00;color:#111;text-decoration:none;font-weight:800;padding:15px 24px;border-radius:10px;margin-top:10px">Abrir prontuário</a>
+<tr><td style="background:#0b0b0b;padding:28px 34px;color:#fff"><div style="color:#ffeb00;font-size:12px;font-weight:800;letter-spacing:1.2px">AGENDA PRESENCIAL</div><div style="font-size:24px;font-weight:800;margin-top:8px">${body.kind === "pending_admin" ? "Confirmação pendente" : isRescheduleRequest ? "Solicitação de remarcação" : "Resposta recebida pelo chatbot"}</div></td></tr>
+<tr><td style="padding:34px"><p style="font-size:16px;line-height:1.6;margin-top:0">${isRescheduleRequest ? "O paciente escolheu um novo horário pelo chatbot. A alteração ainda depende da sua aprovação." : action}</p>
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f4f4f2;border-radius:12px;padding:18px">
+<tr><td style="padding:7px"><strong>Paciente</strong></td><td style="padding:7px">${name}</td></tr>
+<tr><td style="padding:7px"><strong>WhatsApp</strong></td><td style="padding:7px">${whatsapp}</td></tr>
+<tr><td style="padding:7px"><strong>Horário atual</strong></td><td style="padding:7px">${escapeHtml(appointment)}</td></tr>
+${requested ? `<tr><td style="padding:7px"><strong>Novo horário solicitado</strong></td><td style="padding:7px;font-weight:800">${escapeHtml(requested)}</td></tr>` : ""}
+<tr><td style="padding:7px"><strong>Situação</strong></td><td style="padding:7px">${isRescheduleRequest ? "Aguardando sua decisão" : action}</td></tr>
+</table>
+<a href="https://ludgerosangaletti.com.br/admin/clientes/${encodeURIComponent(body.email)}" style="display:inline-block;background:#ffeb00;color:#111;text-decoration:none;font-weight:800;padding:15px 24px;border-radius:10px;margin-top:20px">${isRescheduleRequest ? "Analisar solicitação" : "Abrir prontuário"}</a>
 ${patientPhone ? `<a href="https://wa.me/${patientPhone}" style="display:inline-block;background:#f1f0ea;color:#111;text-decoration:none;font-weight:800;padding:15px 24px;border-radius:10px;margin:10px 0 0 8px">Falar com o paciente</a>` : ""}
 </td></tr></table></td></tr></table></body></html>`;
     try {
