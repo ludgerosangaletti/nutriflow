@@ -5244,6 +5244,33 @@ button:disabled {
   padding: 0 11px;
 }
 
+.in-person-care-manager .appointment-field-status {
+  align-items: center;
+  display: inline-flex;
+  font-size: 9px;
+  font-weight: 900;
+  gap: 7px;
+  letter-spacing: 0.06em;
+  margin-top: 1px;
+  text-transform: uppercase;
+}
+
+.in-person-care-manager .appointment-field-status::before {
+  background: currentColor;
+  border-radius: 50%;
+  content: "";
+  height: 7px;
+  width: 7px;
+}
+
+.in-person-care-manager .appointment-field-status.is-scheduled {
+  color: #277a43;
+}
+
+.in-person-care-manager .appointment-field-status.is-unscheduled {
+  color: #77776e;
+}
+
 .in-person-care-manager .admin-action {
   align-self: end;
   min-height: 44px;

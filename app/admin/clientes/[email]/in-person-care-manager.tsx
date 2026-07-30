@@ -21,6 +21,9 @@ function localDateTime(value: string | null) {
 export default function InPersonCareManager(props: Props) {
   const [saving, setSaving] = useState("");
   const [message, setMessage] = useState("");
+  const [nextAppointmentAt, setNextAppointmentAt] = useState(
+    localDateTime(props.nextAppointmentAt),
+  );
 
   async function request(payload: Record<string, unknown>) {
     const action = String(payload.action);
@@ -100,10 +103,16 @@ export default function InPersonCareManager(props: Props) {
         <label>
           Próxima consulta
           <input
-            defaultValue={localDateTime(props.nextAppointmentAt)}
+            onChange={(event) => setNextAppointmentAt(event.target.value)}
             name="nextAppointmentAt"
             type="datetime-local"
+            value={nextAppointmentAt}
           />
+          <span
+            className={`appointment-field-status ${nextAppointmentAt ? "is-scheduled" : "is-unscheduled"}`}
+          >
+            {nextAppointmentAt ? "Consulta agendada" : "Não agendada"}
+          </span>
         </label>
         <label>
           Local
