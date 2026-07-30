@@ -9,9 +9,10 @@ export default function InPersonInviteForm() {
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const formElement = event.currentTarget;
     setSaving(true);
     setMessage("");
-    const form = new FormData(event.currentTarget);
+    const form = new FormData(formElement);
     try {
       const response = await fetch("/api/admin/pacientes-presenciais", {
         method: "POST",
@@ -31,7 +32,7 @@ export default function InPersonInviteForm() {
       };
       if (!response.ok) throw new Error(result.error || "Não foi possível criar o convite.");
       setMessage("Paciente cadastrado e convite enviado por e-mail.");
-      event.currentTarget.reset();
+      formElement.reset();
       window.setTimeout(() => window.location.reload(), 1200);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Não foi possível criar o convite.");
