@@ -587,3 +587,518 @@ export const nfFeatureFlagOverrides = sqliteTable(
     ),
   ],
 );
+
+export const nfUnits = sqliteTable(
+  "nf_units",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    publicId: text("public_id").notNull(),
+    organizationId: integer("organization_id").references(
+      () => nfOrganizations.id,
+      { onDelete: "restrict" },
+    ),
+    code: text("code").notNull(),
+    label: text("label").notNull(),
+    dimension: text("dimension").notNull(),
+    factorNumerator: integer("factor_numerator").notNull().default(1),
+    factorDenominator: integer("factor_denominator").notNull().default(1),
+    status: text("status").notNull().default("active"),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("nf_units_public_id_unique").on(table.publicId),
+    index("nf_units_scope_code_idx").on(table.organizationId, table.code),
+  ],
+);
+
+export const nfNutrients = sqliteTable(
+  "nf_nutrients",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    publicId: text("public_id").notNull(),
+    code: text("code").notNull(),
+    name: text("name").notNull(),
+    unitCode: text("unit_code").notNull(),
+    amountScale: integer("amount_scale").notNull().default(1000),
+    status: text("status").notNull().default("active"),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("nf_nutrients_public_id_unique").on(table.publicId),
+    uniqueIndex("nf_nutrients_code_unique").on(table.code),
+  ],
+);
+
+export const nfFoods = sqliteTable(
+  "nf_foods",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    publicId: text("public_id").notNull(),
+    organizationId: integer("organization_id").references(
+      () => nfOrganizations.id,
+      { onDelete: "restrict" },
+    ),
+    scope: text("scope").notNull().default("organization"),
+    source: text("source").notNull().default("manual"),
+    externalCode: text("external_code"),
+    status: text("status").notNull().default("active"),
+    createdByAuthUserId: text("created_by_auth_user_id").notNull(),
+    archivedAt: text("archived_at"),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("nf_foods_public_id_unique").on(table.publicId),
+    index("nf_foods_scope_status_idx").on(
+      table.scope,
+      table.organizationId,
+      table.status,
+    ),
+    index("nf_foods_external_code_idx").on(table.source, table.externalCode),
+  ],
+);
+
+export const nfFoodRevisions = sqliteTable(
+  "nf_food_revisions",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    publicId: text("public_id").notNull(),
+    foodId: integer("food_id")
+      .notNull()
+      .references(() => nfFoods.id, { onDelete: "restrict" }),
+    revisionNumber: integer("revision_number").notNull(),
+    state: text("state").notNull().default("draft"),
+    name: text("name").notNull(),
+    categoryCode: text("category_code"),
+    aliasesJson: text("aliases_json").notNull().default("[]"),
+    referenceQuantityMilli: integer("reference_quantity_milli"),
+    referenceUnitId: integer("reference_unit_id").references(() => nfUnits.id, {
+      onDelete: "restrict",
+    }),
+    sourceMetadataJson: text("source_metadata_json").notNull().default("{}"),
+    createdByAuthUserId: text("created_by_auth_user_id").notNull(),
+    releasedByAuthUserId: text("released_by_auth_user_id"),
+    releasedAt: text("released_at"),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("nf_food_revisions_public_id_unique").on(table.publicId),
+    uniqueIndex("nf_food_revisions_food_number_unique").on(
+      table.foodId,
+      table.revisionNumber,
+    ),
+    index("nf_food_revisions_food_state_idx").on(table.foodId, table.state),
+    index("nf_food_revisions_name_idx").on(table.name),
+  ],
+);
+
+export const nfFoodNutrients = sqliteTable(
+  "nf_food_nutrients",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    foodRevisionId: integer("food_revision_id")
+      .notNull()
+      .references(() => nfFoodRevisions.id, { onDelete: "restrict" }),
+    nutrientId: integer("nutrient_id")
+      .notNull()
+      .references(() => nfNutrients.id, { onDelete: "restrict" }),
+    amountScaled: integer("amount_scaled").notNull(),
+    source: text("source").notNull(),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("nf_food_nutrients_revision_nutrient_unique").on(
+      table.foodRevisionId,
+      table.nutrientId,
+    ),
+    index("nf_food_nutrients_nutrient_idx").on(table.nutrientId),
+  ],
+);
+
+export const nfRecipes = sqliteTable(
+  "nf_recipes",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    publicId: text("public_id").notNull(),
+    organizationId: integer("organization_id").references(
+      () => nfOrganizations.id,
+      { onDelete: "restrict" },
+    ),
+    scope: text("scope").notNull().default("organization"),
+    status: text("status").notNull().default("active"),
+    createdByAuthUserId: text("created_by_auth_user_id").notNull(),
+    archivedAt: text("archived_at"),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("nf_recipes_public_id_unique").on(table.publicId),
+    index("nf_recipes_scope_status_idx").on(
+      table.scope,
+      table.organizationId,
+      table.status,
+    ),
+  ],
+);
+
+export const nfRecipeVersions = sqliteTable(
+  "nf_recipe_versions",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    publicId: text("public_id").notNull(),
+    recipeId: integer("recipe_id")
+      .notNull()
+      .references(() => nfRecipes.id, { onDelete: "restrict" }),
+    versionNumber: integer("version_number").notNull(),
+    state: text("state").notNull().default("draft"),
+    name: text("name").notNull(),
+    instructions: text("instructions"),
+    yieldQuantityMilli: integer("yield_quantity_milli").notNull(),
+    yieldUnitId: integer("yield_unit_id")
+      .notNull()
+      .references(() => nfUnits.id, { onDelete: "restrict" }),
+    snapshotJson: text("snapshot_json"),
+    contentHash: text("content_hash"),
+    createdByAuthUserId: text("created_by_auth_user_id").notNull(),
+    releasedByAuthUserId: text("released_by_auth_user_id"),
+    releasedAt: text("released_at"),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("nf_recipe_versions_public_id_unique").on(table.publicId),
+    uniqueIndex("nf_recipe_versions_recipe_number_unique").on(
+      table.recipeId,
+      table.versionNumber,
+    ),
+    index("nf_recipe_versions_recipe_state_idx").on(table.recipeId, table.state),
+  ],
+);
+
+export const nfRecipeItems = sqliteTable(
+  "nf_recipe_items",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    publicId: text("public_id").notNull(),
+    recipeVersionId: integer("recipe_version_id")
+      .notNull()
+      .references(() => nfRecipeVersions.id, { onDelete: "restrict" }),
+    foodRevisionId: integer("food_revision_id")
+      .notNull()
+      .references(() => nfFoodRevisions.id, { onDelete: "restrict" }),
+    displayNameSnapshot: text("display_name_snapshot").notNull(),
+    quantityMilli: integer("quantity_milli").notNull(),
+    unitId: integer("unit_id")
+      .notNull()
+      .references(() => nfUnits.id, { onDelete: "restrict" }),
+    unitCodeSnapshot: text("unit_code_snapshot").notNull(),
+    preparation: text("preparation"),
+    sortOrder: integer("sort_order").notNull(),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("nf_recipe_items_public_id_unique").on(table.publicId),
+    uniqueIndex("nf_recipe_items_version_order_unique").on(
+      table.recipeVersionId,
+      table.sortOrder,
+    ),
+  ],
+);
+
+export const nfMealTemplates = sqliteTable(
+  "nf_meal_templates",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    publicId: text("public_id").notNull(),
+    organizationId: integer("organization_id").references(
+      () => nfOrganizations.id,
+      { onDelete: "restrict" },
+    ),
+    scope: text("scope").notNull().default("organization"),
+    status: text("status").notNull().default("active"),
+    createdByAuthUserId: text("created_by_auth_user_id").notNull(),
+    archivedAt: text("archived_at"),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("nf_meal_templates_public_id_unique").on(table.publicId),
+    index("nf_meal_templates_scope_status_idx").on(
+      table.scope,
+      table.organizationId,
+      table.status,
+    ),
+  ],
+);
+
+export const nfMealTemplateVersions = sqliteTable(
+  "nf_meal_template_versions",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    publicId: text("public_id").notNull(),
+    mealTemplateId: integer("meal_template_id")
+      .notNull()
+      .references(() => nfMealTemplates.id, { onDelete: "restrict" }),
+    versionNumber: integer("version_number").notNull(),
+    state: text("state").notNull().default("draft"),
+    name: text("name").notNull(),
+    suggestedTime: text("suggested_time"),
+    instructions: text("instructions"),
+    snapshotJson: text("snapshot_json"),
+    contentHash: text("content_hash"),
+    createdByAuthUserId: text("created_by_auth_user_id").notNull(),
+    releasedByAuthUserId: text("released_by_auth_user_id"),
+    releasedAt: text("released_at"),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("nf_meal_template_versions_public_id_unique").on(table.publicId),
+    uniqueIndex("nf_meal_template_versions_template_number_unique").on(
+      table.mealTemplateId,
+      table.versionNumber,
+    ),
+    index("nf_meal_template_versions_state_idx").on(
+      table.mealTemplateId,
+      table.state,
+    ),
+  ],
+);
+
+export const nfMealTemplateItems = sqliteTable(
+  "nf_meal_template_items",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    publicId: text("public_id").notNull(),
+    mealTemplateVersionId: integer("meal_template_version_id")
+      .notNull()
+      .references(() => nfMealTemplateVersions.id, { onDelete: "restrict" }),
+    sourceType: text("source_type").notNull(),
+    sourcePublicId: text("source_public_id"),
+    sourceRevisionNumber: integer("source_revision_number"),
+    displayNameSnapshot: text("display_name_snapshot").notNull(),
+    quantityMilli: integer("quantity_milli").notNull(),
+    unitId: integer("unit_id")
+      .notNull()
+      .references(() => nfUnits.id, { onDelete: "restrict" }),
+    unitCodeSnapshot: text("unit_code_snapshot").notNull(),
+    preparation: text("preparation"),
+    notes: text("notes"),
+    sortOrder: integer("sort_order").notNull(),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("nf_meal_template_items_public_id_unique").on(table.publicId),
+    uniqueIndex("nf_meal_template_items_version_order_unique").on(
+      table.mealTemplateVersionId,
+      table.sortOrder,
+    ),
+  ],
+);
+
+export const nfPlanDays = sqliteTable(
+  "nf_plan_days",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    publicId: text("public_id").notNull(),
+    planVersionId: integer("plan_version_id")
+      .notNull()
+      .references(() => nfPlanVersions.id, { onDelete: "restrict" }),
+    label: text("label").notNull(),
+    dayIndex: integer("day_index"),
+    sortOrder: integer("sort_order").notNull(),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("nf_plan_days_public_id_unique").on(table.publicId),
+    uniqueIndex("nf_plan_days_version_order_unique").on(
+      table.planVersionId,
+      table.sortOrder,
+    ),
+  ],
+);
+
+export const nfMeals = sqliteTable(
+  "nf_meals",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    publicId: text("public_id").notNull(),
+    planVersionId: integer("plan_version_id")
+      .notNull()
+      .references(() => nfPlanVersions.id, { onDelete: "restrict" }),
+    planDayId: integer("plan_day_id").references(() => nfPlanDays.id, {
+      onDelete: "restrict",
+    }),
+    title: text("title").notNull(),
+    scheduledTime: text("scheduled_time"),
+    instructions: text("instructions"),
+    sourceTemplatePublicId: text("source_template_public_id"),
+    sourceTemplateVersionNumber: integer("source_template_version_number"),
+    sortOrder: integer("sort_order").notNull(),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("nf_meals_public_id_unique").on(table.publicId),
+    index("nf_meals_version_order_idx").on(
+      table.planVersionId,
+      table.planDayId,
+      table.sortOrder,
+    ),
+  ],
+);
+
+export const nfMealItems = sqliteTable(
+  "nf_meal_items",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    publicId: text("public_id").notNull(),
+    mealId: integer("meal_id")
+      .notNull()
+      .references(() => nfMeals.id, { onDelete: "restrict" }),
+    sourceType: text("source_type").notNull().default("manual"),
+    sourcePublicId: text("source_public_id"),
+    sourceRevisionNumber: integer("source_revision_number"),
+    displayNameSnapshot: text("display_name_snapshot").notNull(),
+    quantityMilli: integer("quantity_milli").notNull(),
+    unitId: integer("unit_id")
+      .notNull()
+      .references(() => nfUnits.id, { onDelete: "restrict" }),
+    unitCodeSnapshot: text("unit_code_snapshot").notNull(),
+    unitLabelSnapshot: text("unit_label_snapshot").notNull(),
+    preparation: text("preparation"),
+    notes: text("notes"),
+    sortOrder: integer("sort_order").notNull(),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("nf_meal_items_public_id_unique").on(table.publicId),
+    uniqueIndex("nf_meal_items_meal_order_unique").on(
+      table.mealId,
+      table.sortOrder,
+    ),
+    index("nf_meal_items_source_idx").on(
+      table.sourceType,
+      table.sourcePublicId,
+      table.sourceRevisionNumber,
+    ),
+  ],
+);
+
+export const nfSubstitutionGroups = sqliteTable(
+  "nf_substitution_groups",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    publicId: text("public_id").notNull(),
+    planVersionId: integer("plan_version_id")
+      .notNull()
+      .references(() => nfPlanVersions.id, { onDelete: "restrict" }),
+    mealId: integer("meal_id").references(() => nfMeals.id, {
+      onDelete: "restrict",
+    }),
+    mealItemId: integer("meal_item_id").references(() => nfMealItems.id, {
+      onDelete: "restrict",
+    }),
+    title: text("title").notNull(),
+    ruleCode: text("rule_code").notNull().default("choose_one"),
+    notes: text("notes"),
+    sortOrder: integer("sort_order").notNull(),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("nf_substitution_groups_public_id_unique").on(table.publicId),
+    index("nf_substitution_groups_version_order_idx").on(
+      table.planVersionId,
+      table.sortOrder,
+    ),
+  ],
+);
+
+export const nfSubstitutionOptions = sqliteTable(
+  "nf_substitution_options",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    publicId: text("public_id").notNull(),
+    substitutionGroupId: integer("substitution_group_id")
+      .notNull()
+      .references(() => nfSubstitutionGroups.id, { onDelete: "restrict" }),
+    sourceType: text("source_type").notNull().default("manual"),
+    sourcePublicId: text("source_public_id"),
+    sourceRevisionNumber: integer("source_revision_number"),
+    displayNameSnapshot: text("display_name_snapshot").notNull(),
+    quantityMilli: integer("quantity_milli").notNull(),
+    unitId: integer("unit_id")
+      .notNull()
+      .references(() => nfUnits.id, { onDelete: "restrict" }),
+    unitCodeSnapshot: text("unit_code_snapshot").notNull(),
+    unitLabelSnapshot: text("unit_label_snapshot").notNull(),
+    notes: text("notes"),
+    sortOrder: integer("sort_order").notNull(),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("nf_substitution_options_public_id_unique").on(table.publicId),
+    uniqueIndex("nf_substitution_options_group_order_unique").on(
+      table.substitutionGroupId,
+      table.sortOrder,
+    ),
+  ],
+);
+
+export const nfPlanNotes = sqliteTable(
+  "nf_plan_notes",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    publicId: text("public_id").notNull(),
+    planVersionId: integer("plan_version_id")
+      .notNull()
+      .references(() => nfPlanVersions.id, { onDelete: "restrict" }),
+    mealId: integer("meal_id").references(() => nfMeals.id, {
+      onDelete: "restrict",
+    }),
+    kind: text("kind").notNull().default("general"),
+    content: text("content").notNull(),
+    sortOrder: integer("sort_order").notNull(),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("nf_plan_notes_public_id_unique").on(table.publicId),
+    index("nf_plan_notes_version_order_idx").on(
+      table.planVersionId,
+      table.mealId,
+      table.sortOrder,
+    ),
+  ],
+);
+
+export const nfDeliverySettings = sqliteTable(
+  "nf_delivery_settings",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    publicId: text("public_id").notNull(),
+    organizationId: integer("organization_id")
+      .notNull()
+      .references(() => nfOrganizations.id, { onDelete: "restrict" }),
+    clientId: integer("client_id")
+      .notNull()
+      .references(() => clients.id, { onDelete: "restrict" }),
+    primarySource: text("primary_source").notNull().default("pdf"),
+    allowPdfFallback: integer("allow_pdf_fallback", { mode: "boolean" })
+      .notNull()
+      .default(true),
+    updatedByAuthUserId: text("updated_by_auth_user_id").notNull(),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("nf_delivery_settings_public_id_unique").on(table.publicId),
+    uniqueIndex("nf_delivery_settings_org_client_unique").on(
+      table.organizationId,
+      table.clientId,
+    ),
+  ],
+);

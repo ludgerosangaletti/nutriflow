@@ -1,7 +1,11 @@
 import type { DomainEvent } from "../../domain/events/domain-event.ts";
+import type { AuditWriteRepository } from "./audit-repository.ts";
+import type { FoodPlanWriteRepository } from "./food-plan-repository.ts";
 
 export interface NutriFlowTransaction {
-  enqueueDomainEvents(events: readonly DomainEvent[]): Promise<void>;
+  readonly plans: FoodPlanWriteRepository;
+  readonly audit: AuditWriteRepository;
+  enqueueDomainEvents(events: readonly DomainEvent[]): void;
 }
 
 export interface NutriFlowUnitOfWork {

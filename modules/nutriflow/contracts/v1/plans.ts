@@ -26,3 +26,89 @@ export type PublishFoodPlanVersionCommandV1 = Readonly<{
   expectedRevision: number;
   correlationId: string;
 }>;
+
+export type FoodPlanItemV1 = Readonly<{
+  publicId: string;
+  source: Readonly<{
+    type: "manual" | "food" | "recipe";
+    publicId: string | null;
+    revisionNumber: number | null;
+  }>;
+  displayName: string;
+  quantityMilli: number;
+  unit: Readonly<{
+    publicId: string;
+    code: string;
+    label: string;
+  }>;
+  preparation: string | null;
+  notes: string | null;
+  sortOrder: number;
+}>;
+
+export type FoodPlanMealV1 = Readonly<{
+  publicId: string;
+  planDayPublicId: string | null;
+  title: string;
+  scheduledTime: string | null;
+  instructions: string | null;
+  sortOrder: number;
+  items: readonly FoodPlanItemV1[];
+}>;
+
+export type FoodPlanDayV1 = Readonly<{
+  publicId: string;
+  label: string;
+  dayIndex: number | null;
+  sortOrder: number;
+}>;
+
+export type FoodPlanContentV1 = Readonly<{
+  schemaVersion: 1;
+  days: readonly FoodPlanDayV1[];
+  meals: readonly FoodPlanMealV1[];
+  notes: readonly Readonly<{
+    publicId: string;
+    mealPublicId: string | null;
+    kind: "general" | "preparation" | "clinical" | "patient";
+    content: string;
+    sortOrder: number;
+  }>[];
+}>;
+
+export type SaveFoodPlanDraftCommandV1 = Readonly<{
+  apiVersion: typeof NUTRIFLOW_API_VERSION;
+  planPublicId: string;
+  planVersionPublicId: string;
+  expectedRevision: number;
+  title: string;
+  planNotes: string | null;
+  content: FoodPlanContentV1;
+  correlationId: string;
+}>;
+
+export type FoodPlanDraftV1 = Readonly<{
+  apiVersion: typeof NUTRIFLOW_API_VERSION;
+  publicId: string;
+  planPublicId: string;
+  clientId: number;
+  versionNumber: number;
+  revision: number;
+  state: "draft" | "in_review";
+  title: string;
+  planNotes: string | null;
+  content: FoodPlanContentV1;
+  updatedAt: string;
+}>;
+
+export type PublishedFoodPlanV1 = Readonly<{
+  apiVersion: typeof NUTRIFLOW_API_VERSION;
+  publicationPublicId: string;
+  planPublicId: string;
+  planVersionPublicId: string;
+  clientId: number;
+  versionNumber: number;
+  contentHash: string;
+  publishedAt: string;
+  content: FoodPlanContentV1;
+}>;
