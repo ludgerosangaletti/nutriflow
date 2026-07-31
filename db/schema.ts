@@ -1,5 +1,11 @@
 import { sql } from "drizzle-orm";
-import { integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import {
+  index,
+  integer,
+  sqliteTable,
+  text,
+  uniqueIndex,
+} from "drizzle-orm/sqlite-core";
 
 export const clients = sqliteTable(
   "clients",
@@ -319,5 +325,265 @@ export const whatsappLeads = sqliteTable(
   },
   (table) => [
     uniqueIndex("whatsapp_leads_wa_id_unique").on(table.waId),
+  ],
+);
+
+// NutriFlow tables are intentionally additive. The existing PDF workflow keeps
+// using patient_documents while structured plans are protected by feature flags.
+export const nfOrganizations = sqliteTable(
+  "nf_organizations",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    publicId: text("public_id").notNull(),
+    name: text("name").notNull(),
+    status: text("status").notNull().default("active"),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("nf_organizations_public_id_unique").on(table.publicId),
+    index("nf_organizations_status_idx").on(table.status),
+  ],
+);
+
+export const nfOrganizationMembers = sqliteTable(
+  "nf_organization_members",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    publicId: text("public_id").notNull(),
+    organizationId: integer("organization_id")
+      .notNull()
+      .references(() => nfOrganizations.id, { onDelete: "restrict" }),
+    authUserId: text("auth_user_id").notNull(),
+    role: text("role").notNull(),
+    status: text("status").notNull().default("active"),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("nf_organization_members_public_id_unique").on(table.publicId),
+    uniqueIndex("nf_organization_members_org_auth_unique").on(
+      table.organizationId,
+      table.authUserId,
+    ),
+    index("nf_organization_members_auth_idx").on(table.authUserId),
+  ],
+);
+
+export const nfPlans = sqliteTable(
+  "nf_plans",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    publicId: text("public_id").notNull(),
+    organizationId: integer("organization_id")
+      .notNull()
+      .references(() => nfOrganizations.id, { onDelete: "restrict" }),
+    clientId: integer("client_id")
+      .notNull()
+      .references(() => clients.id, { onDelete: "restrict" }),
+    title: text("title").notNull(),
+    status: text("status").notNull().default("draft"),
+    createdByAuthUserId: text("created_by_auth_user_id").notNull(),
+    archivedAt: text("archived_at"),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("nf_plans_public_id_unique").on(table.publicId),
+    index("nf_plans_org_client_idx").on(table.organizationId, table.clientId),
+    index("nf_plans_org_status_idx").on(table.organizationId, table.status),
+  ],
+);
+
+export const nfPlanVersions = sqliteTable(
+  "nf_plan_versions",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    publicId: text("public_id").notNull(),
+    planId: integer("plan_id")
+      .notNull()
+      .references(() => nfPlans.id, { onDelete: "restrict" }),
+    versionNumber: integer("version_number").notNull(),
+    revision: integer("revision").notNull().default(1),
+    schemaVersion: integer("schema_version").notNull().default(1),
+    state: text("state").notNull().default("draft"),
+    title: text("title").notNull(),
+    notes: text("notes"),
+    snapshotJson: text("snapshot_json"),
+    contentHash: text("content_hash"),
+    createdByAuthUserId: text("created_by_auth_user_id").notNull(),
+    publishedByAuthUserId: text("published_by_auth_user_id"),
+    publishedAt: text("published_at"),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("nf_plan_versions_public_id_unique").on(table.publicId),
+    uniqueIndex("nf_plan_versions_plan_number_unique").on(
+      table.planId,
+      table.versionNumber,
+    ),
+    index("nf_plan_versions_plan_state_idx").on(table.planId, table.state),
+  ],
+);
+
+export const nfPublications = sqliteTable(
+  "nf_publications",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    publicId: text("public_id").notNull(),
+    organizationId: integer("organization_id")
+      .notNull()
+      .references(() => nfOrganizations.id, { onDelete: "restrict" }),
+    clientId: integer("client_id")
+      .notNull()
+      .references(() => clients.id, { onDelete: "restrict" }),
+    planId: integer("plan_id")
+      .notNull()
+      .references(() => nfPlans.id, { onDelete: "restrict" }),
+    planVersionId: integer("plan_version_id")
+      .notNull()
+      .references(() => nfPlanVersions.id, { onDelete: "restrict" }),
+    status: text("status").notNull().default("active"),
+    publishedByAuthUserId: text("published_by_auth_user_id").notNull(),
+    publishedAt: text("published_at").notNull(),
+    revokedByAuthUserId: text("revoked_by_auth_user_id"),
+    revokedAt: text("revoked_at"),
+    revocationReason: text("revocation_reason"),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("nf_publications_public_id_unique").on(table.publicId),
+    index("nf_publications_org_client_status_idx").on(
+      table.organizationId,
+      table.clientId,
+      table.status,
+    ),
+    index("nf_publications_plan_version_idx").on(table.planVersionId),
+  ],
+);
+
+export const nfAuditEntries = sqliteTable(
+  "nf_audit_entries",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    publicId: text("public_id").notNull(),
+    organizationId: integer("organization_id")
+      .notNull()
+      .references(() => nfOrganizations.id, { onDelete: "restrict" }),
+    actorAuthUserId: text("actor_auth_user_id").notNull(),
+    actorRole: text("actor_role").notNull(),
+    action: text("action").notNull(),
+    entityType: text("entity_type").notNull(),
+    entityPublicId: text("entity_public_id").notNull(),
+    correlationId: text("correlation_id").notNull(),
+    beforeJson: text("before_json"),
+    afterJson: text("after_json"),
+    occurredAt: text("occurred_at").notNull(),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("nf_audit_entries_public_id_unique").on(table.publicId),
+    index("nf_audit_entries_entity_idx").on(
+      table.organizationId,
+      table.entityType,
+      table.entityPublicId,
+    ),
+    index("nf_audit_entries_correlation_idx").on(table.correlationId),
+    index("nf_audit_entries_occurred_idx").on(table.occurredAt),
+  ],
+);
+
+export const nfOutboxEvents = sqliteTable(
+  "nf_outbox_events",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    eventId: text("event_id").notNull(),
+    organizationId: integer("organization_id")
+      .notNull()
+      .references(() => nfOrganizations.id, { onDelete: "restrict" }),
+    eventType: text("event_type").notNull(),
+    eventVersion: integer("event_version").notNull(),
+    aggregateType: text("aggregate_type").notNull(),
+    aggregatePublicId: text("aggregate_public_id").notNull(),
+    aggregateVersion: integer("aggregate_version").notNull(),
+    actorAuthUserId: text("actor_auth_user_id").notNull(),
+    correlationId: text("correlation_id").notNull(),
+    causationId: text("causation_id"),
+    occurredAt: text("occurred_at").notNull(),
+    payloadJson: text("payload_json").notNull(),
+    metadataJson: text("metadata_json").notNull(),
+    status: text("status").notNull().default("pending"),
+    attempts: integer("attempts").notNull().default(0),
+    availableAt: text("available_at").notNull(),
+    processedAt: text("processed_at"),
+    lastError: text("last_error"),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("nf_outbox_events_event_id_unique").on(table.eventId),
+    index("nf_outbox_events_dispatch_idx").on(
+      table.status,
+      table.availableAt,
+    ),
+    index("nf_outbox_events_aggregate_idx").on(
+      table.aggregateType,
+      table.aggregatePublicId,
+      table.aggregateVersion,
+    ),
+    index("nf_outbox_events_correlation_idx").on(table.correlationId),
+  ],
+);
+
+export const nfEventConsumptions = sqliteTable(
+  "nf_event_consumptions",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    eventId: text("event_id").notNull(),
+    consumerName: text("consumer_name").notNull(),
+    status: text("status").notNull().default("processing"),
+    attempts: integer("attempts").notNull().default(1),
+    lastError: text("last_error"),
+    processedAt: text("processed_at"),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("nf_event_consumptions_event_consumer_unique").on(
+      table.eventId,
+      table.consumerName,
+    ),
+    index("nf_event_consumptions_status_idx").on(table.status),
+  ],
+);
+
+export const nfFeatureFlagOverrides = sqliteTable(
+  "nf_feature_flag_overrides",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    publicId: text("public_id").notNull(),
+    flagKey: text("flag_key").notNull(),
+    organizationId: integer("organization_id").references(
+      () => nfOrganizations.id,
+      { onDelete: "restrict" },
+    ),
+    clientId: integer("client_id").references(() => clients.id, {
+      onDelete: "restrict",
+    }),
+    enabled: integer("enabled", { mode: "boolean" }).notNull(),
+    variant: text("variant"),
+    reason: text("reason").notNull(),
+    expiresAt: text("expires_at"),
+    createdByAuthUserId: text("created_by_auth_user_id").notNull(),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("nf_feature_flag_overrides_public_id_unique").on(table.publicId),
+    index("nf_feature_flag_overrides_lookup_idx").on(
+      table.flagKey,
+      table.organizationId,
+      table.clientId,
+    ),
   ],
 );
