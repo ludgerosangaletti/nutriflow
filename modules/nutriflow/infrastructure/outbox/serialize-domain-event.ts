@@ -33,7 +33,10 @@ export function serializeDomainEventForOutbox(
     causationId: event.causationId ?? null,
     occurredAt: event.occurredAt,
     payloadJson: JSON.stringify(event.payload),
-    metadataJson: JSON.stringify(event.metadata),
+    metadataJson: JSON.stringify({
+      ...event.metadata,
+      actorRole: event.actor.role,
+    }),
     status: "pending",
     attempts: 0,
     availableAt: event.occurredAt,

@@ -516,6 +516,8 @@ export const nfOutboxEvents = sqliteTable(
     status: text("status").notNull().default("pending"),
     attempts: integer("attempts").notNull().default(0),
     availableAt: text("available_at").notNull(),
+    processingStartedAt: text("processing_started_at"),
+    leaseToken: text("lease_token"),
     processedAt: text("processed_at"),
     lastError: text("last_error"),
     createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
@@ -543,6 +545,9 @@ export const nfEventConsumptions = sqliteTable(
     consumerName: text("consumer_name").notNull(),
     status: text("status").notNull().default("processing"),
     attempts: integer("attempts").notNull().default(1),
+    availableAt: text("available_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    processingStartedAt: text("processing_started_at"),
+    leaseToken: text("lease_token"),
     lastError: text("last_error"),
     processedAt: text("processed_at"),
     createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
@@ -553,7 +558,40 @@ export const nfEventConsumptions = sqliteTable(
       table.eventId,
       table.consumerName,
     ),
-    index("nf_event_consumptions_status_idx").on(table.status),
+    index("nf_event_consumptions_dispatch_idx").on(
+      table.status,
+      table.availableAt,
+    ),
+  ],
+);
+
+export const nfIdempotencyKeys = sqliteTable(
+  "nf_idempotency_keys",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    organizationId: integer("organization_id")
+      .notNull()
+      .references(() => nfOrganizations.id, { onDelete: "restrict" }),
+    operation: text("operation").notNull(),
+    idempotencyKey: text("idempotency_key").notNull(),
+    requestHash: text("request_hash").notNull(),
+    status: text("status").notNull().default("processing"),
+    responseJson: text("response_json"),
+    errorCode: text("error_code"),
+    correlationId: text("correlation_id").notNull(),
+    expiresAt: text("expires_at").notNull(),
+    completedAt: text("completed_at"),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("nf_idempotency_keys_scope_key_unique").on(
+      table.organizationId,
+      table.operation,
+      table.idempotencyKey,
+    ),
+    index("nf_idempotency_keys_expiry_idx").on(table.expiresAt),
+    index("nf_idempotency_keys_correlation_idx").on(table.correlationId),
   ],
 );
 
