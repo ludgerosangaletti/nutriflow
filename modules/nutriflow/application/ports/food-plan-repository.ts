@@ -81,3 +81,22 @@ export interface FoodPlanWriteRepository {
   insertMealItem(record: NewMealItemRecord): void;
   insertPlanNote(record: NewPlanNoteRecord): void;
 }
+
+export type FoodPlanDraftRecord = Readonly<{
+  publicId: string;
+  planPublicId: string;
+  clientId: number;
+  versionNumber: number;
+  revision: number;
+  state: "draft" | "in_review";
+  title: string;
+  planNotes: string | null;
+  updatedAt: string;
+}>;
+
+export interface FoodPlanReadRepository {
+  findLatestDraft(input: Readonly<{
+    organizationId: number;
+    clientId: number;
+  }>): Promise<FoodPlanDraftRecord | null>;
+}

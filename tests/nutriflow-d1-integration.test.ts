@@ -11,6 +11,12 @@ import { ConfigureFeatureFlagOverride } from "../modules/nutriflow/application/f
 import { evaluateFeatureFlag } from "../modules/nutriflow/application/feature-flags/evaluate-feature-flag.ts";
 import { NUTRIFLOW_FEATURE_FLAGS } from "../modules/nutriflow/config/feature-flags.ts";
 import { D1FeatureFlagRepository } from "../modules/nutriflow/infrastructure/d1/d1-feature-flag-repository.ts";
+import { CreateFoodPlanDraft } from "../modules/nutriflow/application/plans/create-food-plan-draft.ts";
+import { GetFoodPlanDraft } from "../modules/nutriflow/application/plans/get-food-plan-draft.ts";
+import { D1FoodPlanReadRepository } from "../modules/nutriflow/infrastructure/d1/d1-food-plan-read-repository.ts";
+import { CreateFoodPlanDraftOperation } from "../modules/nutriflow/application/plans/create-food-plan-draft-operation.ts";
+import { NutriFlowOperationRunner } from "../modules/nutriflow/application/operations/run-nutriflow-operation.ts";
+import { D1IdempotencyRepository } from "../modules/nutriflow/infrastructure/d1/d1-idempotency-repository.ts";
 
 class SqliteStatement implements D1PreparedStatementLike {
   readonly query: string;
@@ -221,6 +227,73 @@ const owner = Object.freeze({
   organizationPublicId: "org_01",
   role: "owner" as const,
   membershipStatus: "active" as const,
+});
+
+test("Marco 1.1 creates and recovers an empty draft with audit and outbox atomically", async () => {
+  const sqlite = databaseWithNutriFlowSchema();
+  apply(sqlite, "0022_fantastic_martin_li.sql");
+  const database = new SqliteD1Database(sqlite);
+  sqlite.exec(
+    "INSERT INTO nf_feature_flag_overrides (public_id, flag_key, organization_id, client_id, enabled, variant, reason, created_by_auth_user_id) VALUES ('flag_marco_11', 'nutriflow.editor.enabled', 1, 1, 1, 'integration-test', 'validação automatizada', 'auth_owner_01')",
+  );
+  const identifiers = [
+    "plan_marco_11",
+    "version_marco_11",
+    "audit_marco_11",
+    "event_marco_11",
+  ];
+  const create = new CreateFoodPlanDraft({
+    unitOfWork: new D1NutriFlowUnitOfWork(database, {
+      organizationId: 1,
+      organizationPublicId: "org_01",
+    }),
+    generatePublicId: () => identifiers.shift() ?? "missing_id",
+    clock: () => new Date("2026-07-31T16:00:00.000Z"),
+    environment: "test",
+  });
+  const operation = new CreateFoodPlanDraftOperation({
+    runner: new NutriFlowOperationRunner({
+      flags: new D1FeatureFlagRepository(database),
+      idempotency: new D1IdempotencyRepository(database),
+      telemetry: { record: () => undefined },
+      generateCorrelationId: () => "corr_marco_11_create",
+      clock: () => new Date("2026-07-31T16:00:00.000Z"),
+    }),
+    createDraft: create,
+  });
+  const command = {
+    actor: owner,
+    organizationId: 1,
+    organizationPublicId: "org_01",
+    clientId: 1,
+    title: "Plano alimentar inicial",
+    idempotencyKey: "idem_marco_11_create",
+    requestHash: "hash_marco_11_create",
+  } as const;
+  const first = await operation.execute(command);
+  const replay = await operation.execute(command);
+  const created = first.data;
+  assert.deepEqual(replay, first);
+  assert.equal(first.correlationId, "corr_marco_11_create");
+
+  assert.equal(created.state, "draft");
+  assert.equal(created.revision, 1);
+  assert.deepEqual(created.content.meals, []);
+  assert.equal(countRows(sqlite, "nf_plans"), 1);
+  assert.equal(countRows(sqlite, "nf_plan_versions"), 1);
+  assert.equal(countRows(sqlite, "nf_audit_entries"), 1);
+  assert.equal(countRows(sqlite, "nf_outbox_events"), 1);
+
+  const recovered = await new GetFoodPlanDraft(
+    new D1FoodPlanReadRepository(database),
+  ).execute({
+    actor: owner,
+    organizationId: 1,
+    organizationPublicId: "org_01",
+    clientId: 1,
+    now: new Date("2026-07-31T16:01:00.000Z"),
+  });
+  assert.deepEqual(recovered, created);
 });
 
 test("a test-account feature override and its audit entry commit atomically", async () => {
