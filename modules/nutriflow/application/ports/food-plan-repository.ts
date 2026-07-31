@@ -1,3 +1,7 @@
+import type { FoodPlanContentV1 } from "../../contracts/v1/plans.ts";
+import type { DomainEvent } from "../../domain/events/domain-event.ts";
+import type { NewAuditEntry } from "./audit-repository.ts";
+
 export type NewPlanRecord = Readonly<{
   publicId: string;
   clientId: number;
@@ -91,6 +95,7 @@ export type FoodPlanDraftRecord = Readonly<{
   state: "draft" | "in_review";
   title: string;
   planNotes: string | null;
+  content: FoodPlanContentV1;
   updatedAt: string;
 }>;
 
@@ -99,4 +104,29 @@ export interface FoodPlanReadRepository {
     organizationId: number;
     clientId: number;
   }>): Promise<FoodPlanDraftRecord | null>;
+  findDraftByVersion(input: Readonly<{
+    organizationId: number;
+    clientId: number;
+    planVersionPublicId: string;
+  }>): Promise<FoodPlanDraftRecord | null>;
+}
+
+export type SaveFoodPlanDraftRecord = Readonly<{
+  organizationId: number;
+  organizationPublicId: string;
+  clientId: number;
+  planPublicId: string;
+  planVersionPublicId: string;
+  expectedRevision: number;
+  nextRevision: number;
+  title: string;
+  planNotes: string | null;
+  content: FoodPlanContentV1;
+  audit: NewAuditEntry;
+  event: DomainEvent;
+  updatedAt: string;
+}>;
+
+export interface FoodPlanDraftStore {
+  save(record: SaveFoodPlanDraftRecord): Promise<void>;
 }

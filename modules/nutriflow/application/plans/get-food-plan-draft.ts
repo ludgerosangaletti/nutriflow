@@ -41,12 +41,7 @@ export class GetFoodPlanDraft {
     return Object.freeze({
       apiVersion: NUTRIFLOW_API_VERSION,
       ...record,
-      content: Object.freeze({
-        schemaVersion: 1,
-        days: Object.freeze([]),
-        meals: Object.freeze([]),
-        notes: Object.freeze([]),
-      }),
+      content: record.content,
     });
   }
 }

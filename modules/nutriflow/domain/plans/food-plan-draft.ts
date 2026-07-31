@@ -20,6 +20,7 @@ import type {
 } from "./food-plan-content.ts";
 import {
   planDraftCreated,
+  planDraftSaved,
   planVersionPublished,
 } from "./plan-events.ts";
 
@@ -224,6 +225,58 @@ export class FoodPlanDraft extends AggregateRoot {
       items: [...meal.items, item],
     });
     this.advanceRevision();
+  }
+
+  replaceContent(input: Readonly<{
+    expectedRevision: RevisionToken;
+    title: string;
+    notes: string | null;
+    days: readonly PlanDay[];
+    meals: readonly Meal[];
+    planNotes: readonly PlanNote[];
+    event: DomainEventContext;
+  }>) {
+    this.assertEditable(input.expectedRevision);
+    assertUniquePublicIds(input.days, "days");
+    assertUniquePublicIds(input.meals, "meals");
+    assertUniquePublicIds(input.planNotes, "planNotes");
+    const dayIds = new Set(input.days.map(({ publicId: value }) => value));
+    const mealIds = new Set(input.meals.map(({ publicId: value }) => value));
+    for (const meal of input.meals) {
+      requiredText(meal.title, "meal.title");
+      if (meal.planDayPublicId && !dayIds.has(meal.planDayPublicId)) {
+        throw new Error("NUTRIFLOW_INVALID_PLAN:meal.planDayPublicId");
+      }
+      assertUniquePublicIds(meal.items, "meal.items");
+      for (const item of meal.items) {
+        requiredText(item.displayName, "mealItem.displayName");
+      }
+    }
+    for (const note of input.planNotes) {
+      requiredText(note.content, "planNote.content");
+      if (note.mealPublicId && !mealIds.has(note.mealPublicId)) {
+        throw new Error("NUTRIFLOW_INVALID_PLAN:planNote.mealPublicId");
+      }
+    }
+    this.#title = requiredText(input.title, "title");
+    this.#notes = input.notes?.trim() || null;
+    this.#days = input.days.map((day) => Object.freeze({ ...day }));
+    this.#meals = input.meals.map(freezeMeal);
+    this.#planNotes = input.planNotes.map((note) => Object.freeze({ ...note }));
+    this.advanceRevision();
+    this.recordDomainEvent(
+      planDraftSaved({
+        ...input.event,
+        aggregatePublicId: this.#planPublicId,
+        aggregateVersion: this.#revision,
+        payload: {
+          planPublicId: this.#planPublicId,
+          planVersionPublicId: this.#planVersionPublicId,
+          clientId: this.#clientId,
+          revision: this.#revision,
+        },
+      }),
+    );
   }
 
   requestReview(expectedRevision: RevisionToken) {

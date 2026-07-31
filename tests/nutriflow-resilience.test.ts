@@ -34,6 +34,9 @@ class SqliteStatement implements D1PreparedStatementLike {
   async first<T>() {
     return (this.sqlite.prepare(this.query).get(...this.sqlValues()) as T | undefined) ?? null;
   }
+  async all<T>() {
+    return { results: this.sqlite.prepare(this.query).all(...this.sqlValues()) as T[] };
+  }
   async run() {
     const result = this.sqlite.prepare(this.query).run(...this.sqlValues());
     return { meta: { changes: Number(result.changes) } };

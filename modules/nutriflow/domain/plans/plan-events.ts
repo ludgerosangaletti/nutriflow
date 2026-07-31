@@ -5,6 +5,7 @@ import {
 } from "../events/domain-event.ts";
 
 export const PLAN_DRAFT_CREATED = "nutriflow.plan-draft-created.v1";
+export const PLAN_DRAFT_SAVED = "nutriflow.plan-draft-saved.v1";
 export const PLAN_VERSION_PUBLISHED = "nutriflow.plan-version-published.v1";
 export const PLAN_PUBLICATION_REVOKED = "nutriflow.plan-publication-revoked.v1";
 
@@ -13,6 +14,13 @@ export type PlanDraftCreatedPayload = Readonly<{
   planVersionPublicId: string;
   clientId: number;
   title: string;
+}>;
+
+export type PlanDraftSavedPayload = Readonly<{
+  planPublicId: string;
+  planVersionPublicId: string;
+  clientId: number;
+  revision: number;
 }>;
 
 export type PlanVersionPublishedPayload = Readonly<{
@@ -43,6 +51,17 @@ export function planDraftCreated(
   return createDomainEvent({
     ...input,
     eventType: PLAN_DRAFT_CREATED,
+    eventVersion: 1,
+    aggregateType: "food-plan",
+  });
+}
+
+export function planDraftSaved(
+  input: PlanEventInput<PlanDraftSavedPayload>,
+): DomainEvent<PlanDraftSavedPayload> {
+  return createDomainEvent({
+    ...input,
+    eventType: PLAN_DRAFT_SAVED,
     eventVersion: 1,
     aggregateType: "food-plan",
   });

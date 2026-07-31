@@ -17,6 +17,9 @@ import { D1FoodPlanReadRepository } from "../modules/nutriflow/infrastructure/d1
 import { CreateFoodPlanDraftOperation } from "../modules/nutriflow/application/plans/create-food-plan-draft-operation.ts";
 import { NutriFlowOperationRunner } from "../modules/nutriflow/application/operations/run-nutriflow-operation.ts";
 import { D1IdempotencyRepository } from "../modules/nutriflow/infrastructure/d1/d1-idempotency-repository.ts";
+import { D1FoodPlanDraftStore } from "../modules/nutriflow/infrastructure/d1/d1-food-plan-draft-store.ts";
+import { SaveFoodPlanDraft } from "../modules/nutriflow/application/plans/save-food-plan-draft.ts";
+import { SaveFoodPlanDraftOperation } from "../modules/nutriflow/application/plans/save-food-plan-draft-operation.ts";
 
 class SqliteStatement implements D1PreparedStatementLike {
   readonly query: string;
@@ -35,6 +38,9 @@ class SqliteStatement implements D1PreparedStatementLike {
       (this.sqlite.prepare(this.query).get(...this.sqlValues()) as T | undefined) ??
       null
     );
+  }
+  async all<T>() {
+    return { results: this.sqlite.prepare(this.query).all(...this.sqlValues()) as T[] };
   }
   async run() {
     const result = this.sqlite.prepare(this.query).run(...this.sqlValues());
@@ -91,6 +97,10 @@ function countRows(sqlite: DatabaseSync, table: string) {
     "nf_audit_entries",
     "nf_outbox_events",
     "nf_feature_flag_overrides",
+    "nf_plan_days",
+    "nf_meals",
+    "nf_meal_items",
+    "nf_plan_notes",
   ]);
   if (!allowed.has(table)) throw new Error("Unsupported test table");
   const row = sqlite.prepare(`SELECT count(*) AS total FROM ${table}`).get();
@@ -294,6 +304,49 @@ test("Marco 1.1 creates and recovers an empty draft with audit and outbox atomic
     now: new Date("2026-07-31T16:01:00.000Z"),
   });
   assert.deepEqual(recovered, created);
+});
+
+test("Sprint 1 saves normalized draft content idempotently and rejects stale revisions", async () => {
+  const sqlite = databaseWithNutriFlowSchema();
+  apply(sqlite, "0022_fantastic_martin_li.sql");
+  apply(sqlite, "0023_nutriflow_base_units.sql");
+  const database = new SqliteD1Database(sqlite);
+  sqlite.exec("INSERT INTO nf_feature_flag_overrides (public_id, flag_key, organization_id, client_id, enabled, reason, created_by_auth_user_id) VALUES ('flag_sprint_01', 'nutriflow.editor.enabled', 1, 1, 1, 'teste', 'auth_owner_01')");
+  const createIds = ["plan_sprint_01", "version_sprint_01", "audit_sprint_create", "event_sprint_create"];
+  const createOperation = new CreateFoodPlanDraftOperation({
+    runner: new NutriFlowOperationRunner({ flags: new D1FeatureFlagRepository(database), idempotency: new D1IdempotencyRepository(database), telemetry: { record: () => undefined }, generateCorrelationId: () => "corr_sprint_create" }),
+    createDraft: new CreateFoodPlanDraft({ unitOfWork: new D1NutriFlowUnitOfWork(database, { organizationId: 1, organizationPublicId: "org_01" }), generatePublicId: () => createIds.shift() ?? "missing_id", clock: () => new Date("2026-07-31T17:00:00.000Z"), environment: "test" }),
+  });
+  const created = (await createOperation.execute({ actor: owner, organizationId: 1, organizationPublicId: "org_01", clientId: 1, title: "Plano inicial", idempotencyKey: "idem_sprint_create", requestHash: "hash_sprint_create" })).data;
+  const saveIds = ["event_sprint_save", "audit_sprint_save"];
+  const saveOperation = new SaveFoodPlanDraftOperation({
+    runner: new NutriFlowOperationRunner({ flags: new D1FeatureFlagRepository(database), idempotency: new D1IdempotencyRepository(database), telemetry: { record: () => undefined }, generateCorrelationId: () => "corr_sprint_save", clock: () => new Date("2026-07-31T17:05:00.000Z") }),
+    saveDraft: new SaveFoodPlanDraft({ plans: new D1FoodPlanReadRepository(database), store: new D1FoodPlanDraftStore(database), generatePublicId: () => saveIds.shift() ?? "missing_id", clock: () => new Date("2026-07-31T17:05:00.000Z"), environment: "test" }),
+  });
+  const content = Object.freeze({ schemaVersion: 1 as const, days: Object.freeze([{ publicId: "day_sprint_01", label: "Dia padrão", dayIndex: 1, sortOrder: 0 }]), meals: Object.freeze([{ publicId: "meal_sprint_01", planDayPublicId: "day_sprint_01", title: "Café da manhã", scheduledTime: "08:00", instructions: null, sortOrder: 0, items: Object.freeze([{ publicId: "item_sprint_01", source: Object.freeze({ type: "manual" as const, publicId: null, revisionNumber: null }), displayName: "Banana", quantityMilli: 1000, unit: Object.freeze({ publicId: "unit_piece", code: "piece", label: "unidade" }), preparation: null, notes: null, sortOrder: 0 }]) }]), notes: Object.freeze([{ publicId: "note_sprint_01", mealPublicId: null, kind: "general" as const, content: "Hidratação ao longo do dia.", sortOrder: 0 }]) });
+  const command = { actor: owner, organizationId: 1, organizationPublicId: "org_01", clientId: 1, command: { apiVersion: "v1" as const, planPublicId: created.planPublicId, planVersionPublicId: created.publicId, expectedRevision: 1, title: "Plano editado", planNotes: "Observação clínica", content, correlationId: "corr_sprint_save" }, idempotencyKey: "idem_sprint_save", requestHash: "hash_sprint_save" } as const;
+  const saved = await saveOperation.execute(command);
+  const replay = await saveOperation.execute(command);
+  assert.deepEqual(replay, saved);
+  assert.equal(saved.data.revision, 2);
+  assert.equal(countRows(sqlite, "nf_plan_days"), 1);
+  assert.equal(countRows(sqlite, "nf_meals"), 1);
+  assert.equal(countRows(sqlite, "nf_meal_items"), 1);
+  assert.equal(countRows(sqlite, "nf_plan_notes"), 1);
+  assert.equal(countRows(sqlite, "nf_audit_entries"), 2);
+  assert.equal(countRows(sqlite, "nf_outbox_events"), 2);
+  const recovered = await new GetFoodPlanDraft(new D1FoodPlanReadRepository(database)).execute({ actor: owner, organizationId: 1, organizationPublicId: "org_01", clientId: 1 });
+  assert.deepEqual(recovered.content, content);
+  await assert.rejects(saveOperation.execute({ ...command, command: { ...command.command, correlationId: "corr_stale" }, idempotencyKey: "idem_stale", requestHash: "hash_stale" }), (error: unknown) => error instanceof Error && "code" in error && error.code === "NF_VERSION_CONFLICT");
+  assert.equal(countRows(sqlite, "nf_audit_entries"), 2);
+  assert.equal(countRows(sqlite, "nf_outbox_events"), 2);
+  const invalidContent = { ...content, meals: [{ ...content.meals[0], items: [{ ...content.meals[0].items[0], unit: { publicId: "unit_missing", code: "missing", label: "inexistente" } }] }] };
+  await assert.rejects(saveOperation.execute({ ...command, command: { ...command.command, expectedRevision: 2, content: invalidContent, correlationId: "corr_invalid_unit" }, idempotencyKey: "idem_invalid_unit", requestHash: "hash_invalid_unit" }));
+  const afterRollback = await new GetFoodPlanDraft(new D1FoodPlanReadRepository(database)).execute({ actor: owner, organizationId: 1, organizationPublicId: "org_01", clientId: 1 });
+  assert.equal(afterRollback.revision, 2);
+  assert.deepEqual(afterRollback.content, content);
+  assert.equal(countRows(sqlite, "nf_audit_entries"), 2);
+  assert.equal(countRows(sqlite, "nf_outbox_events"), 2);
 });
 
 test("a test-account feature override and its audit entry commit atomically", async () => {
