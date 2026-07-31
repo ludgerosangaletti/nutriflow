@@ -7,16 +7,35 @@ import {
   type D1PreparedStatementLike,
 } from "../modules/nutriflow/infrastructure/d1/d1-unit-of-work.ts";
 import { planDraftCreated } from "../modules/nutriflow/domain/plans/plan-events.ts";
+import { ConfigureFeatureFlagOverride } from "../modules/nutriflow/application/feature-flags/configure-feature-flag-override.ts";
+import { evaluateFeatureFlag } from "../modules/nutriflow/application/feature-flags/evaluate-feature-flag.ts";
+import { NUTRIFLOW_FEATURE_FLAGS } from "../modules/nutriflow/config/feature-flags.ts";
+import { D1FeatureFlagRepository } from "../modules/nutriflow/infrastructure/d1/d1-feature-flag-repository.ts";
 
 class SqliteStatement implements D1PreparedStatementLike {
   readonly query: string;
+  readonly sqlite: DatabaseSync;
   values: unknown[] = [];
-  constructor(query: string) {
+  constructor(query: string, sqlite: DatabaseSync) {
     this.query = query;
+    this.sqlite = sqlite;
   }
   bind(...values: unknown[]) {
     this.values = values;
     return this;
+  }
+  async first<T>() {
+    return (
+      (this.sqlite.prepare(this.query).get(...this.sqlValues()) as T | undefined) ??
+      null
+    );
+  }
+  async run() {
+    const result = this.sqlite.prepare(this.query).run(...this.sqlValues());
+    return { meta: { changes: Number(result.changes) } };
+  }
+  sqlValues() {
+    return this.values.map(toSqlInputValue);
   }
 }
 
@@ -27,7 +46,7 @@ class SqliteD1Database {
     this.sqlite = sqlite;
   }
   prepare(query: string) {
-    return new SqliteStatement(query);
+    return new SqliteStatement(query, this.sqlite);
   }
   async batch(statements: SqliteStatement[]) {
     this.sqlite.exec("BEGIN IMMEDIATE");
@@ -35,7 +54,7 @@ class SqliteD1Database {
       const results = statements.map((statement) =>
         this.sqlite
           .prepare(statement.query)
-          .run(...statement.values.map(toSqlInputValue)),
+          .run(...statement.sqlValues()),
       );
       this.sqlite.exec("COMMIT");
       return results;
@@ -65,6 +84,7 @@ function countRows(sqlite: DatabaseSync, table: string) {
     "nf_plan_versions",
     "nf_audit_entries",
     "nf_outbox_events",
+    "nf_feature_flag_overrides",
   ]);
   if (!allowed.has(table)) throw new Error("Unsupported test table");
   const row = sqlite.prepare(`SELECT count(*) AS total FROM ${table}`).get();
@@ -193,4 +213,116 @@ test("a statement failure rolls back every staged D1 write", async () => {
   );
 
   assert.equal(countRows(sqlite, "nf_plans"), 0);
+});
+
+const owner = Object.freeze({
+  kind: "staff" as const,
+  authUserId: "auth_owner_01",
+  organizationPublicId: "org_01",
+  role: "owner" as const,
+  membershipStatus: "active" as const,
+});
+
+test("a test-account feature override and its audit entry commit atomically", async () => {
+  const sqlite = databaseWithNutriFlowSchema();
+  apply(sqlite, "0022_fantastic_martin_li.sql");
+  const database = new SqliteD1Database(sqlite);
+  const identifiers = ["flag_override_01", "audit_flag_01"];
+  const configure = new ConfigureFeatureFlagOverride({
+    unitOfWork: new D1NutriFlowUnitOfWork(database, {
+      organizationId: 1,
+      organizationPublicId: "org_01",
+    }),
+    generatePublicId: () => identifiers.shift() ?? "missing_id",
+    clock: () => new Date("2026-07-31T15:00:00.000Z"),
+  });
+  await configure.execute({
+    actor: owner,
+    organizationPublicId: "org_01",
+    flag: NUTRIFLOW_FEATURE_FLAGS.ADMIN_EDITOR,
+    clientId: 1,
+    enabled: true,
+    variant: "test-account",
+    reason: "Liberação controlada para a conta de validação.",
+    expiresAt: "2026-08-31T15:00:00.000Z",
+    correlationId: "corr_flag_config_01",
+  });
+  assert.equal(countRows(sqlite, "nf_feature_flag_overrides"), 1);
+  assert.equal(countRows(sqlite, "nf_audit_entries"), 1);
+  const evaluation = await evaluateFeatureFlag({
+    flag: NUTRIFLOW_FEATURE_FLAGS.ADMIN_EDITOR,
+    context: {
+      organizationId: 1,
+      clientId: 1,
+      correlationId: "corr_flag_read_01",
+      now: new Date("2026-08-01T12:00:00.000Z"),
+    },
+    repository: new D1FeatureFlagRepository(database),
+  });
+  assert.equal(evaluation.enabled, true);
+  assert.equal(evaluation.scope, "client");
+
+  const rollbackIdentifiers = ["flag_override_02", "audit_flag_02"];
+  const disable = new ConfigureFeatureFlagOverride({
+    unitOfWork: new D1NutriFlowUnitOfWork(database, {
+      organizationId: 1,
+      organizationPublicId: "org_01",
+    }),
+    generatePublicId: () => rollbackIdentifiers.shift() ?? "missing_id",
+    clock: () => new Date("2026-08-01T13:00:00.000Z"),
+  });
+  await disable.execute({
+    actor: owner,
+    organizationPublicId: "org_01",
+    flag: NUTRIFLOW_FEATURE_FLAGS.ADMIN_EDITOR,
+    clientId: 1,
+    enabled: false,
+    variant: "rollback",
+    reason: "Desligamento seguro sem remoção do histórico.",
+    correlationId: "corr_flag_rollback_01",
+  });
+  const rolledBack = await evaluateFeatureFlag({
+    flag: NUTRIFLOW_FEATURE_FLAGS.ADMIN_EDITOR,
+    context: {
+      organizationId: 1,
+      clientId: 1,
+      correlationId: "corr_flag_read_02",
+      now: new Date("2026-08-01T14:00:00.000Z"),
+    },
+    repository: new D1FeatureFlagRepository(database),
+  });
+  assert.equal(rolledBack.enabled, false);
+  assert.equal(rolledBack.variant, "rollback");
+  assert.equal(countRows(sqlite, "nf_feature_flag_overrides"), 2);
+  assert.equal(countRows(sqlite, "nf_audit_entries"), 2);
+});
+
+test("a feature override failure leaves neither configuration nor audit", async () => {
+  const sqlite = databaseWithNutriFlowSchema();
+  apply(sqlite, "0022_fantastic_martin_li.sql");
+  sqlite.exec(
+    "INSERT INTO nf_feature_flag_overrides (public_id, flag_key, organization_id, client_id, enabled, reason, created_by_auth_user_id) VALUES ('flag_duplicate_01', 'nutriflow.editor.enabled', 1, 1, 0, 'registro preexistente', 'auth_owner_01')",
+  );
+  const identifiers = ["flag_duplicate_01", "audit_should_rollback_01"];
+  const configure = new ConfigureFeatureFlagOverride({
+    unitOfWork: new D1NutriFlowUnitOfWork(new SqliteD1Database(sqlite), {
+      organizationId: 1,
+      organizationPublicId: "org_01",
+    }),
+    generatePublicId: () => identifiers.shift() ?? "missing_id",
+    clock: () => new Date("2026-07-31T15:00:00.000Z"),
+  });
+  await assert.rejects(
+    configure.execute({
+      actor: owner,
+      organizationPublicId: "org_01",
+      flag: NUTRIFLOW_FEATURE_FLAGS.ADMIN_EDITOR,
+      clientId: 1,
+      enabled: true,
+      reason: "Tentativa que precisa falhar atomicamente.",
+      correlationId: "corr_flag_config_02",
+    }),
+  );
+  assert.equal(countRows(sqlite, "nf_feature_flag_overrides"), 1);
+  assert.equal(countRows(sqlite, "nf_audit_entries"), 0);
 });

@@ -12,6 +12,10 @@ import type {
   NewPlanVersionRecord,
 } from "../../application/ports/food-plan-repository.ts";
 import type {
+  FeatureFlagWriteRepository,
+  NewFeatureFlagOverride,
+} from "../../application/ports/feature-flag-repository.ts";
+import type {
   NutriFlowTransaction,
   NutriFlowUnitOfWork,
 } from "../../application/ports/unit-of-work.ts";
@@ -212,6 +216,41 @@ class StagedAuditRepository implements AuditWriteRepository {
   }
 }
 
+class StagedFeatureFlagRepository implements FeatureFlagWriteRepository {
+  private readonly stage: (factory: StatementFactory) => void;
+  private readonly organizationId: number;
+
+  constructor(
+    stage: (factory: StatementFactory) => void,
+    organizationId: number,
+  ) {
+    this.stage = stage;
+    this.organizationId = organizationId;
+  }
+
+  insertOverride(record: NewFeatureFlagOverride) {
+    this.stage((database) =>
+      database
+        .prepare(
+          "INSERT INTO nf_feature_flag_overrides (public_id, flag_key, organization_id, client_id, enabled, variant, reason, expires_at, created_by_auth_user_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        )
+        .bind(
+          record.publicId,
+          record.flag,
+          this.organizationId,
+          record.clientId,
+          record.enabled ? 1 : 0,
+          record.variant,
+          record.reason,
+          record.expiresAt,
+          record.createdByAuthUserId,
+          record.createdAt,
+          record.createdAt,
+        ),
+    );
+  }
+}
+
 export class D1NutriFlowUnitOfWork implements NutriFlowUnitOfWork {
   private readonly database: D1DatabaseLike;
   private readonly context: D1UnitOfWorkContext;
@@ -232,9 +271,14 @@ export class D1NutriFlowUnitOfWork implements NutriFlowUnitOfWork {
     const stage = (factory: StatementFactory) => factories.push(factory);
     const plans = new StagedPlanRepository(stage, this.context.organizationId);
     const audit = new StagedAuditRepository(stage, this.context.organizationId);
+    const featureFlags = new StagedFeatureFlagRepository(
+      stage,
+      this.context.organizationId,
+    );
     const transaction: NutriFlowTransaction = {
       plans,
       audit,
+      featureFlags,
       enqueueDomainEvents: (events: readonly DomainEvent[]) => {
         for (const event of events) {
           if (

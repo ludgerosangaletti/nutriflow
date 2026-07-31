@@ -26,7 +26,7 @@ export class D1FeatureFlagRepository implements FeatureFlagRepository {
   ): Promise<FeatureFlagOverride | null> {
     const row = await this.database
       .prepare(
-        "SELECT enabled, variant, organization_id, client_id, expires_at FROM nf_feature_flag_overrides WHERE flag_key = ? AND (expires_at IS NULL OR expires_at >= ?) AND (organization_id IS NULL OR organization_id = ?) AND (client_id IS NULL OR client_id = ?) ORDER BY CASE WHEN client_id IS NOT NULL THEN 3 WHEN organization_id IS NOT NULL THEN 2 ELSE 1 END DESC, updated_at DESC LIMIT 1",
+        "SELECT enabled, variant, organization_id, client_id, expires_at FROM nf_feature_flag_overrides WHERE flag_key = ? AND (expires_at IS NULL OR expires_at >= ?) AND (organization_id IS NULL OR organization_id = ?) AND (client_id IS NULL OR client_id = ?) ORDER BY CASE WHEN client_id IS NOT NULL THEN 3 WHEN organization_id IS NOT NULL THEN 2 ELSE 1 END DESC, updated_at DESC, id DESC LIMIT 1",
       )
       .bind(flag, context.now.toISOString(), context.organizationId ?? null, context.clientId ?? null)
       .first<FlagRow>();

@@ -21,6 +21,22 @@ export interface FeatureFlagRepository {
   ): Promise<FeatureFlagOverride | null>;
 }
 
+export type NewFeatureFlagOverride = Readonly<{
+  publicId: string;
+  flag: NutriFlowFeatureFlag;
+  clientId: number | null;
+  enabled: boolean;
+  variant: string | null;
+  reason: string;
+  expiresAt: string | null;
+  createdByAuthUserId: string;
+  createdAt: string;
+}>;
+
+export interface FeatureFlagWriteRepository {
+  insertOverride(override: NewFeatureFlagOverride): void;
+}
+
 export interface FeatureFlagTelemetry {
   record(input: Readonly<{
     flag: NutriFlowFeatureFlag;

@@ -33,6 +33,7 @@ export const NUTRIFLOW_ACTIONS = {
   PUBLISH_VERSION: "plan:publish-version",
   REVOKE_PUBLICATION: "plan:revoke-publication",
   READ_PUBLISHED_PLAN: "publication:read",
+  CONFIGURE_FEATURE_FLAG: "feature-flag:configure",
 } as const;
 
 export type NutriFlowAction =
@@ -41,7 +42,11 @@ export type NutriFlowAction =
 export const NUTRIFLOW_AUTHORIZATION_MATRIX = Object.freeze({
   owner: Object.freeze(Object.values(NUTRIFLOW_ACTIONS)),
   admin: Object.freeze(Object.values(NUTRIFLOW_ACTIONS)),
-  nutritionist: Object.freeze(Object.values(NUTRIFLOW_ACTIONS)),
+  nutritionist: Object.freeze(
+    Object.values(NUTRIFLOW_ACTIONS).filter(
+      (action) => action !== NUTRIFLOW_ACTIONS.CONFIGURE_FEATURE_FLAG,
+    ),
+  ),
   patient: Object.freeze([NUTRIFLOW_ACTIONS.READ_PUBLISHED_PLAN]),
   service: Object.freeze([NUTRIFLOW_ACTIONS.READ_PUBLISHED_PLAN]),
 });
@@ -65,16 +70,6 @@ export type AuthorizationDecision = Readonly<{
     | "unsupported-action";
 }>;
 
-const STAFF_ACTIONS = new Set<NutriFlowAction>([
-  NUTRIFLOW_ACTIONS.CREATE_PLAN,
-  NUTRIFLOW_ACTIONS.READ_PLAN,
-  NUTRIFLOW_ACTIONS.UPDATE_DRAFT,
-  NUTRIFLOW_ACTIONS.REQUEST_REVIEW,
-  NUTRIFLOW_ACTIONS.PUBLISH_VERSION,
-  NUTRIFLOW_ACTIONS.REVOKE_PUBLICATION,
-  NUTRIFLOW_ACTIONS.READ_PUBLISHED_PLAN,
-]);
-
 function denied(reason: AuthorizationDecision["reason"]): AuthorizationDecision {
   return Object.freeze({ allowed: false, reason });
 }
@@ -94,7 +89,7 @@ export function authorizeNutriFlow(
     if (actor.organizationPublicId !== resource.organizationPublicId) {
       return denied("cross-organization");
     }
-    return STAFF_ACTIONS.has(action)
+    return (NUTRIFLOW_AUTHORIZATION_MATRIX[actor.role] as readonly string[]).includes(action)
       ? Object.freeze({ allowed: true, reason: "allowed" })
       : denied("unsupported-action");
   }

@@ -19,5 +19,7 @@ export * from "./application/security/authorization.ts";
 export * from "./application/observability/operation-telemetry.ts";
 export * from "./application/idempotency/execute-idempotently.ts";
 export * from "./application/feature-flags/evaluate-feature-flag.ts";
+export * from "./application/feature-flags/configure-feature-flag-override.ts";
 export * from "./application/events/reliable-domain-event-dispatcher.ts";
 export * from "./application/events/process-outbox.ts";
+export * from "./application/operations/run-nutriflow-operation.ts";
