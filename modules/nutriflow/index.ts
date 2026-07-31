@@ -1,6 +1,7 @@
 export * from "./config/feature-flags.ts";
 export * from "./contracts/v1/errors.ts";
 export * from "./contracts/v1/plans.ts";
+export * from "./contracts/v1/validation.ts";
 export * from "./domain/aggregate-root.ts";
 export * from "./domain/events/domain-event.ts";
 export * from "./domain/plans/plan-events.ts";
@@ -10,3 +11,6 @@ export * from "./domain/shared/value-objects.ts";
 export * from "./application/ports/audit-repository.ts";
 export * from "./application/ports/food-plan-repository.ts";
 export * from "./application/ports/unit-of-work.ts";
+export * from "./application/errors/nutriflow-application-error.ts";
+export * from "./application/security/authorization.ts";
+export * from "./application/observability/operation-telemetry.ts";

@@ -112,3 +112,15 @@ export type PublishedFoodPlanV1 = Readonly<{
   publishedAt: string;
   content: FoodPlanContentV1;
 }>;
+
+export type GetPublishedFoodPlanQueryV1 = Readonly<{
+  apiVersion: typeof NUTRIFLOW_API_VERSION;
+  publicationPublicId: string;
+  correlationId: string;
+}>;
+
+export type NutriFlowApiSuccessV1<T> = Readonly<{
+  apiVersion: typeof NUTRIFLOW_API_VERSION;
+  correlationId: string;
+  data: T;
+}>;

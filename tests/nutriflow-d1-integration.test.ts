@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { DatabaseSync } from "node:sqlite";
+import { DatabaseSync, type SQLInputValue } from "node:sqlite";
 import test from "node:test";
 import {
   D1NutriFlowUnitOfWork,
@@ -33,7 +33,9 @@ class SqliteD1Database {
     this.sqlite.exec("BEGIN IMMEDIATE");
     try {
       const results = statements.map((statement) =>
-        this.sqlite.prepare(statement.query).run(...statement.values),
+        this.sqlite
+          .prepare(statement.query)
+          .run(...statement.values.map(toSqlInputValue)),
       );
       this.sqlite.exec("COMMIT");
       return results;
@@ -42,6 +44,32 @@ class SqliteD1Database {
       throw error;
     }
   }
+}
+
+function toSqlInputValue(value: unknown): SQLInputValue {
+  if (
+    value === null ||
+    typeof value === "string" ||
+    typeof value === "number" ||
+    typeof value === "bigint" ||
+    ArrayBuffer.isView(value)
+  ) {
+    return value as SQLInputValue;
+  }
+  throw new Error("Unsupported SQL input value in integration test");
+}
+
+function countRows(sqlite: DatabaseSync, table: string) {
+  const allowed = new Set([
+    "nf_plans",
+    "nf_plan_versions",
+    "nf_audit_entries",
+    "nf_outbox_events",
+  ]);
+  if (!allowed.has(table)) throw new Error("Unsupported test table");
+  const row = sqlite.prepare(`SELECT count(*) AS total FROM ${table}`).get();
+  if (!row || typeof row.total !== "number") throw new Error("Missing count result");
+  return row.total;
 }
 
 function apply(database: DatabaseSync, migrationName: string) {
@@ -136,19 +164,10 @@ test("D1 adapter persists state, audit and outbox atomically in the real schema"
     transaction.enqueueDomainEvents([event]);
   });
 
-  assert.equal(sqlite.prepare("SELECT count(*) AS total FROM nf_plans").get().total, 1);
-  assert.equal(
-    sqlite.prepare("SELECT count(*) AS total FROM nf_plan_versions").get().total,
-    1,
-  );
-  assert.equal(
-    sqlite.prepare("SELECT count(*) AS total FROM nf_audit_entries").get().total,
-    1,
-  );
-  assert.equal(
-    sqlite.prepare("SELECT count(*) AS total FROM nf_outbox_events").get().total,
-    1,
-  );
+  assert.equal(countRows(sqlite, "nf_plans"), 1);
+  assert.equal(countRows(sqlite, "nf_plan_versions"), 1);
+  assert.equal(countRows(sqlite, "nf_audit_entries"), 1);
+  assert.equal(countRows(sqlite, "nf_outbox_events"), 1);
 });
 
 test("a statement failure rolls back every staged D1 write", async () => {
@@ -173,5 +192,5 @@ test("a statement failure rolls back every staged D1 write", async () => {
     }),
   );
 
-  assert.equal(sqlite.prepare("SELECT count(*) AS total FROM nf_plans").get().total, 0);
+  assert.equal(countRows(sqlite, "nf_plans"), 0);
 });
