@@ -63,7 +63,15 @@ export async function DELETE(request: Request) {
     deleted?: boolean;
     error?: string;
   };
-  if (!authResponse.ok || authResult.deleted !== true) {
+  const accountWasAlreadyRemoved =
+    !authResponse.ok &&
+    /not found|does not exist|n.o encontrado|inexistente/i.test(
+      authResult.error || "",
+    );
+  if (
+    (!authResponse.ok || authResult.deleted !== true) &&
+    !accountWasAlreadyRemoved
+  ) {
     return Response.json(
       {
         error:
@@ -99,7 +107,13 @@ export async function DELETE(request: Request) {
     await env.BUCKET.delete(objectKeys);
   }
 
-  await env.DB.batch([
+  const now = new Date().toISOString();
+  const tombstoneEmail = `reset-${client.id}-${Date.now()}@deleted.invalid`;
+  const plan = await env.DB.prepare(
+    "SELECT id FROM nf_plans WHERE client_id = ? LIMIT 1",
+  ).bind(client.id).first<{ id: number }>();
+
+  const cleanup = [
     env.DB.prepare(
       "DELETE FROM appointment_change_requests WHERE client_email = ?",
     ).bind(email),
@@ -125,8 +139,60 @@ export async function DELETE(request: Request) {
       email,
     ),
     env.DB.prepare("DELETE FROM anamneses WHERE client_email = ?").bind(email),
-    env.DB.prepare("DELETE FROM clients WHERE email = ?").bind(email),
-  ]);
+  ];
 
-  return Response.json({ ok: true, deleted: true });
+  if (plan) {
+    cleanup.push(
+      env.DB.prepare(`UPDATE clients SET
+        auth_user_id = NULL,
+        email = ?,
+        name = 'Cadastro reiniciado',
+        whatsapp = '',
+        birth_date = NULL,
+        profile_completed_at = NULL,
+        invite_status = 'not_applicable',
+        invite_sent_at = NULL,
+        invite_accepted_at = NULL,
+        invite_error = NULL,
+        payment_status = 'reset',
+        access_started_at = NULL,
+        access_expires_at = NULL,
+        next_appointment_at = NULL,
+        appointment_status = 'cancelled',
+        appointment_confirmation_status = 'not_applicable',
+        appointment_confirmation_token = NULL,
+        appointment_confirmation_expires_at = NULL,
+        appointment_confirmation_sent_at = NULL,
+        appointment_confirmation_responded_at = NULL,
+        google_calendar_event_id = NULL,
+        google_calendar_synced_at = NULL,
+        form_status = 'not_started',
+        archived_at = ?,
+        archive_reason = 'patient_requested_restart',
+        updated_at = ?
+        WHERE id = ? AND email = ?`)
+        .bind(tombstoneEmail, now, now, client.id, email),
+    );
+  } else {
+    cleanup.push(
+      env.DB.prepare("DELETE FROM nf_feature_flag_overrides WHERE client_id = ?").bind(client.id),
+      env.DB.prepare("DELETE FROM nf_delivery_settings WHERE client_id = ?").bind(client.id),
+      env.DB.prepare("DELETE FROM clients WHERE id = ? AND email = ?").bind(client.id, email),
+    );
+  }
+
+  try {
+    await env.DB.batch(cleanup);
+  } catch (error) {
+    console.error("[patient-reset.cleanup]", JSON.stringify({ clientId: client.id, preservedNutriFlowHistory: Boolean(plan), error: error instanceof Error ? error.message : "unknown" }));
+    return Response.json(
+      {
+        error: "A conta de acesso já foi removida, mas o prontuário ainda não terminou de ser reiniciado. Clique novamente em ‘Excluir e reiniciar paciente’ para concluir com segurança.",
+        retryable: true,
+      },
+      { status: 503 },
+    );
+  }
+
+  return Response.json({ ok: true, deleted: true, clinicalHistoryPreserved: Boolean(plan) });
 }

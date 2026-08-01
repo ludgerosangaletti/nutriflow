@@ -44,13 +44,14 @@ export default function PatientResetPanel({ patients }: { patients: Patient[] })
       });
       const result = (await response.json().catch(() => ({}))) as {
         error?: string;
+        clinicalHistoryPreserved?: boolean;
       };
       if (!response.ok) {
         throw new Error(result.error || "Não foi possível excluir o cadastro.");
       }
-      setMessage(
-        "Reset concluído. A conta e os dados do paciente foram excluídos; um novo cadastro começará do zero.",
-      );
+      setMessage(result.clinicalHistoryPreserved
+        ? "Reset concluído. O histórico clínico publicado foi preservado de forma desidentificada e o paciente poderá ser cadastrado novamente do zero."
+        : "Reset concluído. A conta e os dados do paciente foram excluídos; um novo cadastro começará do zero.");
       window.setTimeout(() => window.location.reload(), 1400);
     } catch (error) {
       setMessage(
@@ -79,7 +80,8 @@ export default function PatientResetPanel({ patients }: { patients: Patient[] })
             Remove conta, confirmação de e-mail, dados cadastrais, anamnese,
             check-ins, fotos, documentos, metas, lembretes e solicitações. Para
             voltar, o paciente precisará receber um novo convite e criar a conta
-            novamente.
+            novamente. Versões clínicas já publicadas permanecem preservadas de
+            forma desidentificada para manter a auditoria obrigatória.
           </p>
         </div>
         <label>

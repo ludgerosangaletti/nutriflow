@@ -1,4 +1,4 @@
-import { desc } from "drizzle-orm";
+import { desc, isNull } from "drizzle-orm";
 import Link from "next/link";
 import { getDb } from "../../../db";
 import {
@@ -42,6 +42,7 @@ export default async function AdminClients() {
   const rows = await getDb()
     .select()
     .from(clients)
+    .where(isNull(clients.archivedAt))
     .orderBy(desc(clients.createdAt));
   const submittedAnamneses = (await getDb().select().from(anamneses)).filter(
     (anamnesis) => anamnesis.status === "submitted",

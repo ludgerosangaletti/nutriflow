@@ -41,6 +41,8 @@ export const clients = sqliteTable(
     googleCalendarEventId: text("google_calendar_event_id"),
     googleCalendarSyncedAt: text("google_calendar_synced_at"),
     formStatus: text("form_status").notNull().default("not_started"),
+    archivedAt: text("archived_at"),
+    archiveReason: text("archive_reason"),
     createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
     updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
   },
