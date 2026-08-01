@@ -3,7 +3,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getDb } from "../../../../../db";
 import { clients } from "../../../../../db/schema";
-import { canUseNutriFlowEditor, resolveNutriFlowAdminContext } from "../../../../nutriflow/server";
+import { canUseNutriFlowEditor, canUseNutriFlowFeature, resolveNutriFlowAdminContext } from "../../../../nutriflow/server";
+import { NUTRIFLOW_FEATURE_FLAGS } from "../../../../../modules/nutriflow/config/feature-flags";
 import { requireAdmin } from "../../../../supabase/server";
 import NutriFlowEditor from "./nutriflow-editor";
 
@@ -16,5 +17,10 @@ export default async function NutriFlowEditorPage({ params }: { params: Promise<
   if (!client) notFound();
   const context = await resolveNutriFlowAdminContext(user.id);
   if (!context || !(await canUseNutriFlowEditor(context, client.id))) notFound();
-  return <main className="portal-shell nutriflow-page"><header className="portal-header"><Link className="portal-brand" href={`/admin/clientes/${encodeURIComponent(client.email)}`}>← Prontuário de {client.name}</Link><span>NutriFlow · rascunho</span></header><NutriFlowEditor clientId={client.id} patientName={client.name} /></main>;
+  const [catalogEnabled, recipesEnabled, mealTemplatesEnabled] = await Promise.all([
+    canUseNutriFlowFeature(context, client.id, NUTRIFLOW_FEATURE_FLAGS.GLOBAL_CATALOG),
+    canUseNutriFlowFeature(context, client.id, NUTRIFLOW_FEATURE_FLAGS.RECIPES),
+    canUseNutriFlowFeature(context, client.id, NUTRIFLOW_FEATURE_FLAGS.MEAL_TEMPLATES),
+  ]);
+  return <main className="portal-shell nutriflow-page"><header className="portal-header"><Link className="portal-brand" href={`/admin/clientes/${encodeURIComponent(client.email)}`}>← Prontuário de {client.name}</Link><span>NutriFlow · rascunho</span></header><NutriFlowEditor clientId={client.id} patientName={client.name} tools={{ catalogEnabled, recipesEnabled, mealTemplatesEnabled }} /></main>;
 }

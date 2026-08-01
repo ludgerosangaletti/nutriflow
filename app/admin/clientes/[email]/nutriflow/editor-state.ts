@@ -1,4 +1,5 @@
 import type { FoodPlanContentV1, FoodPlanDraftV1, FoodPlanMealV1 } from "../../../../../modules/nutriflow/contracts/v1/plans.ts";
+import type { FoodCatalogItemV1 } from "../../../../../modules/nutriflow/contracts/v1/catalog.ts";
 
 export const NUTRIFLOW_UNITS = Object.freeze([
   { publicId: "unit_gram", code: "g", label: "grama" },
@@ -102,10 +103,53 @@ export function addItem(draft: FoodPlanDraftV1, mealPublicId: string, publicId =
   return updateContent(draft, { ...draft.content, meals: draft.content.meals.map((meal) => meal.publicId === mealPublicId ? { ...meal, items: [...meal.items, { publicId, source: { type: "manual", publicId: null, revisionNumber: null }, displayName: "Novo alimento", quantityMilli: 1000, unit, preparation: null, notes: null, sortOrder: meal.items.length }] } : meal) });
 }
 
+export function addCatalogItem(draft: FoodPlanDraftV1, mealPublicId: string, food: FoodCatalogItemV1, publicId = editorId("item")) {
+  return updateContent(draft, { ...draft.content, meals: draft.content.meals.map((meal) => meal.publicId === mealPublicId ? { ...meal, items: [...meal.items, { publicId, source: { type: "food", publicId: food.publicId, revisionNumber: food.revisionNumber }, displayName: food.name, quantityMilli: food.referenceQuantityMilli, unit: food.referenceUnit, preparation: null, notes: null, sortOrder: meal.items.length }] } : meal) });
+}
+
 export function updateItem(draft: FoodPlanDraftV1, mealPublicId: string, itemPublicId: string, patch: Partial<FoodPlanMealV1["items"][number]>) {
   return updateContent(draft, { ...draft.content, meals: draft.content.meals.map((meal) => meal.publicId === mealPublicId ? { ...meal, items: meal.items.map((item) => item.publicId === itemPublicId ? { ...item, ...patch, publicId: item.publicId } : item) } : meal) });
 }
 
 export function removeItem(draft: FoodPlanDraftV1, mealPublicId: string, itemPublicId: string) {
   return updateContent(draft, { ...draft.content, meals: draft.content.meals.map((meal) => meal.publicId === mealPublicId ? { ...meal, items: meal.items.filter((item) => item.publicId !== itemPublicId) } : meal) });
+}
+
+export function moveItem(draft: FoodPlanDraftV1, mealPublicId: string, itemPublicId: string, direction: -1 | 1) {
+  return updateContent(draft, { ...draft.content, meals: draft.content.meals.map((meal) => {
+    if (meal.publicId !== mealPublicId) return meal;
+    const items = [...meal.items];
+    const index = items.findIndex((item) => item.publicId === itemPublicId);
+    const target = index + direction;
+    if (index < 0 || target < 0 || target >= items.length) return meal;
+    [items[index], items[target]] = [items[target], items[index]];
+    return { ...meal, items };
+  }) });
+}
+
+export function duplicateItem(draft: FoodPlanDraftV1, mealPublicId: string, itemPublicId: string, publicId = editorId("item")) {
+  return updateContent(draft, { ...draft.content, meals: draft.content.meals.map((meal) => {
+    if (meal.publicId !== mealPublicId) return meal;
+    const index = meal.items.findIndex((item) => item.publicId === itemPublicId);
+    if (index < 0) return meal;
+    const copy = { ...meal.items[index], publicId };
+    const items = [...meal.items.slice(0, index + 1), copy, ...meal.items.slice(index + 1)];
+    return { ...meal, items };
+  }) });
+}
+
+export function duplicateMeal(draft: FoodPlanDraftV1, mealPublicId: string, ids: Readonly<{ meal: string; items: readonly string[] }> = { meal: editorId("meal"), items: [] }) {
+  const source = draft.content.meals.find((meal) => meal.publicId === mealPublicId);
+  if (!source) return draft;
+  const copy: FoodPlanMealV1 = {
+    ...source,
+    publicId: ids.meal,
+    title: `${source.title} — cópia`,
+    sortOrder: source.sortOrder + 1,
+    items: source.items.map((item, index) => ({ ...item, publicId: ids.items[index] ?? editorId("item") })),
+  };
+  const meals = draft.content.meals.map((meal) => meal.planDayPublicId === source.planDayPublicId && meal.sortOrder > source.sortOrder ? { ...meal, sortOrder: meal.sortOrder + 1 } : meal);
+  const sourcePosition = meals.findIndex((meal) => meal.publicId === source.publicId);
+  meals.splice(sourcePosition + 1, 0, copy);
+  return updateContent(draft, { ...draft.content, meals });
 }

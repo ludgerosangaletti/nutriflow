@@ -7,12 +7,15 @@ import { GetFoodPlanDraft } from "../../modules/nutriflow/application/plans/get-
 import { GetFoodPlanDraftOperation } from "../../modules/nutriflow/application/plans/get-food-plan-draft-operation.ts";
 import { SaveFoodPlanDraft } from "../../modules/nutriflow/application/plans/save-food-plan-draft.ts";
 import { SaveFoodPlanDraftOperation } from "../../modules/nutriflow/application/plans/save-food-plan-draft-operation.ts";
+import { SearchFoodCatalog } from "../../modules/nutriflow/application/catalog/search-food-catalog.ts";
+import { SearchFoodCatalogOperation } from "../../modules/nutriflow/application/catalog/search-food-catalog-operation.ts";
 import { NutriFlowOperationRunner } from "../../modules/nutriflow/application/operations/run-nutriflow-operation.ts";
 import type { NutriFlowOperationMetric } from "../../modules/nutriflow/application/observability/operation-telemetry.ts";
 import type { NutriFlowActor, NutriFlowStaffRole } from "../../modules/nutriflow/application/security/authorization.ts";
 import { D1FeatureFlagRepository } from "../../modules/nutriflow/infrastructure/d1/d1-feature-flag-repository.ts";
 import { D1FoodPlanDraftStore } from "../../modules/nutriflow/infrastructure/d1/d1-food-plan-draft-store.ts";
 import { D1FoodPlanReadRepository } from "../../modules/nutriflow/infrastructure/d1/d1-food-plan-read-repository.ts";
+import { D1FoodCatalogReadRepository } from "../../modules/nutriflow/infrastructure/d1/d1-food-catalog-read-repository.ts";
 import { D1IdempotencyRepository } from "../../modules/nutriflow/infrastructure/d1/d1-idempotency-repository.ts";
 import { D1NutriFlowUnitOfWork } from "../../modules/nutriflow/infrastructure/d1/d1-unit-of-work.ts";
 
@@ -72,6 +75,19 @@ export async function canUseNutriFlowEditor(
   return evaluation.enabled;
 }
 
+export async function canUseNutriFlowFeature(
+  context: NutriFlowAdminContext,
+  clientId: number,
+  flag: (typeof NUTRIFLOW_FEATURE_FLAGS)[keyof typeof NUTRIFLOW_FEATURE_FLAGS],
+) {
+  const evaluation = await evaluateFeatureFlag({
+    flag,
+    context: { organizationId: context.organizationId, clientId, correlationId: generatePublicId("corr"), now: new Date() },
+    repository: new D1FeatureFlagRepository(env.DB),
+  });
+  return evaluation.enabled;
+}
+
 function generatePublicId(kind: string) {
   return `${kind}_${crypto.randomUUID()}`;
 }
@@ -116,6 +132,10 @@ export function createNutriFlowAdminRuntime(context: NutriFlowAdminContext) {
         generatePublicId,
         environment: process.env.NODE_ENV === "production" ? "production" : "development",
       }),
+    }),
+    searchCatalog: new SearchFoodCatalogOperation({
+      runner,
+      search: new SearchFoodCatalog(new D1FoodCatalogReadRepository(env.DB)),
     }),
   });
 }

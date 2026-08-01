@@ -7498,3 +7498,105 @@ button:disabled {
   .nutriflow-loading span,
   .nutriflow-sync.is-saving > span { animation: none; }
 }
+
+/* NutriFlow Sprint 3 — produtividade clínica e biblioteca global */
+.nutriflow-loading-shell {
+  min-height: 620px;
+  display: grid;
+  align-content: start;
+  gap: 18px;
+  padding: 24px 0;
+}
+.nutriflow-loading-shell header,
+.nutriflow-loading-shell > div { display: grid; gap: 14px; }
+.nutriflow-loading-shell header { grid-template-columns: 1fr 240px; }
+.nutriflow-loading-shell > div { grid-template-columns: 230px 1fr; }
+.nutriflow-loading-shell aside,
+.nutriflow-loading-shell main { display: grid; align-content: start; gap: 12px; border: 1px solid #e0e0d8; border-radius: 18px; background: #fff; padding: 18px; }
+.nutriflow-loading-shell span { display: block; height: 48px; border-radius: 12px; background: linear-gradient(100deg, #eeeeea 20%, #fafaf7 40%, #eeeeea 60%); background-size: 200% 100%; animation: nutriflow-shimmer 1.25s ease-in-out infinite; }
+.nutriflow-loading-shell header span:first-child { width: 60%; }
+.nutriflow-loading-shell aside span { height: 64px; }
+.nutriflow-loading-shell main span { height: 110px; }
+.nutriflow-loading-shell p { color: #6e6e67; text-align: center; }
+@keyframes nutriflow-shimmer { to { background-position: -200% 0; } }
+
+.nutriflow-editor-layout.has-library { grid-template-columns: minmax(0, 1fr) 334px; }
+.nutriflow-tools-rail { position: sticky; top: 18px; align-self: start; display: grid; gap: 14px; }
+.nutriflow-tools-rail .nutriflow-sidebar { position: static; }
+.nutriflow-meal { transition: border-color .18s ease, box-shadow .18s ease; }
+.nutriflow-meal.is-selected { border-color: #b8a400; box-shadow: 0 0 0 3px rgba(255,230,0,.14); }
+
+.nutriflow-item { display: block; padding: 10px; }
+.nutriflow-item-main { display: grid; grid-template-columns: minmax(180px, 1.45fr) 100px minmax(125px, .8fr) minmax(150px, 1fr) auto; gap: 8px; align-items: end; }
+.nutriflow-item-main label { display: grid; gap: 7px; }
+.nutriflow-item-main label > span { color: #66665f; font-size: .68rem; font-weight: 850; letter-spacing: .09em; text-transform: uppercase; }
+.nutriflow-item-main label > span b { display: inline-block; margin-left: 6px; border-radius: 999px; background: #fff4a8; color: #655b00; font-size: .55rem; letter-spacing: .04em; padding: 3px 6px; vertical-align: 1px; }
+.nutriflow-item-actions { display: grid; grid-template-columns: repeat(2, 30px); gap: 4px; align-self: end; }
+.nutriflow-item-actions button { width: 30px; height: 30px; border: 1px solid #deded7; border-radius: 8px; background: #f8f8f4; color: #41413c; font-weight: 850; cursor: pointer; }
+.nutriflow-item-actions button:disabled { opacity: .28; cursor: not-allowed; }
+.nutriflow-item-actions button.is-danger { background: #fff0ee; color: #a83027; }
+.nutriflow-item-notes { margin-top: 8px; border-top: 1px solid #ecece6; padding-top: 8px; }
+.nutriflow-item-notes summary { width: max-content; color: #72726b; font-size: .72rem; font-weight: 750; cursor: pointer; }
+.nutriflow-item-notes label { margin-top: 8px; }
+.nutriflow-item-notes input { width: 100%; }
+
+.nutriflow-library { overflow: hidden; border: 1px solid #d6d6ce; border-radius: 20px; background: #11110f; color: #fff; box-shadow: 0 18px 38px rgba(17,17,15,.12); }
+.nutriflow-library > header { display: flex; align-items: start; justify-content: space-between; gap: 12px; padding: 18px 18px 13px; }
+.nutriflow-library > header div { display: grid; gap: 4px; }
+.nutriflow-library > header span { color: #ffe600; font-size: .65rem; font-weight: 900; letter-spacing: .11em; text-transform: uppercase; }
+.nutriflow-library > header strong { font-size: 1rem; }
+.nutriflow-library > header small { border: 1px solid #44443e; border-radius: 999px; color: #c9c9c1; padding: 4px 7px; }
+.nutriflow-library-search { display: grid; grid-template-columns: 22px 1fr; align-items: center; margin: 0 13px; border: 1px solid #3b3b36; border-radius: 12px; background: #22221f; padding: 0 11px; }
+.nutriflow-library-search > span { color: #ffe600; font-size: 1.25rem; }
+.nutriflow-library-search input { width: 100%; height: 44px; border: 0; outline: 0; background: transparent; color: #fff; font: inherit; }
+.nutriflow-library-search input::placeholder { color: #8f8f87; }
+.nutriflow-library-categories { display: flex; gap: 6px; overflow-x: auto; padding: 11px 13px 5px; scrollbar-width: none; }
+.nutriflow-library-categories::-webkit-scrollbar { display: none; }
+.nutriflow-library-categories button { flex: 0 0 auto; border: 1px solid #3d3d37; border-radius: 999px; background: transparent; color: #aaa9a1; font: inherit; font-size: .68rem; font-weight: 750; padding: 6px 9px; cursor: pointer; }
+.nutriflow-library-categories button.is-active { border-color: #ffe600; background: #ffe600; color: #11110f; }
+.nutriflow-library-target { margin: 8px 13px; border-radius: 9px; background: #292925; color: #aaa9a1; font-size: .72rem; line-height: 1.35; padding: 8px 10px; }
+.nutriflow-library-target.is-ready { background: #31300e; color: #d9d597; }
+.nutriflow-library-target strong { color: #fff; }
+.nutriflow-library-results { min-height: 210px; max-height: 350px; display: grid; align-content: start; gap: 3px; overflow-y: auto; padding: 4px 8px 8px; }
+.nutriflow-library-results > button:not(.nutriflow-library-error) { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 8px; border: 0; border-radius: 11px; background: transparent; color: #fff; text-align: left; padding: 10px; cursor: pointer; }
+.nutriflow-library-results > button:not(.nutriflow-library-error):hover,
+.nutriflow-library-results > button.is-active { background: #292925; }
+.nutriflow-library-results > button:disabled { opacity: .4; cursor: not-allowed; }
+.nutriflow-library-results button span { min-width: 0; display: grid; gap: 3px; }
+.nutriflow-library-results button strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .82rem; }
+.nutriflow-library-results button small { color: #999990; font-size: .68rem; }
+.nutriflow-library-results button b { display: grid; place-items: center; width: 28px; height: 28px; flex: 0 0 28px; border-radius: 50%; background: #ffe600; color: #11110f; font-size: 1rem; }
+.nutriflow-library-skeleton { height: 54px; border-radius: 11px; background: linear-gradient(100deg, #22221f 20%, #30302b 40%, #22221f 60%); background-size: 200% 100%; animation: nutriflow-shimmer 1.1s ease-in-out infinite; }
+.nutriflow-library-empty { color: #a5a59d; font-size: .78rem; line-height: 1.5; padding: 18px 10px; text-align: center; }
+.nutriflow-library-error { border: 0; background: transparent; color: #ffb7b0; font: inherit; font-size: .76rem; line-height: 1.45; padding: 18px 10px; cursor: pointer; }
+.nutriflow-library footer { display: flex; justify-content: space-between; gap: 8px; border-top: 1px solid #2d2d28; color: #808078; font-size: .62rem; padding: 9px 13px; }
+.nutriflow-save-now { display: grid; gap: 2px; }
+.nutriflow-save-now small { color: #aead9f; font-size: .62rem; font-weight: 650; }
+
+@media (max-width: 1180px) {
+  .nutriflow-editor-layout.has-library { grid-template-columns: 1fr; }
+  .nutriflow-tools-rail { position: static; grid-template-columns: minmax(280px, .8fr) minmax(0, 1.2fr); }
+  .nutriflow-library-results { max-height: 310px; }
+}
+
+@media (max-width: 920px) {
+  .nutriflow-item-main { grid-template-columns: minmax(180px, 1fr) 100px minmax(125px, .8fr) auto; }
+  .nutriflow-item-main .is-preparation { grid-column: 1 / -2; }
+}
+
+@media (max-width: 720px) {
+  .nutriflow-loading-shell header,
+  .nutriflow-loading-shell > div,
+  .nutriflow-tools-rail { grid-template-columns: 1fr; }
+  .nutriflow-item-main { grid-template-columns: 1fr 1fr; }
+  .nutriflow-item-main label:first-child,
+  .nutriflow-item-main .is-preparation { grid-column: 1 / -1; }
+  .nutriflow-item-actions { grid-column: 1 / -1; display: flex; }
+  .nutriflow-library { border-radius: 16px; }
+  .nutriflow-library-results { max-height: 280px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nutriflow-loading-shell span,
+  .nutriflow-library-skeleton { animation: none; }
+}

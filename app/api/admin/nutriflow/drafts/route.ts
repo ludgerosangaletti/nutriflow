@@ -27,22 +27,27 @@ async function authorizedRuntime() {
   return context ? { context, runtime: createNutriFlowAdminRuntime(context) } : null;
 }
 
-function success(correlation: string, data: unknown, status = 200) {
-  return Response.json({ apiVersion: NUTRIFLOW_API_VERSION, correlationId: correlation, data }, { status });
+function metricHeaders(startedAt: number, queryCount: string) {
+  return { "server-timing": `nutriflow;dur=${(performance.now() - startedAt).toFixed(1)}`, "x-nutriflow-query-count": queryCount };
 }
 
-function failure(error: unknown, correlation: string) {
+function success(correlation: string, data: unknown, startedAt: number, queryCount: string, status = 200) {
+  return Response.json({ apiVersion: NUTRIFLOW_API_VERSION, correlationId: correlation, data }, { status, headers: metricHeaders(startedAt, queryCount) });
+}
+
+function failure(error: unknown, correlation: string, startedAt: number) {
   if (error instanceof NutriFlowApplicationError) {
-    return Response.json(createNutriFlowApiErrorV1(error.code, correlation), { status: error.httpStatus });
+    return Response.json(createNutriFlowApiErrorV1(error.code, correlation), { status: error.httpStatus, headers: metricHeaders(startedAt, "0") });
   }
   if (error instanceof NutriFlowContractError) {
-    return Response.json(createNutriFlowApiErrorV1(NUTRIFLOW_ERROR_CODES.INVALID_INPUT, correlation, { path: error.path }), { status: 400 });
+    return Response.json(createNutriFlowApiErrorV1(NUTRIFLOW_ERROR_CODES.INVALID_INPUT, correlation, { path: error.path }), { status: 400, headers: metricHeaders(startedAt, "0") });
   }
   console.error("[nutriflow.api]", JSON.stringify({ correlationId: correlation, errorCode: NUTRIFLOW_ERROR_CODES.INTERNAL_ERROR }));
-  return Response.json(createNutriFlowApiErrorV1(NUTRIFLOW_ERROR_CODES.INTERNAL_ERROR, correlation), { status: 500 });
+  return Response.json(createNutriFlowApiErrorV1(NUTRIFLOW_ERROR_CODES.INTERNAL_ERROR, correlation), { status: 500, headers: metricHeaders(startedAt, "0") });
 }
 
 export async function GET(request: Request) {
+  const startedAt = performance.now();
   const correlation = correlationId(request);
   try {
     const authorized = await authorizedRuntime();
@@ -56,13 +61,14 @@ export async function GET(request: Request) {
       clientId,
       suppliedCorrelationId: correlation,
     });
-    return success(result.correlationId, result.data);
+    return success(result.correlationId, result.data, startedAt, "5");
   } catch (error) {
-    return failure(error, correlation);
+    return failure(error, correlation, startedAt);
   }
 }
 
 export async function POST(request: Request) {
+  const startedAt = performance.now();
   const correlation = correlationId(request);
   try {
     const authorized = await authorizedRuntime();
@@ -81,13 +87,14 @@ export async function POST(request: Request) {
       idempotencyKey: key,
       requestHash: await sha256Json(command),
     });
-    return success(result.correlationId, result.data, 201);
+    return success(result.correlationId, result.data, startedAt, "1-batch", 201);
   } catch (error) {
-    return failure(error, correlation);
+    return failure(error, correlation, startedAt);
   }
 }
 
 export async function PATCH(request: Request) {
+  const startedAt = performance.now();
   const correlation = correlationId(request);
   try {
     const authorized = await authorizedRuntime();
@@ -107,8 +114,8 @@ export async function PATCH(request: Request) {
       idempotencyKey: key,
       requestHash: await sha256Json({ clientId, command }),
     });
-    return success(result.correlationId, result.data);
+    return success(result.correlationId, result.data, startedAt, "5+1-batch");
   } catch (error) {
-    return failure(error, correlation);
+    return failure(error, correlation, startedAt);
   }
 }

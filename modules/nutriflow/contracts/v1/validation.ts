@@ -15,6 +15,7 @@ import type {
   PublishFoodPlanVersionCommandV1,
   SaveFoodPlanDraftCommandV1,
 } from "./plans.ts";
+import type { SearchFoodCatalogQueryV1 } from "./catalog.ts";
 
 const SAFE_ERROR_MESSAGES: Readonly<Record<NutriFlowErrorCode, string>> = Object.freeze({
   [NUTRIFLOW_ERROR_CODES.FEATURE_DISABLED]: "Recurso indisponível.",
@@ -59,11 +60,23 @@ function nullableText(value: unknown, path: string, max = 2000): string | null {
   return textValue(value, path, max);
 }
 
+function optionalSearchText(value: unknown, path: string, max: number) {
+  if (value === undefined || value === null || value === "") return "";
+  if (typeof value !== "string" || value.length > max) throw new NutriFlowContractError(path);
+  return value.trim();
+}
+
 function integer(value: unknown, path: string, minimum = 0) {
   if (!Number.isSafeInteger(value) || (value as number) < minimum) {
     throw new NutriFlowContractError(path);
   }
   return value as number;
+}
+
+function boundedInteger(value: unknown, path: string, minimum: number, maximum: number) {
+  const parsed = integer(value, path, minimum);
+  if (parsed > maximum) throw new NutriFlowContractError(path);
+  return parsed;
 }
 
 function apiVersion(value: unknown) {
@@ -188,6 +201,17 @@ export function parseSaveFoodPlanDraftCommandV1(value: unknown): SaveFoodPlanDra
     title: textValue(input.title, "title", 160),
     planNotes: nullableText(input.planNotes, "planNotes", 4000),
     content: parseFoodPlanContentV1(input.content),
+    correlationId: textValue(input.correlationId, "correlationId", 128),
+  });
+}
+
+export function parseSearchFoodCatalogQueryV1(value: unknown): SearchFoodCatalogQueryV1 {
+  const input = object(value, "query");
+  return Object.freeze({
+    apiVersion: apiVersion(input.apiVersion),
+    query: optionalSearchText(input.query, "query", 120),
+    categoryCode: input.categoryCode === undefined || input.categoryCode === null || input.categoryCode === "" ? null : textValue(input.categoryCode, "categoryCode", 80),
+    limit: input.limit === undefined ? 12 : boundedInteger(input.limit, "limit", 1, 25),
     correlationId: textValue(input.correlationId, "correlationId", 128),
   });
 }
