@@ -16,6 +16,8 @@ import { D1FeatureFlagRepository } from "../../modules/nutriflow/infrastructure/
 import { D1FoodPlanDraftStore } from "../../modules/nutriflow/infrastructure/d1/d1-food-plan-draft-store.ts";
 import { D1FoodPlanReadRepository } from "../../modules/nutriflow/infrastructure/d1/d1-food-plan-read-repository.ts";
 import { D1FoodCatalogReadRepository } from "../../modules/nutriflow/infrastructure/d1/d1-food-catalog-read-repository.ts";
+import { D1ReusableContentRepository } from "../../modules/nutriflow/infrastructure/d1/d1-reusable-content-repository.ts";
+import { ReusableContentOperations } from "../../modules/nutriflow/application/reusable-content/reusable-content-operations.ts";
 import { D1IdempotencyRepository } from "../../modules/nutriflow/infrastructure/d1/d1-idempotency-repository.ts";
 import { D1NutriFlowUnitOfWork } from "../../modules/nutriflow/infrastructure/d1/d1-unit-of-work.ts";
 
@@ -102,6 +104,7 @@ function telemetry() {
 
 export function createNutriFlowAdminRuntime(context: NutriFlowAdminContext) {
   const plans = new D1FoodPlanReadRepository(env.DB);
+  const reusableContentRepository = new D1ReusableContentRepository(env.DB);
   const runner = new NutriFlowOperationRunner({
     flags: new D1FeatureFlagRepository(env.DB),
     idempotency: new D1IdempotencyRepository(env.DB),
@@ -136,6 +139,12 @@ export function createNutriFlowAdminRuntime(context: NutriFlowAdminContext) {
     searchCatalog: new SearchFoodCatalogOperation({
       runner,
       search: new SearchFoodCatalog(new D1FoodCatalogReadRepository(env.DB)),
+    }),
+    reusableContent: new ReusableContentOperations({
+      runner,
+      repository: reusableContentRepository,
+      generatePublicId,
+      environment: process.env.NODE_ENV === "production" ? "production" : "development",
     }),
   });
 }

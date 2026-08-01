@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { FoodPlanDraftV1 } from "../modules/nutriflow/contracts/v1/plans.ts";
-import { addCatalogItem, addDay, addItem, addMeal, duplicateItem, duplicateMeal, moveDay, moveItem, moveMeal, removeDay, removeItem, removeMeal, updateItem, updateMeal } from "../app/admin/clientes/[email]/nutriflow/editor-state.ts";
+import { addCatalogItem, addDay, addItem, addMeal, addRecipeItem, applyMealTemplate, duplicateDay, duplicateItem, duplicateMeal, moveDay, moveItem, moveMeal, moveMealToDay, removeDay, removeItem, removeMeal, updateItem, updateMeal } from "../app/admin/clientes/[email]/nutriflow/editor-state.ts";
 
 function emptyDraft(): FoodPlanDraftV1 {
   return { apiVersion: "v1", publicId: "version_editor_01", planPublicId: "plan_editor_01", clientId: 1, versionNumber: 1, revision: 1, state: "draft", title: "Plano", planNotes: null, content: { schemaVersion: 1, days: [], meals: [], notes: [] }, updatedAt: "2026-08-01T10:00:00.000Z" };
@@ -71,4 +71,32 @@ test("editor state duplicates and reorders items and meals without identifier co
   assert.equal(draft.content.meals.length, 2);
   assert.equal(draft.content.meals[1].title, "Nova refeição — cópia");
   assert.deepEqual(draft.content.meals[1].items.map((item) => item.publicId), ["item_editor_04", "item_editor_05", "item_editor_06"]);
+});
+
+test("editor duplicates a complete day and moves meals across days", () => {
+  let draft = addDay(addDay(emptyDraft(), "day_editor_01"), "day_editor_02");
+  draft = addMeal(draft, "day_editor_01", "meal_editor_01");
+  draft = addItem(draft, "meal_editor_01", "item_editor_01");
+  draft = duplicateDay(draft, "day_editor_01", { day: "day_editor_03", meals: [{ meal: "meal_editor_02", items: ["item_editor_02"] }] });
+  assert.equal(draft.content.days[1].publicId, "day_editor_03");
+  assert.equal(draft.content.meals.find((meal) => meal.publicId === "meal_editor_02")?.planDayPublicId, "day_editor_03");
+  assert.equal(draft.content.meals.find((meal) => meal.publicId === "meal_editor_02")?.items[0].publicId, "item_editor_02");
+  draft = moveMealToDay(draft, "meal_editor_01", "day_editor_02");
+  assert.equal(draft.content.meals.find((meal) => meal.publicId === "meal_editor_01")?.planDayPublicId, "day_editor_02");
+});
+
+test("editor applies a versioned meal template and a recipe with provenance", () => {
+  let draft = addMeal(addDay(emptyDraft(), "day_editor_01"), "day_editor_01", "meal_editor_01");
+  draft = applyMealTemplate(draft, "day_editor_01", {
+    apiVersion: "v1", templatePublicId: "template_01", versionPublicId: "template_version_01", versionNumber: 3, state: "released", name: "Café proteico", suggestedTime: "08:00", instructions: "Consumir com calma", createdAt: "2026-08-01T12:00:00.000Z",
+    items: [{ publicId: "template_item_01", source: { type: "food", publicId: "food_01", revisionNumber: 1 }, displayName: "Ovos", quantityMilli: 2000, unit: { publicId: "unit_piece", code: "piece", label: "unidade" }, preparation: "mexidos", notes: null, sortOrder: 0 }],
+  }, { meal: "meal_template_01", items: ["item_template_01"] });
+  const templateMeal = draft.content.meals.find((meal) => meal.publicId === "meal_template_01")!;
+  assert.deepEqual(templateMeal.sourceTemplate, { publicId: "template_01", versionNumber: 3 });
+  assert.equal(templateMeal.items[0].publicId, "item_template_01");
+  draft = addRecipeItem(draft, "meal_editor_01", {
+    apiVersion: "v1", recipePublicId: "recipe_01", versionPublicId: "recipe_version_01", versionNumber: 2, state: "released", name: "Overnight oats", instructions: "Misturar e refrigerar", yieldQuantityMilli: 1000, yieldUnit: { publicId: "unit_portion", code: "portion", label: "porção" }, ingredients: [], createdAt: "2026-08-01T12:00:00.000Z",
+  }, "item_recipe_01");
+  const recipeItem = draft.content.meals.find((meal) => meal.publicId === "meal_editor_01")!.items[0];
+  assert.deepEqual(recipeItem.source, { type: "recipe", publicId: "recipe_01", revisionNumber: 2 });
 });

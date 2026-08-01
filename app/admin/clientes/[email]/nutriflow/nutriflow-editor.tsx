@@ -3,20 +3,26 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { FoodCatalogItemV1 } from "../../../../../modules/nutriflow/contracts/v1/catalog.ts";
 import type { FoodPlanDraftV1 } from "../../../../../modules/nutriflow/contracts/v1/plans.ts";
+import type { MealTemplateVersionV1, RecipeVersionV1 } from "../../../../../modules/nutriflow/contracts/v1/reusable-content.ts";
 import { EditorLoadingSkeleton, EditorNotice, SyncIndicator, type EditorSyncState } from "./editor-components";
 import FoodLibraryPanel from "./food-library-panel";
+import ReusableContentPanel from "./reusable-content-panel";
 import {
   NUTRIFLOW_UNITS,
   addCatalogItem,
   addDay,
   addItem,
   addMeal,
+  addRecipeItem,
+  applyMealTemplate,
+  duplicateDay,
   duplicateItem,
   duplicateMeal,
   editorId,
   moveDay,
   moveItem,
   moveMeal,
+  moveMealToDay,
   removeDay,
   removeItem,
   removeMeal,
@@ -66,6 +72,7 @@ export default function NutriFlowEditor({ clientId, patientName, tools }: { clie
   const saveNowRef = useRef<() => Promise<void>>(async () => undefined);
   const dirtyStartedAt = useRef<number | null>(null);
   const firstAutosaveRecorded = useRef(false);
+  const productivity = useRef({ startedAt: 0, actions: 0, simplePlanRecorded: false });
 
   const transition = useCallback((next: EditorSyncState) => {
     syncStateRef.current = next;
@@ -201,9 +208,39 @@ export default function NutriFlowEditor({ clientId, patientName, tools }: { clie
     noticeTimer.current = setTimeout(() => setNotice(""), 2400);
   }
 
+  function trackProductivityAction(action: string) {
+    productivity.current.startedAt ||= performance.now();
+    productivity.current.actions += 1;
+    recordClientMetric("editor.productivity.action", 0, { action, actions: productivity.current.actions });
+    queueMicrotask(() => {
+      const current = latestDraft.current;
+      const simplePlanReady = current?.content.meals.some((meal) => meal.items.length >= 3);
+      if (!simplePlanReady || productivity.current.simplePlanRecorded) return;
+      productivity.current.simplePlanRecorded = true;
+      recordClientMetric("editor.simple-plan.duration", performance.now() - productivity.current.startedAt, { actions: productivity.current.actions, days: current?.content.days.length ?? 0, meals: current?.content.meals.length ?? 0 });
+    });
+  }
+
   function insertCatalogFood(food: FoodCatalogItemV1, mealPublicId: string) {
     mutate((current) => addCatalogItem(current, mealPublicId, food));
+    trackProductivityAction("catalog.food.apply");
     showNotice(`${food.name} adicionado à refeição.`);
+  }
+
+  function insertTemplate(template: MealTemplateVersionV1) {
+    if (!activeDayId) return;
+    const mealId = editorId("meal");
+    mutate((current) => applyMealTemplate(current, activeDayId, template, { meal: mealId, items: template.items.map(() => editorId("item")) }));
+    setSelectedMealId(mealId);
+    trackProductivityAction("meal-template.apply");
+    showNotice(`${template.name} aplicado ao dia.`);
+  }
+
+  function insertRecipe(recipe: RecipeVersionV1) {
+    if (!activeMealId) return;
+    mutate((current) => addRecipeItem(current, activeMealId, recipe));
+    trackProductivityAction("recipe.apply");
+    showNotice(`${recipe.name} adicionada à refeição.`);
   }
 
   async function createDraft() {
@@ -238,17 +275,17 @@ export default function NutriFlowEditor({ clientId, patientName, tools }: { clie
     <header className="nutriflow-editor-header"><div><p className="section-kicker">Editor NutriFlow</p><input aria-label="Título do plano" maxLength={160} value={draft.title} onChange={(event) => mutate((current) => ({ ...current, title: event.target.value }))} /></div><SyncIndicator state={syncState} detail={syncDetail} /></header>
     {message ? <EditorNotice state={syncState} action={<button type="button" onClick={syncState === "conflict" ? loadDraft : saveNow}>{syncState === "conflict" ? "Recarregar versão" : "Tentar novamente"}</button>}>{message}</EditorNotice> : null}
     {notice ? <EditorNotice state="saved">{notice}</EditorNotice> : null}
-    <div className={`nutriflow-editor-layout ${tools.catalogEnabled ? "has-library" : ""}`}>
+    <div className={`nutriflow-editor-layout ${tools.catalogEnabled || tools.recipesEnabled || tools.mealTemplatesEnabled ? "has-library" : ""}`}>
       <main className="nutriflow-canvas">
         <nav className="nutriflow-days" aria-label="Dias do plano">
           {draft.content.days.map((day) => <button className={day.publicId === activeDayId ? "is-active" : ""} key={day.publicId} type="button" onClick={() => { setSelectedDayId(day.publicId); setSelectedMealId(draft.content.meals.find((meal) => meal.planDayPublicId === day.publicId)?.publicId ?? null); }}><span>{day.label}</span><small>{draft.content.meals.filter((meal) => meal.planDayPublicId === day.publicId).length} refeições</small></button>)}
-          <button className="is-add" type="button" onClick={() => { const id = editorId("day"); mutate((current) => addDay(current, id)); setSelectedDayId(id); setSelectedMealId(null); }}>＋ Adicionar dia</button>
+          <button className="is-add" type="button" onClick={() => { const id = editorId("day"); mutate((current) => addDay(current, id)); setSelectedDayId(id); setSelectedMealId(null); trackProductivityAction("day.add"); }}>＋ Adicionar dia</button>
         </nav>
         {activeDay ? <section className="nutriflow-day-panel">
-          <header><div><label htmlFor="day-label">Nome do dia</label><input id="day-label" maxLength={120} value={activeDay.label} onChange={(event) => mutate((current) => ({ ...current, content: { ...current.content, days: current.content.days.map((day) => day.publicId === activeDay.publicId ? { ...day, label: event.target.value } : day) } }))} /></div><div className="nutriflow-icon-actions"><button type="button" title="Mover dia para a esquerda" aria-label="Mover dia para a esquerda" disabled={activeDay.sortOrder === 0} onClick={() => mutate((current) => moveDay(current, activeDay.publicId, -1))}>←</button><button type="button" title="Mover dia para a direita" aria-label="Mover dia para a direita" disabled={activeDay.sortOrder === draft.content.days.length - 1} onClick={() => mutate((current) => moveDay(current, activeDay.publicId, 1))}>→</button><button className="is-danger" type="button" onClick={() => { mutate((current) => removeDay(current, activeDay.publicId)); setSelectedDayId(draft.content.days.find((day) => day.publicId !== activeDay.publicId)?.publicId ?? null); setSelectedMealId(null); }}>Excluir dia</button></div></header>
+          <header><div><label htmlFor="day-label">Nome do dia</label><input id="day-label" maxLength={120} value={activeDay.label} onChange={(event) => mutate((current) => ({ ...current, content: { ...current.content, days: current.content.days.map((day) => day.publicId === activeDay.publicId ? { ...day, label: event.target.value } : day) } }))} /></div><div className="nutriflow-icon-actions"><button type="button" title="Duplicar dia completo" aria-label="Duplicar dia completo" onClick={() => { const dayId = editorId("day"); mutate((current) => duplicateDay(current, activeDay.publicId, { day: dayId, meals: meals.map((meal) => ({ meal: editorId("meal"), items: meal.items.map(() => editorId("item")) })) })); setSelectedDayId(dayId); setSelectedMealId(null); trackProductivityAction("day.duplicate"); }}>⧉ Dia</button><button type="button" title="Mover dia para a esquerda" aria-label="Mover dia para a esquerda" disabled={activeDay.sortOrder === 0} onClick={() => mutate((current) => moveDay(current, activeDay.publicId, -1))}>←</button><button type="button" title="Mover dia para a direita" aria-label="Mover dia para a direita" disabled={activeDay.sortOrder === draft.content.days.length - 1} onClick={() => mutate((current) => moveDay(current, activeDay.publicId, 1))}>→</button><button className="is-danger" type="button" onClick={() => { mutate((current) => removeDay(current, activeDay.publicId)); setSelectedDayId(draft.content.days.find((day) => day.publicId !== activeDay.publicId)?.publicId ?? null); setSelectedMealId(null); }}>Excluir dia</button></div></header>
           <div className="nutriflow-meals">
             {meals.map((meal, mealIndex) => <article className={`nutriflow-meal ${meal.publicId === activeMealId ? "is-selected" : ""}`} key={meal.publicId} onClick={() => setSelectedMealId(meal.publicId)} onFocusCapture={() => setSelectedMealId(meal.publicId)}>
-              <header><span className="nutriflow-meal-index">{String(mealIndex + 1).padStart(2, "0")}</span><div className="nutriflow-meal-title"><input aria-label="Nome da refeição" maxLength={120} value={meal.title} onChange={(event) => mutate((current) => updateMeal(current, meal.publicId, { title: event.target.value }))} /><input aria-label="Horário da refeição" type="time" value={meal.scheduledTime ?? ""} onChange={(event) => mutate((current) => updateMeal(current, meal.publicId, { scheduledTime: event.target.value || null }))} /></div><div className="nutriflow-icon-actions"><button type="button" title="Duplicar refeição" aria-label="Duplicar refeição" onClick={() => { const id = editorId("meal"); mutate((current) => duplicateMeal(current, meal.publicId, { meal: id, items: meal.items.map(() => editorId("item")) })); setSelectedMealId(id); }}>⧉</button><button type="button" aria-label="Mover refeição para cima" disabled={mealIndex === 0} onClick={() => mutate((current) => moveMeal(current, meal.publicId, -1))}>↑</button><button type="button" aria-label="Mover refeição para baixo" disabled={mealIndex === meals.length - 1} onClick={() => mutate((current) => moveMeal(current, meal.publicId, 1))}>↓</button><button className="is-danger" type="button" onClick={() => { mutate((current) => removeMeal(current, meal.publicId)); setSelectedMealId(null); }}>Excluir</button></div></header>
+              <header><span className="nutriflow-meal-index">{String(mealIndex + 1).padStart(2, "0")}</span><div className="nutriflow-meal-title"><input aria-label="Nome da refeição" maxLength={120} value={meal.title} onChange={(event) => mutate((current) => updateMeal(current, meal.publicId, { title: event.target.value }))} /><input aria-label="Horário da refeição" type="time" value={meal.scheduledTime ?? ""} onChange={(event) => mutate((current) => updateMeal(current, meal.publicId, { scheduledTime: event.target.value || null }))} />{draft.content.days.length > 1 ? <select aria-label="Mover refeição para outro dia" value={meal.planDayPublicId ?? ""} onChange={(event) => { mutate((current) => moveMealToDay(current, meal.publicId, event.target.value)); setSelectedDayId(event.target.value); setSelectedMealId(meal.publicId); trackProductivityAction("meal.move-day"); }}>{draft.content.days.map((day) => <option key={day.publicId} value={day.publicId}>{day.label}</option>)}</select> : null}</div><div className="nutriflow-icon-actions"><button type="button" title="Duplicar refeição" aria-label="Duplicar refeição" onClick={() => { const id = editorId("meal"); mutate((current) => duplicateMeal(current, meal.publicId, { meal: id, items: meal.items.map(() => editorId("item")) })); setSelectedMealId(id); trackProductivityAction("meal.duplicate"); }}>⧉</button><button type="button" aria-label="Mover refeição para cima" disabled={mealIndex === 0} onClick={() => mutate((current) => moveMeal(current, meal.publicId, -1))}>↑</button><button type="button" aria-label="Mover refeição para baixo" disabled={mealIndex === meals.length - 1} onClick={() => mutate((current) => moveMeal(current, meal.publicId, 1))}>↓</button><button className="is-danger" type="button" onClick={() => { mutate((current) => removeMeal(current, meal.publicId)); setSelectedMealId(null); }}>Excluir</button></div></header>
               <div className="nutriflow-items">
                 {meal.items.map((item, itemIndex) => <div className="nutriflow-item" key={item.publicId}>
                   <div className="nutriflow-item-main">
@@ -260,16 +297,17 @@ export default function NutriFlowEditor({ clientId, patientName, tools }: { clie
                   </div>
                   <details className="nutriflow-item-notes"><summary>Observação opcional do alimento</summary><label><span>Orientação ou contexto</span><input maxLength={1000} placeholder="Ex.: consumir antes do treino" value={item.notes ?? ""} onChange={(event) => mutate((current) => updateItem(current, meal.publicId, item.publicId, { notes: event.target.value || null }))} /></label></details>
                 </div>)}
-                <button className="nutriflow-add-item" type="button" onClick={() => mutate((current) => addItem(current, meal.publicId))}>＋ Adicionar alimento manualmente</button>
+                <button className="nutriflow-add-item" type="button" onClick={() => { mutate((current) => addItem(current, meal.publicId)); trackProductivityAction("food.manual.add"); }}>＋ Adicionar alimento manualmente</button>
               </div>
               <label className="nutriflow-instructions"><span>Orientações da refeição</span><textarea maxLength={2000} placeholder="Opcional: substituições, modo de preparo ou contexto clínico." value={meal.instructions ?? ""} onChange={(event) => mutate((current) => updateMeal(current, meal.publicId, { instructions: event.target.value || null }))} /></label>
             </article>)}
-            <button className="nutriflow-add-meal" type="button" onClick={() => { const id = editorId("meal"); mutate((current) => addMeal(current, activeDay.publicId, id)); setSelectedMealId(id); }}><span>＋</span><strong>Adicionar refeição</strong><small>Inclua horário, alimentos e orientações.</small></button>
+            <button className="nutriflow-add-meal" type="button" onClick={() => { const id = editorId("meal"); mutate((current) => addMeal(current, activeDay.publicId, id)); setSelectedMealId(id); trackProductivityAction("meal.add"); }}><span>＋</span><strong>Adicionar refeição</strong><small>Inclua horário, alimentos e orientações.</small></button>
           </div>
         </section> : <section className="nutriflow-no-days"><span>01</span><h2>Organize o plano por dias</h2><p>Adicione o primeiro dia para começar a montar as refeições.</p><button type="button" onClick={() => { const id = editorId("day"); mutate((current) => addDay(current, id)); setSelectedDayId(id); }}>Adicionar primeiro dia</button></section>}
       </main>
       <div className="nutriflow-tools-rail">
         {tools.catalogEnabled ? <FoodLibraryPanel clientId={clientId} targetMealTitle={activeMeal?.title ?? null} onInsert={(food) => activeMealId && insertCatalogFood(food, activeMealId)} /> : null}
+        {tools.recipesEnabled || tools.mealTemplatesEnabled ? <ReusableContentPanel clientId={clientId} activeMeal={activeMeal} templatesEnabled={tools.mealTemplatesEnabled} recipesEnabled={tools.recipesEnabled} onApplyTemplate={insertTemplate} onApplyRecipe={insertRecipe} onProductivityAction={trackProductivityAction} /> : null}
         <aside className="nutriflow-sidebar"><div><span>Paciente</span><strong>{patientName}</strong><small>Rascunho · versão {draft.versionNumber}.{draft.revision}</small></div><label><span>Observações gerais</span><textarea maxLength={4000} placeholder="Contexto clínico, estratégia e pontos importantes para revisão." value={draft.planNotes ?? ""} onChange={(event) => mutate((current) => ({ ...current, planNotes: event.target.value || null }))} /></label><section><span>Estrutura atual</span><dl><div><dt>Dias</dt><dd>{draft.content.days.length}</dd></div><div><dt>Refeições</dt><dd>{draft.content.meals.length}</dd></div><div><dt>Alimentos</dt><dd>{draft.content.meals.reduce((total, meal) => total + meal.items.length, 0)}</dd></div></dl></section><button className="nutriflow-save-now" type="button" disabled={syncState === "saving" || syncState === "saved"} onClick={saveNow}>{syncState === "saving" ? "Salvando…" : "Salvar agora"}<small>Ctrl/⌘ + S</small></button><p>O plano ainda não está visível ao paciente.</p></aside>
       </div>
     </div>

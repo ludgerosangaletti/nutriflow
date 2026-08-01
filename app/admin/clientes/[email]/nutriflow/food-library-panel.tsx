@@ -55,6 +55,7 @@ export default function FoodLibraryPanel({ clientId, targetMealTitle, onInsert }
         const envelope = await response.json().catch(() => ({})) as Envelope;
         if (!response.ok || !envelope.data) throw new Error(envelope.message || "Não foi possível consultar a biblioteca.");
         const items = envelope.data.items;
+        if (cache.current.size >= 40) cache.current.delete(cache.current.keys().next().value ?? "");
         cache.current.set(cacheKey, items);
         setResults(items);
         setActiveIndex(0);

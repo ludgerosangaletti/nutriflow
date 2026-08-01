@@ -71,11 +71,11 @@ test("food search uses one query, ranks name and aliases and preserves the relea
   assert.equal(proteins.items.some((item) => item.name === "Peito de frango grelhado"), true);
 });
 
-test("editor tool registry prepares recipes and templates without enabling them", () => {
+test("editor tool registry makes recipes and templates available without enabling them", () => {
   assert.deepEqual(NUTRIFLOW_EDITOR_TOOLS.map(({ id, implementationState }) => [id, implementationState]), [
     ["food-library", "available"],
-    ["recipes", "prepared"],
-    ["meal-templates", "prepared"],
+    ["recipes", "available"],
+    ["meal-templates", "available"],
   ]);
   for (const tool of NUTRIFLOW_EDITOR_TOOLS) {
     assert.equal(NUTRIFLOW_DEFAULT_FEATURE_FLAGS[tool.featureFlag as keyof typeof NUTRIFLOW_DEFAULT_FEATURE_FLAGS], false);

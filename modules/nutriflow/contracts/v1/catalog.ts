@@ -41,4 +41,3 @@ export type EditorCatalogToolV1 = Readonly<{
   featureFlag: string;
   implementationState: "available" | "prepared";
 }>;
-

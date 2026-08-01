@@ -6,7 +6,9 @@ import {
   parseCreateFoodPlanCommandV1,
   parseGetPublishedFoodPlanQueryV1,
   parsePublishedFoodPlanV1,
+  parseSaveMealTemplateCommandV1,
   parseSaveFoodPlanDraftCommandV1,
+  parseSaveRecipeCommandV1,
 } from "../modules/nutriflow/contracts/v1/validation.ts";
 
 const content = {
@@ -132,4 +134,35 @@ test("published DTO and safe error envelope are runtime validated", () => {
   assert.equal(error.message, "O conteúdo foi atualizado em outro local.");
   assert.equal(Object.isFrozen(error.details), true);
   assert.equal(JSON.stringify(error).includes("database"), false);
+});
+
+test("reusable content v1 validates immutable templates and versioned recipe ingredients", () => {
+  const item = content.meals[0].items[0];
+  const template = parseSaveMealTemplateCommandV1({
+    apiVersion: "v1",
+    templatePublicId: null,
+    name: " Café clínico ",
+    suggestedTime: "08:00",
+    instructions: null,
+    items: [item],
+    release: false,
+    correlationId: "corr_template_contract_01",
+  });
+  const recipe = parseSaveRecipeCommandV1({
+    apiVersion: "v1",
+    recipePublicId: null,
+    name: "Banana preparada",
+    instructions: "Amassar.",
+    yieldQuantityMilli: 1000,
+    yieldUnit: { publicId: "unit_portion", code: "portion", label: "porção" },
+    ingredients: [{ ...item, source: { type: "food", publicId: "food_global_banana", revisionNumber: 1 } }],
+    release: true,
+    correlationId: "corr_recipe_contract_01",
+  });
+
+  assert.equal(template.name, "Café clínico");
+  assert.equal(Object.isFrozen(template.items), true);
+  assert.equal(recipe.ingredients[0].source.revisionNumber, 1);
+  assert.equal(Object.isFrozen(recipe.ingredients), true);
+  assert.throws(() => parseSaveRecipeCommandV1({ ...recipe, ingredients: [item] }), (error) => error instanceof NutriFlowContractError && error.path === "ingredients.source");
 });

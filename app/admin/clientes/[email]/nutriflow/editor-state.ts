@@ -1,5 +1,6 @@
 import type { FoodPlanContentV1, FoodPlanDraftV1, FoodPlanMealV1 } from "../../../../../modules/nutriflow/contracts/v1/plans.ts";
 import type { FoodCatalogItemV1 } from "../../../../../modules/nutriflow/contracts/v1/catalog.ts";
+import type { MealTemplateVersionV1, RecipeVersionV1 } from "../../../../../modules/nutriflow/contracts/v1/reusable-content.ts";
 
 export const NUTRIFLOW_UNITS = Object.freeze([
   { publicId: "unit_gram", code: "g", label: "grama" },
@@ -71,9 +72,31 @@ export function moveDay(draft: FoodPlanDraftV1, dayPublicId: string, direction: 
   return updateContent(draft, { ...draft.content, days });
 }
 
+export function duplicateDay(
+  draft: FoodPlanDraftV1,
+  dayPublicId: string,
+  ids: Readonly<{ day: string; meals: readonly Readonly<{ meal: string; items: readonly string[] }>[] }> = { day: editorId("day"), meals: [] },
+) {
+  const sourceDay = draft.content.days.find((day) => day.publicId === dayPublicId);
+  if (!sourceDay) return draft;
+  const sourceMeals = draft.content.meals.filter((meal) => meal.planDayPublicId === dayPublicId).sort((a, b) => a.sortOrder - b.sortOrder);
+  const dayIndex = draft.content.days.findIndex((day) => day.publicId === dayPublicId);
+  const days = [...draft.content.days];
+  days.splice(dayIndex + 1, 0, { ...sourceDay, publicId: ids.day, label: `${sourceDay.label} — cópia` });
+  const mealIdMap = new Map<string, string>();
+  const copies = sourceMeals.map((meal, mealIndex) => {
+    const generated = ids.meals[mealIndex];
+    const mealPublicId = generated?.meal ?? editorId("meal");
+    mealIdMap.set(meal.publicId, mealPublicId);
+    return { ...meal, publicId: mealPublicId, planDayPublicId: ids.day, items: meal.items.map((item, itemIndex) => ({ ...item, publicId: generated?.items[itemIndex] ?? editorId("item") })) };
+  });
+  const notes = [...draft.content.notes, ...draft.content.notes.filter((note) => note.mealPublicId && mealIdMap.has(note.mealPublicId)).map((note) => ({ ...note, publicId: editorId("note"), mealPublicId: mealIdMap.get(note.mealPublicId!) ?? null }))];
+  return updateContent(draft, { ...draft.content, days, meals: [...draft.content.meals, ...copies], notes });
+}
+
 export function addMeal(draft: FoodPlanDraftV1, dayPublicId: string, publicId = editorId("meal")) {
   const siblings = draft.content.meals.filter((meal) => meal.planDayPublicId === dayPublicId);
-  const meal: FoodPlanMealV1 = { publicId, planDayPublicId: dayPublicId, title: "Nova refeição", scheduledTime: null, instructions: null, sortOrder: siblings.length, items: [] };
+  const meal: FoodPlanMealV1 = { publicId, planDayPublicId: dayPublicId, title: "Nova refeição", scheduledTime: null, instructions: null, sourceTemplate: null, sortOrder: siblings.length, items: [] };
   return updateContent(draft, { ...draft.content, meals: [...draft.content.meals, meal] });
 }
 
@@ -94,6 +117,12 @@ export function moveMeal(draft: FoodPlanDraftV1, mealPublicId: string, direction
   return updateContent(draft, { ...draft.content, meals: draft.content.meals.map((meal) => replacement.get(meal.publicId) ?? meal) });
 }
 
+export function moveMealToDay(draft: FoodPlanDraftV1, mealPublicId: string, targetDayPublicId: string) {
+  if (!draft.content.days.some((day) => day.publicId === targetDayPublicId)) return draft;
+  const nextOrder = draft.content.meals.filter((meal) => meal.planDayPublicId === targetDayPublicId && meal.publicId !== mealPublicId).length;
+  return updateContent(draft, { ...draft.content, meals: draft.content.meals.map((meal) => meal.publicId === mealPublicId ? { ...meal, planDayPublicId: targetDayPublicId, sortOrder: nextOrder } : meal) });
+}
+
 export function updateMeal(draft: FoodPlanDraftV1, mealPublicId: string, patch: Partial<FoodPlanMealV1>) {
   return updateContent(draft, { ...draft.content, meals: draft.content.meals.map((meal) => meal.publicId === mealPublicId ? { ...meal, ...patch, publicId: meal.publicId, items: meal.items } : meal) });
 }
@@ -105,6 +134,22 @@ export function addItem(draft: FoodPlanDraftV1, mealPublicId: string, publicId =
 
 export function addCatalogItem(draft: FoodPlanDraftV1, mealPublicId: string, food: FoodCatalogItemV1, publicId = editorId("item")) {
   return updateContent(draft, { ...draft.content, meals: draft.content.meals.map((meal) => meal.publicId === mealPublicId ? { ...meal, items: [...meal.items, { publicId, source: { type: "food", publicId: food.publicId, revisionNumber: food.revisionNumber }, displayName: food.name, quantityMilli: food.referenceQuantityMilli, unit: food.referenceUnit, preparation: null, notes: null, sortOrder: meal.items.length }] } : meal) });
+}
+
+export function addRecipeItem(draft: FoodPlanDraftV1, mealPublicId: string, recipe: RecipeVersionV1, publicId = editorId("item")) {
+  return updateContent(draft, { ...draft.content, meals: draft.content.meals.map((meal) => meal.publicId === mealPublicId ? { ...meal, items: [...meal.items, { publicId, source: { type: "recipe", publicId: recipe.recipePublicId, revisionNumber: recipe.versionNumber }, displayName: recipe.name, quantityMilli: recipe.yieldQuantityMilli, unit: recipe.yieldUnit, preparation: recipe.instructions, notes: `${recipe.ingredients.length} ingrediente(s)`, sortOrder: meal.items.length }] } : meal) });
+}
+
+export function applyMealTemplate(
+  draft: FoodPlanDraftV1,
+  dayPublicId: string,
+  template: MealTemplateVersionV1,
+  ids: Readonly<{ meal: string; items: readonly string[] }> = { meal: editorId("meal"), items: [] },
+) {
+  if (!draft.content.days.some((day) => day.publicId === dayPublicId)) return draft;
+  const siblings = draft.content.meals.filter((meal) => meal.planDayPublicId === dayPublicId);
+  const meal: FoodPlanMealV1 = { publicId: ids.meal, planDayPublicId: dayPublicId, title: template.name, scheduledTime: template.suggestedTime, instructions: template.instructions, sourceTemplate: { publicId: template.templatePublicId, versionNumber: template.versionNumber }, sortOrder: siblings.length, items: template.items.map((item, index) => ({ ...item, publicId: ids.items[index] ?? editorId("item"), sortOrder: index })) };
+  return updateContent(draft, { ...draft.content, meals: [...draft.content.meals, meal] });
 }
 
 export function updateItem(draft: FoodPlanDraftV1, mealPublicId: string, itemPublicId: string, patch: Partial<FoodPlanMealV1["items"][number]>) {
@@ -138,18 +183,21 @@ export function duplicateItem(draft: FoodPlanDraftV1, mealPublicId: string, item
   }) });
 }
 
-export function duplicateMeal(draft: FoodPlanDraftV1, mealPublicId: string, ids: Readonly<{ meal: string; items: readonly string[] }> = { meal: editorId("meal"), items: [] }) {
+export function duplicateMeal(draft: FoodPlanDraftV1, mealPublicId: string, ids: Readonly<{ meal: string; items: readonly string[]; targetDayPublicId?: string }> = { meal: editorId("meal"), items: [] }) {
   const source = draft.content.meals.find((meal) => meal.publicId === mealPublicId);
   if (!source) return draft;
+  const targetDay = ids.targetDayPublicId ?? source.planDayPublicId;
+  const targetOrder = ids.targetDayPublicId ? draft.content.meals.filter((meal) => meal.planDayPublicId === targetDay).length : source.sortOrder + 1;
   const copy: FoodPlanMealV1 = {
     ...source,
     publicId: ids.meal,
+    planDayPublicId: ids.targetDayPublicId ?? source.planDayPublicId,
     title: `${source.title} — cópia`,
-    sortOrder: source.sortOrder + 1,
+    sortOrder: targetOrder,
     items: source.items.map((item, index) => ({ ...item, publicId: ids.items[index] ?? editorId("item") })),
   };
-  const meals = draft.content.meals.map((meal) => meal.planDayPublicId === source.planDayPublicId && meal.sortOrder > source.sortOrder ? { ...meal, sortOrder: meal.sortOrder + 1 } : meal);
+  const meals = draft.content.meals.map((meal) => !ids.targetDayPublicId && meal.planDayPublicId === source.planDayPublicId && meal.sortOrder > source.sortOrder ? { ...meal, sortOrder: meal.sortOrder + 1 } : meal);
   const sourcePosition = meals.findIndex((meal) => meal.publicId === source.publicId);
-  meals.splice(sourcePosition + 1, 0, copy);
+  meals.splice(ids.targetDayPublicId ? meals.length : sourcePosition + 1, 0, copy);
   return updateContent(draft, { ...draft.content, meals });
 }

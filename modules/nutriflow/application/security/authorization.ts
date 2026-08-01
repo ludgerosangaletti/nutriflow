@@ -34,6 +34,8 @@ export const NUTRIFLOW_ACTIONS = {
   REVOKE_PUBLICATION: "plan:revoke-publication",
   READ_PUBLISHED_PLAN: "publication:read",
   READ_CATALOG: "catalog:read",
+  MANAGE_MEAL_TEMPLATES: "meal-template:manage",
+  MANAGE_RECIPES: "recipe:manage",
   CONFIGURE_FEATURE_FLAG: "feature-flag:configure",
 } as const;
 

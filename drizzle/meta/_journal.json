@@ -176,6 +176,13 @@
       "when": 1785589200000,
       "tag": "0024_nutriflow_global_food_catalog",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "6",
+      "when": 1785603600000,
+      "tag": "0025_nutriflow_clinical_productivity",
+      "breakpoints": true
     }
   ]
 }

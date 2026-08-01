@@ -16,6 +16,13 @@ import type {
   SaveFoodPlanDraftCommandV1,
 } from "./plans.ts";
 import type { SearchFoodCatalogQueryV1 } from "./catalog.ts";
+import type {
+  ArchiveReusableContentCommandV1,
+  ReusableContentItemV1,
+  SaveMealTemplateCommandV1,
+  SaveRecipeCommandV1,
+  SearchReusableContentQueryV1,
+} from "./reusable-content.ts";
 
 const SAFE_ERROR_MESSAGES: Readonly<Record<NutriFlowErrorCode, string>> = Object.freeze({
   [NUTRIFLOW_ERROR_CODES.FEATURE_DISABLED]: "Recurso indisponível.",
@@ -79,6 +86,11 @@ function boundedInteger(value: unknown, path: string, minimum: number, maximum: 
   return parsed;
 }
 
+function booleanValue(value: unknown, path: string) {
+  if (typeof value !== "boolean") throw new NutriFlowContractError(path);
+  return value;
+}
+
 function apiVersion(value: unknown) {
   if (value !== NUTRIFLOW_API_VERSION) {
     throw new NutriFlowContractError("apiVersion");
@@ -133,6 +145,7 @@ function day(value: unknown, path: string): FoodPlanDayV1 {
 function meal(value: unknown, path: string): FoodPlanMealV1 {
   const input = object(value, path);
   if (!Array.isArray(input.items)) throw new NutriFlowContractError(`${path}.items`);
+  const sourceTemplate = input.sourceTemplate === undefined || input.sourceTemplate === null ? null : object(input.sourceTemplate, `${path}.sourceTemplate`);
   return Object.freeze({
     publicId: textValue(input.publicId, `${path}.publicId`),
     planDayPublicId:
@@ -145,6 +158,10 @@ function meal(value: unknown, path: string): FoodPlanMealV1 {
         ? null
         : textValue(input.scheduledTime, `${path}.scheduledTime`, 5),
     instructions: nullableText(input.instructions, `${path}.instructions`, 2000),
+    sourceTemplate: sourceTemplate ? Object.freeze({
+      publicId: textValue(sourceTemplate.publicId, `${path}.sourceTemplate.publicId`),
+      versionNumber: integer(sourceTemplate.versionNumber, `${path}.sourceTemplate.versionNumber`, 1),
+    }) : null,
     sortOrder: integer(input.sortOrder, `${path}.sortOrder`),
     items: Object.freeze(input.items.map((entry, index) => item(entry, `${path}.items.${index}`))),
   });
@@ -212,6 +229,67 @@ export function parseSearchFoodCatalogQueryV1(value: unknown): SearchFoodCatalog
     query: optionalSearchText(input.query, "query", 120),
     categoryCode: input.categoryCode === undefined || input.categoryCode === null || input.categoryCode === "" ? null : textValue(input.categoryCode, "categoryCode", 80),
     limit: input.limit === undefined ? 12 : boundedInteger(input.limit, "limit", 1, 25),
+    correlationId: textValue(input.correlationId, "correlationId", 128),
+  });
+}
+
+function reusableItem(value: unknown, path: string): ReusableContentItemV1 {
+  return item(value, path);
+}
+
+export function parseSearchReusableContentQueryV1(value: unknown): SearchReusableContentQueryV1 {
+  const input = object(value, "query");
+  return Object.freeze({
+    apiVersion: apiVersion(input.apiVersion),
+    query: optionalSearchText(input.query, "query", 120),
+    limit: input.limit === undefined ? 12 : boundedInteger(input.limit, "limit", 1, 25),
+    correlationId: textValue(input.correlationId, "correlationId", 128),
+  });
+}
+
+export function parseSaveMealTemplateCommandV1(value: unknown): SaveMealTemplateCommandV1 {
+  const input = object(value, "command");
+  if (!Array.isArray(input.items) || input.items.length > 80) throw new NutriFlowContractError("items");
+  return Object.freeze({
+    apiVersion: apiVersion(input.apiVersion),
+    templatePublicId: input.templatePublicId === null || input.templatePublicId === undefined ? null : textValue(input.templatePublicId, "templatePublicId"),
+    name: textValue(input.name, "name", 160),
+    suggestedTime: input.suggestedTime === null || input.suggestedTime === "" ? null : textValue(input.suggestedTime, "suggestedTime", 5),
+    instructions: nullableText(input.instructions, "instructions", 4000),
+    items: Object.freeze(input.items.map((entry, index) => reusableItem(entry, `items.${index}`))),
+    release: booleanValue(input.release, "release"),
+    correlationId: textValue(input.correlationId, "correlationId", 128),
+  });
+}
+
+export function parseSaveRecipeCommandV1(value: unknown): SaveRecipeCommandV1 {
+  const input = object(value, "command");
+  const yieldUnit = object(input.yieldUnit, "yieldUnit");
+  if (!Array.isArray(input.ingredients) || input.ingredients.length === 0 || input.ingredients.length > 80) throw new NutriFlowContractError("ingredients");
+  const ingredients = input.ingredients.map((entry, index) => reusableItem(entry, `ingredients.${index}`));
+  if (ingredients.some((entry) => entry.source.type !== "food" || !entry.source.publicId || !entry.source.revisionNumber)) throw new NutriFlowContractError("ingredients.source");
+  return Object.freeze({
+    apiVersion: apiVersion(input.apiVersion),
+    recipePublicId: input.recipePublicId === null || input.recipePublicId === undefined ? null : textValue(input.recipePublicId, "recipePublicId"),
+    name: textValue(input.name, "name", 160),
+    instructions: nullableText(input.instructions, "instructions", 6000),
+    yieldQuantityMilli: boundedInteger(input.yieldQuantityMilli, "yieldQuantityMilli", 1, 100000000),
+    yieldUnit: Object.freeze({
+      publicId: textValue(yieldUnit.publicId, "yieldUnit.publicId"),
+      code: textValue(yieldUnit.code, "yieldUnit.code", 32),
+      label: textValue(yieldUnit.label, "yieldUnit.label", 80),
+    }),
+    ingredients: Object.freeze(ingredients),
+    release: booleanValue(input.release, "release"),
+    correlationId: textValue(input.correlationId, "correlationId", 128),
+  });
+}
+
+export function parseArchiveReusableContentCommandV1(value: unknown): ArchiveReusableContentCommandV1 {
+  const input = object(value, "command");
+  return Object.freeze({
+    apiVersion: apiVersion(input.apiVersion),
+    publicId: textValue(input.publicId, "publicId"),
     correlationId: textValue(input.correlationId, "correlationId", 128),
   });
 }

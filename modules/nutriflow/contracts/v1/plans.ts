@@ -52,6 +52,10 @@ export type FoodPlanMealV1 = Readonly<{
   title: string;
   scheduledTime: string | null;
   instructions: string | null;
+  sourceTemplate?: Readonly<{
+    publicId: string;
+    versionNumber: number;
+  }> | null;
   sortOrder: number;
   items: readonly FoodPlanItemV1[];
 }>;
