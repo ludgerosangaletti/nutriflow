@@ -26,6 +26,7 @@ export * from "./application/operations/run-nutriflow-operation.ts";
 export * from "./application/plans/create-food-plan-draft.ts";
 export * from "./application/plans/create-food-plan-draft-operation.ts";
 export * from "./application/plans/get-food-plan-draft.ts";
+export * from "./application/plans/get-food-plan-draft-operation.ts";
 export * from "./application/plans/save-food-plan-draft.ts";
 export * from "./application/plans/save-food-plan-draft-operation.ts";
 export * from "./infrastructure/d1/d1-food-plan-read-repository.ts";

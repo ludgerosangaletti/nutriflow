@@ -15,6 +15,7 @@ import RenewalEmailTest from "./renewal-email-test";
 import { daysRemaining, hasActiveAccess } from "../../../access";
 import InPersonCareManager from "./in-person-care-manager";
 import AppointmentRequests from "./appointment-requests";
+import { canUseNutriFlowEditor, resolveNutriFlowAdminContext } from "../../../nutriflow/server";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +24,7 @@ export default async function ClientAnswers({
 }: {
   params: Promise<{ email: string }>;
 }) {
-  await requireAdmin("/admin/clientes");
+  const adminUser = await requireAdmin("/admin/clientes");
 
   const email = decodeURIComponent((await params).email);
   const db = getDb();
@@ -91,6 +92,10 @@ export default async function ClientAnswers({
   const activeGoalCount = patientGoals.filter(
     (goal) => goal.status === "active",
   ).length;
+  const nutriFlowContext = await resolveNutriFlowAdminContext(adminUser.id);
+  const nutriFlowEnabled = nutriFlowContext
+    ? await canUseNutriFlowEditor(nutriFlowContext, row.client.id)
+    : false;
 
   return (
     <main className="portal-shell response-page">
@@ -145,6 +150,11 @@ export default async function ClientAnswers({
           </a>
         </div>
         <nav className="admin-patient-nav" aria-label="Seções do paciente">
+          {nutriFlowEnabled ? (
+            <Link className="is-nutriflow" href={`/admin/clientes/${encodeURIComponent(row.client.email)}/nutriflow`}>
+              Editor NutriFlow
+            </Link>
+          ) : null}
           {isInPerson ? <a href="#dados-presenciais">Atendimento</a> : null}
           <a href="#documentos">{isInPerson ? "Protocolo e avaliação" : "Documentos"}</a>
           <a href="#check-ins">Check-ins</a>
