@@ -98,12 +98,12 @@ export default function NutriFlowHomologationPanel({
             <div>
               <h3>Recursos liberados</h3>
               <ul className="nutriflow-homologation__flags">
-                {snapshot.flags.map((flag) => (
-                  <li className={flag.enabled ? "is-complete" : ""} key={flag.flag}>
-                    <span aria-hidden="true">{flag.enabled ? "✓" : "–"}</span>
-                    <div><strong>{flag.label}</strong><small>{flag.enabled ? flag.variant === "controlled-homologation" && flag.scope === "client" ? "Liberação individual controlada" : "Ativo fora do perfil controlado — revisar" : "Desligado"}</small></div>
+                {snapshot.flags.map((flag) => { const controlled = flag.enabled && flag.variant === "controlled-homologation" && flag.scope === "client" && Boolean(flag.expiresAt); return (
+                  <li className={controlled ? "is-complete" : ""} key={flag.flag}>
+                    <span aria-hidden="true">{controlled ? "✓" : "–"}</span>
+                    <div><strong>{flag.label}</strong><small>{controlled ? "Liberação individual controlada" : flag.enabled ? "Ativo fora do perfil controlado — revisar" : "Desligado"}</small></div>
                   </li>
-                ))}
+                ); })}
               </ul>
             </div>
             <div>

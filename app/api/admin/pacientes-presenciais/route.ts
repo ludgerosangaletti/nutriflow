@@ -81,6 +81,8 @@ export async function POST(request: Request) {
 
   const body = (await request.json().catch(() => ({}))) as {
     email?: string;
+    name?: string;
+    whatsapp?: string;
     plan?: string;
     startsAt?: string;
     nextAppointmentAt?: string;
@@ -88,6 +90,8 @@ export async function POST(request: Request) {
     requestId?: number;
   };
   const email = String(body.email || "").trim().toLowerCase();
+  const name = String(body.name || "").trim().replace(/\s+/g, " ").slice(0, 160);
+  const whatsapp = normalizeBrazilPhone(String(body.whatsapp || ""));
   const plan = String(body.plan || "");
   const startsAt = new Date(String(body.startsAt || ""));
   const nextAppointmentAt = String(body.nextAppointmentAt || "").trim();
@@ -96,7 +100,7 @@ export async function POST(request: Request) {
     .slice(0, 180);
 
   if (
-    !validEmail(email) ||
+    !validEmail(email) || name.length < 3 ||
     !allowedPlans.includes(plan) ||
     Number.isNaN(startsAt.getTime())
   ) {
@@ -123,8 +127,8 @@ export async function POST(request: Request) {
   const access = calculateAccessPeriod(plan, startsAt);
   await db.insert(clients).values({
     email,
-    name: "Convite pendente",
-    whatsapp: "",
+    name,
+    whatsapp,
     modality: "in_person",
     plan,
     paymentStatus: "approved",
@@ -150,7 +154,7 @@ export async function POST(request: Request) {
         updatedAt: now,
       })
       .where(eq(clients.email, email));
-    return Response.json({ ok: true, invite: { sent: true, id: result.id } });
+    return Response.json({ ok: true, patient: { email, anamnesisUrl: `/admin/clientes/${encodeURIComponent(email)}/anamnese` }, invite: { sent: true, id: result.id } });
   } catch (error) {
     const message =
       error instanceof Error ? error.message.slice(0, 300) : "Falha desconhecida.";
@@ -158,10 +162,12 @@ export async function POST(request: Request) {
       .update(clients)
       .set({ inviteStatus: "failed", inviteError: message, updatedAt: now })
       .where(eq(clients.email, email));
-    return Response.json(
-      { error: `Cadastro criado, mas o convite não foi enviado: ${message}` },
-      { status: 502 },
-    );
+    return Response.json({
+      ok: true,
+      warning: `Cadastro criado, mas o convite não foi enviado: ${message}`,
+      patient: { email, anamnesisUrl: `/admin/clientes/${encodeURIComponent(email)}/anamnese` },
+      invite: { sent: false },
+    }, { status: 201 });
   }
 }
 

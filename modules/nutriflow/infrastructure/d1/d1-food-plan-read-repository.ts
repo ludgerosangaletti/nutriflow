@@ -2,10 +2,11 @@ import type { FoodPlanContentV1 } from "../../contracts/v1/plans.ts";
 import type {
   FoodPlanDraftRecord,
   FoodPlanReadRepository,
+  PublishedFoodPlanRecord,
 } from "../../application/ports/food-plan-repository.ts";
 import type { D1OperationDatabaseLike } from "./d1-operation-database.ts";
 
-type DraftRow = Readonly<{ public_id: string; plan_public_id: string; client_id: number; version_number: number; revision: number; state: "draft" | "in_review"; title: string; notes: string | null; updated_at: string }>;
+type DraftRow = Readonly<{ public_id: string; plan_public_id: string; client_id: number; version_number: number; revision: number; state: "draft" | "in_review" | "published"; title: string; notes: string | null; updated_at: string }>;
 type DayRow = Readonly<{ public_id: string; label: string; day_index: number | null; sort_order: number }>;
 type MealRow = Readonly<{ public_id: string; plan_day_public_id: string | null; title: string; scheduled_time: string | null; instructions: string | null; source_template_public_id: string | null; source_template_version_number: number | null; sort_order: number }>;
 type ItemRow = Readonly<{ public_id: string; meal_public_id: string; source_type: "manual" | "food" | "recipe"; source_public_id: string | null; source_revision_number: number | null; display_name_snapshot: string; quantity_milli: number; unit_public_id: string; unit_code_snapshot: string; unit_label_snapshot: string; preparation: string | null; notes: string | null; sort_order: number }>;
@@ -16,23 +17,27 @@ export class D1FoodPlanReadRepository implements FoodPlanReadRepository {
   constructor(database: D1OperationDatabaseLike) { this.database = database; }
 
   findLatestDraft(input: Readonly<{ organizationId: number; clientId: number }>) {
-    return this.findOne(input, "", []);
+    return this.findOne(input, " AND version.state IN ('draft', 'in_review')", []) as Promise<FoodPlanDraftRecord | null>;
   }
 
   findDraftByVersion(input: Readonly<{ organizationId: number; clientId: number; planVersionPublicId: string }>) {
-    return this.findOne(input, " AND version.public_id = ?", [input.planVersionPublicId]);
+    return this.findOne(input, " AND version.state IN ('draft', 'in_review') AND version.public_id = ?", [input.planVersionPublicId]) as Promise<FoodPlanDraftRecord | null>;
+  }
+
+  findLatestPublished(input: Readonly<{ organizationId: number; clientId: number }>) {
+    return this.findOne(input, " AND version.state = 'published' AND EXISTS (SELECT 1 FROM nf_publications AS publication WHERE publication.plan_version_id = version.id AND publication.status = 'active')", []) as Promise<PublishedFoodPlanRecord | null>;
   }
 
   private async findOne(
     input: Readonly<{ organizationId: number; clientId: number }>,
     extraWhere: string,
     extraBindings: unknown[],
-  ): Promise<FoodPlanDraftRecord | null> {
+  ): Promise<FoodPlanDraftRecord | PublishedFoodPlanRecord | null> {
     const row = await this.database.prepare(
       `SELECT version.public_id, plan.public_id AS plan_public_id, plan.client_id, version.version_number, version.revision, version.state, version.title, version.notes, version.updated_at
        FROM nf_plan_versions AS version INNER JOIN nf_plans AS plan ON plan.id = version.plan_id
-       WHERE plan.organization_id = ? AND plan.client_id = ? AND plan.status = 'draft' AND version.state IN ('draft', 'in_review')${extraWhere}
-       ORDER BY version.updated_at DESC, version.id DESC LIMIT 1`,
+       WHERE plan.organization_id = ? AND plan.client_id = ?${extraWhere}
+       ORDER BY version.version_number DESC, version.updated_at DESC, version.id DESC LIMIT 1`,
     ).bind(input.organizationId, input.clientId, ...extraBindings).first<DraftRow>();
     if (!row) return null;
 

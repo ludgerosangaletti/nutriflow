@@ -3,20 +3,7 @@ import { getDb } from "../../../db";
 import { anamneses, clients } from "../../../db/schema";
 import { hasActiveAccess } from "../../access";
 import { getPatientUser } from "../../supabase/server";
-import { sections, type Answers } from "../../anamnese/questions";
-
-const allowedFields = new Set(
-  sections.flatMap((section) => section.fields.map((field) => field.id)),
-);
-
-function cleanAnswers(input: unknown): Answers {
-  if (!input || typeof input !== "object") return {};
-  return Object.fromEntries(
-    Object.entries(input as Record<string, unknown>)
-      .filter(([key, value]) => allowedFields.has(key) && ["string", "boolean"].includes(typeof value))
-      .map(([key, value]) => [key, typeof value === "string" ? value.slice(0, 5000) : value]),
-  );
-}
+import { cleanAnamnesisAnswers, missingRequiredAnamnesisFields } from "../../anamnese/answers";
 
 export async function PUT(request: Request) {
   const user = await getPatientUser();
@@ -31,15 +18,15 @@ export async function PUT(request: Request) {
   if (!client || !hasActiveAccess(client)) {
     return Response.json({ error: "Acesso não liberado ou vigência encerrada." }, { status: 403 });
   }
+  if (client.modality === "in_person") {
+    return Response.json({ error: "A anamnese presencial é preenchida pelo nutricionista." }, { status: 403 });
+  }
 
   const payload = (await request.json()) as { answers?: unknown; submit?: boolean };
-  const answers = cleanAnswers(payload.answers);
+  const answers = cleanAnamnesisAnswers(payload.answers);
 
   if (payload.submit) {
-    const missing = sections
-      .flatMap((section) => section.fields)
-      .filter((field) => field.required && !answers[field.id])
-      .map((field) => field.label);
+    const missing = missingRequiredAnamnesisFields(answers);
     if (missing.length) {
       return Response.json(
         { error: `Preencha os campos obrigatórios: ${missing.join(", ")}` },

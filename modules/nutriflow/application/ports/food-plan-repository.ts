@@ -99,6 +99,8 @@ export type FoodPlanDraftRecord = Readonly<{
   updatedAt: string;
 }>;
 
+export type PublishedFoodPlanRecord = Omit<FoodPlanDraftRecord, "state"> & Readonly<{ state: "published" }>;
+
 export interface FoodPlanReadRepository {
   findLatestDraft(input: Readonly<{
     organizationId: number;
@@ -109,6 +111,10 @@ export interface FoodPlanReadRepository {
     clientId: number;
     planVersionPublicId: string;
   }>): Promise<FoodPlanDraftRecord | null>;
+  findLatestPublished(input: Readonly<{
+    organizationId: number;
+    clientId: number;
+  }>): Promise<PublishedFoodPlanRecord | null>;
 }
 
 export type SaveFoodPlanDraftRecord = Readonly<{

@@ -11,6 +11,7 @@ export const NUTRIFLOW_UNITS = Object.freeze([
   { publicId: "unit_teaspoon", code: "tsp", label: "colher de chá" },
   { publicId: "unit_cup", code: "cup", label: "xícara" },
   { publicId: "unit_slice", code: "slice", label: "fatia" },
+  { publicId: "unit_as_desired", code: "as_desired", label: "à vontade" },
 ]);
 
 export function editorId(kind: "day" | "meal" | "item" | "note") {

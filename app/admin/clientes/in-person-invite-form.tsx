@@ -18,7 +18,9 @@ export default function InPersonInviteForm() {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
+          name: form.get("name"),
           email: form.get("email"),
+          whatsapp: form.get("whatsapp"),
           plan: form.get("plan"),
           startsAt: `${form.get("startsAt")}T12:00:00Z`,
           nextAppointmentAt: form.get("nextAppointmentAt")
@@ -29,14 +31,13 @@ export default function InPersonInviteForm() {
       });
       const result = (await response.json().catch(() => ({}))) as {
         error?: string;
+        warning?: string;
+        patient?: { anamnesisUrl?: string };
         invite?: { id?: string; sent?: boolean };
       };
       if (!response.ok) throw new Error(result.error || "Não foi possível criar o convite.");
-      setMessage(
-        `Paciente cadastrado e convite enviado por e-mail.${result.invite?.id ? ` Código do envio: ${result.invite.id}` : ""}`,
-      );
-      formElement.reset();
-      window.setTimeout(() => window.location.reload(), 1200);
+      setMessage(result.warning || "Paciente cadastrado. Abrindo a anamnese clínica…");
+      if (result.patient?.anamnesisUrl) window.location.assign(result.patient.anamnesisUrl);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Não foi possível criar o convite.");
     } finally {
@@ -48,8 +49,16 @@ export default function InPersonInviteForm() {
     <form className="in-person-invite-form" onSubmit={submit}>
       <div>
         <label>
+          Nome do paciente
+          <input autoComplete="name" maxLength={160} name="name" required />
+        </label>
+        <label>
           E-mail do paciente
           <input autoComplete="email" name="email" required type="email" />
+        </label>
+        <label>
+          WhatsApp
+          <input autoComplete="tel" inputMode="tel" name="whatsapp" placeholder="(42) 99999-9999" />
         </label>
         <label>
           Plano
@@ -77,7 +86,7 @@ export default function InPersonInviteForm() {
         </label>
       </div>
       <button className="admin-action" disabled={saving}>
-        {saving ? "Enviando convite..." : "Cadastrar e enviar convite"}
+        {saving ? "Criando prontuário..." : "Criar prontuário e enviar convite"}
       </button>
       {message ? <p role="status">{message}</p> : null}
     </form>

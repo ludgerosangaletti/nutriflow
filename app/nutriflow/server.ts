@@ -3,6 +3,8 @@ import { NUTRIFLOW_FEATURE_FLAGS } from "../../modules/nutriflow/config/feature-
 import { evaluateFeatureFlag } from "../../modules/nutriflow/application/feature-flags/evaluate-feature-flag.ts";
 import { CreateFoodPlanDraft } from "../../modules/nutriflow/application/plans/create-food-plan-draft.ts";
 import { CreateFoodPlanDraftOperation } from "../../modules/nutriflow/application/plans/create-food-plan-draft-operation.ts";
+import { CreateFoodPlanRevision } from "../../modules/nutriflow/application/plans/create-food-plan-revision.ts";
+import { CreateFoodPlanRevisionOperation } from "../../modules/nutriflow/application/plans/create-food-plan-revision-operation.ts";
 import { GetFoodPlanDraft } from "../../modules/nutriflow/application/plans/get-food-plan-draft.ts";
 import { GetFoodPlanDraftOperation } from "../../modules/nutriflow/application/plans/get-food-plan-draft-operation.ts";
 import { SaveFoodPlanDraft } from "../../modules/nutriflow/application/plans/save-food-plan-draft.ts";
@@ -270,7 +272,7 @@ export async function getControlledHomologationSnapshot(
   };
   const steps: readonly HomologationStepV1[] = Object.freeze([
     step("consultation", "Consulta e acesso", value.consultation_complete, "Pagamento e vigência ativos."),
-    step("anamnesis", "Anamnese", value.anamnesis_complete, "Anamnese enviada pelo paciente."),
+    step("anamnesis", "Anamnese", value.anamnesis_complete, client.email && value.anamnesis_complete && client.id ? "Anamnese clínica concluída." : "Anamnese clínica pendente."),
     step("plan", "Construção do plano", value.plan_complete, "Rascunho estruturado criado."),
     step("meal-template", "Meal Templates", value.meal_template_complete, "Template reutilizável criado."),
     step("recipe", "Receitas", value.recipe_complete, "Receita reutilizável criada."),
@@ -373,6 +375,15 @@ export function createNutriFlowAdminRuntime(context: NutriFlowAdminContext) {
           organizationId: context.organizationId,
           organizationPublicId: context.organizationPublicId,
         }),
+        generatePublicId,
+        environment: process.env.NODE_ENV === "production" ? "production" : "development",
+      }),
+    }),
+    createRevision: new CreateFoodPlanRevisionOperation({
+      runner,
+      createRevision: new CreateFoodPlanRevision({
+        plans,
+        unitOfWork: new D1NutriFlowUnitOfWork(env.DB, { organizationId: context.organizationId, organizationPublicId: context.organizationPublicId }),
         generatePublicId,
         environment: process.env.NODE_ENV === "production" ? "production" : "development",
       }),

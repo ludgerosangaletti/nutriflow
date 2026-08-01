@@ -133,10 +133,10 @@ export default async function ClientAnswers({
         </div>
         <div className="admin-patient-stats">
           {isInPerson ? (
-            <a href="#dados-presenciais">
-              <span>Convite</span>
-              <strong>{row.client.inviteStatus === "accepted" ? "Aceito" : "Pendente"}</strong>
-            </a>
+            <Link href={`/admin/clientes/${encodeURIComponent(row.client.email)}/anamnese`}>
+              <span>Anamnese clínica</span>
+              <strong>{row.anamnesis?.status === "submitted" ? "Concluída" : row.anamnesis?.status === "draft" ? "Rascunho" : "Iniciar"}</strong>
+            </Link>
           ) : (
             <a href="#anamnese">
               <span>Anamnese</span>
@@ -162,7 +162,7 @@ export default async function ClientAnswers({
               Editor NutriFlow
             </Link>
           ) : null}
-          {isInPerson ? <a href="#dados-presenciais">Atendimento</a> : null}
+          {isInPerson ? <><a href="#dados-presenciais">Atendimento</a><Link href={`/admin/clientes/${encodeURIComponent(row.client.email)}/anamnese`}>{row.anamnesis ? "Editar anamnese" : "Preencher anamnese"}</Link></> : null}
           <a href="#documentos">{isInPerson ? "Protocolo e avaliação" : "Documentos"}</a>
           <a href="#check-ins">Check-ins</a>
           <a href="#ajustes">Ajustes</a>

@@ -7466,6 +7466,9 @@ button:disabled {
 .nutriflow-meals { display: grid; gap: 14px; padding: 18px; }
 .nutriflow-meal { overflow: hidden; border: 1px solid #deded7; border-radius: 17px; background: #fafaf7; }
 .nutriflow-meal > header { display: flex; align-items: center; gap: 13px; padding: 14px 15px; border-bottom: 1px solid #e2e2db; background: #fff; }
+.nutriflow-meal.is-collapsed > header { border-bottom: 0; }
+.nutriflow-meal-collapse { display: grid; place-items: center; width: 30px; height: 30px; flex: 0 0 30px; border: 1px solid #d6d6cf; border-radius: 9px; background: #f7f7f2; color: #11110f; font-size: 1.05rem; font-weight: 900; cursor: pointer; }
+.nutriflow-meal-collapsed-summary { width: 100%; border: 0; border-top: 1px solid #e8e8e1; background: #fbfbf8; color: #6a6a63; text-align: left; padding: 9px 83px; cursor: pointer; }
 .nutriflow-meal-index { display: grid; place-items: center; width: 38px; height: 38px; flex: 0 0 38px; border-radius: 11px; background: #ffe600; color: #11110f; font-weight: 900; }
 .nutriflow-meal-title { min-width: 0; flex: 1; display: grid; grid-template-columns: minmax(140px, 1fr) 112px; gap: 9px; }
 .nutriflow-meal-title input { min-width: 0; border: 1px solid transparent; border-radius: 9px; background: transparent; font: 800 1rem/1.2 inherit; padding: 9px; }
@@ -7475,6 +7478,7 @@ button:disabled {
 .nutriflow-item { display: grid; grid-template-columns: minmax(180px, 1.5fr) 110px minmax(135px, .8fr) minmax(170px, 1fr) 34px; gap: 8px; align-items: end; border: 1px solid #e3e3dc; border-radius: 12px; background: #fff; padding: 10px; }
 .nutriflow-item input,
 .nutriflow-item select { width: 100%; min-width: 0; height: 40px; border: 1px solid #d6d6cf; border-radius: 9px; background: #fff; color: #11110f; font: inherit; padding: 0 10px; }
+.nutriflow-item input:disabled { background: #f1f1eb; color: #55554e; font-weight: 800; }
 .nutriflow-remove-item { width: 34px; height: 40px; border: 0; border-radius: 9px; background: #fff0ee; color: #a83027; font-size: 1.25rem; cursor: pointer; }
 .nutriflow-add-item { justify-self: start; border: 0; background: transparent; color: #33332e; font-weight: 850; padding: 8px 4px; cursor: pointer; }
 .nutriflow-instructions { padding: 0 12px 14px; }
@@ -7622,6 +7626,9 @@ button:disabled {
 .nutriflow-published-confirmation h1 { margin: 8px 0; font-size: clamp(2rem, 5vw, 4rem); line-height: .95; letter-spacing: -.055em; }
 .nutriflow-published-confirmation p { color: #66665e; line-height: 1.55; }
 .nutriflow-published-confirmation a { display: inline-flex; margin-top: 8px; color: #11110f; font-weight: 850; }
+.nutriflow-published-actions { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-top: 20px; }
+.nutriflow-published-actions button { border: 0; border-radius: 12px; background: #11110f; color: #fff; font: inherit; font-weight: 850; padding: 14px 18px; cursor: pointer; }
+.nutriflow-published-actions a { margin-top: 0; padding: 12px 4px; }
 
 @media (max-width: 1180px) {
   .nutriflow-editor-layout.has-library { grid-template-columns: 1fr; }

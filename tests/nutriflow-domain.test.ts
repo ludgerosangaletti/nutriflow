@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import "./nutriflow-revision.test.ts";
 import test from "node:test";
 import {
   NUTRIFLOW_DEFAULT_FEATURE_FLAGS,

@@ -6,9 +6,17 @@ import { sections, type Answers } from "./questions";
 export default function AnamneseForm({
   initialAnswers,
   initialStatus,
+  mode = "patient",
+  endpoint = "/api/anamnese",
+  patientEmail,
+  backHref = "/area-cliente",
 }: {
   initialAnswers: Answers;
   initialStatus: string;
+  mode?: "patient" | "admin";
+  endpoint?: string;
+  patientEmail?: string;
+  backHref?: string;
 }) {
   const [answers, setAnswers] = useState<Answers>(initialAnswers);
   const [step, setStep] = useState(0);
@@ -34,10 +42,10 @@ export default function AnamneseForm({
   async function save(submit = false) {
     setSaving(true);
     setMessage("");
-    const response = await fetch("/api/anamnese", {
+    const response = await fetch(endpoint, {
       method: "PUT",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ answers, submit }),
+      body: JSON.stringify({ answers, submit, email: patientEmail }),
     });
     const result = (await response.json()) as { error?: string; status?: string };
     setSaving(false);
@@ -70,13 +78,10 @@ export default function AnamneseForm({
     return (
       <section className="submitted-state">
         <span>✓</span>
-        <p className="section-kicker">Anamnese recebida</p>
-        <h1>Suas respostas foram enviadas.</h1>
-        <p>
-          Ludgero poderá acessar as informações e iniciar a elaboração da sua
-          estratégia alimentar.
-        </p>
-        <a className="button button-dark" href="/area-cliente">Voltar à área do paciente</a>
+        <p className="section-kicker">Anamnese concluída</p>
+        <h1>{mode === "admin" ? "Informações clínicas registradas." : "Suas respostas foram enviadas."}</h1>
+        <p>{mode === "admin" ? "O prontuário já está pronto para orientar a construção do plano alimentar." : "Ludgero poderá acessar as informações e iniciar a elaboração da sua estratégia alimentar."}</p>
+        <a className="button button-dark" href={backHref}>{mode === "admin" ? "Voltar ao prontuário" : "Voltar à área do paciente"}</a>
       </section>
     );
   }
@@ -84,7 +89,7 @@ export default function AnamneseForm({
   return (
     <div className="anamnesis-layout">
       <aside className="anamnesis-sidebar">
-        <a className="portal-brand" href="/area-cliente">Área do paciente</a>
+        <a className="portal-brand" href={backHref}>{mode === "admin" ? "Prontuário do paciente" : "Área do paciente"}</a>
         <p>Progresso da anamnese</p>
         <div className="progress-meter"><i style={{ width: `${progress}%` }} /></div>
         <strong>{progress}%</strong>
@@ -167,9 +172,7 @@ export default function AnamneseForm({
           {message ? <p className={message.includes("sucesso") || message.includes("salvo") ? "form-success" : "form-error"}>{message}</p> : null}
           {step === sections.length - 1 ? (
             <p className="anamnesis-privacy-note">
-              Ao enviar, você confirma o tratamento das informações fornecidas,
-              inclusive dados de saúde, exclusivamente para avaliação e
-              acompanhamento nutricional, conforme a{" "}
+              {mode === "admin" ? "Ao concluir, você registra que estas informações foram coletadas durante o atendimento e integram o prontuário clínico, conforme a " : "Ao enviar, você confirma o tratamento das informações fornecidas, inclusive dados de saúde, exclusivamente para avaliação e acompanhamento nutricional, conforme a "}
               <a href="/politica-de-privacidade" target="_blank">
                 Política de Privacidade
               </a>.
@@ -191,7 +194,7 @@ export default function AnamneseForm({
                 onClick={() => save(true)}
                 disabled={saving}
               >
-                Enviar anamnese
+                {mode === "admin" ? "Concluir anamnese" : "Enviar anamnese"}
               </button>
             ) : (
               <button className="button button-dark" disabled={saving}>
