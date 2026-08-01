@@ -33,12 +33,10 @@ import type {
   ControlledHomologationSnapshotV1,
   HomologationStepV1,
 } from "../../modules/nutriflow/contracts/v1/homologation.ts";
-
-type MembershipRow = Readonly<{
-  organization_id: number;
-  organization_public_id: string;
-  role: string;
-}>;
+import {
+  ensurePrimaryOwnerMembership,
+  resolveNutriFlowStaffMembership,
+} from "../../modules/nutriflow/infrastructure/d1/d1-admin-membership-bootstrap.ts";
 
 export type NutriFlowAdminContext = Readonly<{
   organizationId: number;
@@ -69,13 +67,7 @@ const staffRoles = new Set<NutriFlowStaffRole>(["owner", "admin", "nutritionist"
 export async function resolveNutriFlowAdminContext(
   authUserId: string,
 ): Promise<NutriFlowAdminContext | null> {
-  const row = await env.DB.prepare(
-    `SELECT member.organization_id, organization.public_id AS organization_public_id, member.role
-     FROM nf_organization_members AS member
-     INNER JOIN nf_organizations AS organization ON organization.id = member.organization_id
-     WHERE member.auth_user_id = ? AND member.status = 'active' AND organization.status = 'active'
-     ORDER BY member.id ASC LIMIT 1`,
-  ).bind(authUserId).first<MembershipRow>();
+  const row = await resolveNutriFlowStaffMembership(env.DB, authUserId);
   if (!row || !staffRoles.has(row.role as NutriFlowStaffRole)) return null;
   const role = row.role as NutriFlowStaffRole;
   return Object.freeze({
@@ -84,6 +76,32 @@ export async function resolveNutriFlowAdminContext(
     actor: Object.freeze({
       kind: "staff",
       authUserId,
+      organizationPublicId: row.organization_public_id,
+      role,
+      membershipStatus: "active",
+    }),
+  });
+}
+
+export async function ensureNutriFlowAdminContext(input: Readonly<{
+  authUserId: string;
+  email: string;
+}>): Promise<NutriFlowAdminContext | null> {
+  const row = await ensurePrimaryOwnerMembership({
+    database: env.DB,
+    authUserId: input.authUserId,
+    email: input.email,
+    expectedAdminEmail: env.ADMIN_EMAIL,
+    environment: process.env.NODE_ENV === "production" ? "production" : "development",
+  });
+  if (!row || !staffRoles.has(row.role as NutriFlowStaffRole)) return null;
+  const role = row.role as NutriFlowStaffRole;
+  return Object.freeze({
+    organizationId: row.organization_id,
+    organizationPublicId: row.organization_public_id,
+    actor: Object.freeze({
+      kind: "staff",
+      authUserId: input.authUserId,
       organizationPublicId: row.organization_public_id,
       role,
       membershipStatus: "active",

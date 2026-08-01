@@ -15,7 +15,7 @@ import RenewalEmailTest from "./renewal-email-test";
 import { daysRemaining, hasActiveAccess } from "../../../access";
 import InPersonCareManager from "./in-person-care-manager";
 import AppointmentRequests from "./appointment-requests";
-import { canUseNutriFlowEditor, getControlledHomologationSnapshot, resolveNutriFlowAdminContext } from "../../../nutriflow/server";
+import { canUseNutriFlowEditor, ensureNutriFlowAdminContext, getControlledHomologationSnapshot } from "../../../nutriflow/server";
 import NutriFlowHomologationPanel from "./nutriflow-homologation-panel";
 
 export const dynamic = "force-dynamic";
@@ -93,7 +93,10 @@ export default async function ClientAnswers({
   const activeGoalCount = patientGoals.filter(
     (goal) => goal.status === "active",
   ).length;
-  const nutriFlowContext = await resolveNutriFlowAdminContext(adminUser.id);
+  const nutriFlowContext = await ensureNutriFlowAdminContext({
+    authUserId: adminUser.id,
+    email: adminUser.email ?? "",
+  });
   const nutriFlowEnabled = nutriFlowContext
     ? await canUseNutriFlowEditor(nutriFlowContext, row.client.id)
     : false;

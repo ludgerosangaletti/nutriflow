@@ -9,7 +9,7 @@ import {
 import { NutriFlowApplicationError } from "../../../../../modules/nutriflow/application/errors/nutriflow-application-error.ts";
 import {
   createNutriFlowAdminRuntime,
-  resolveNutriFlowAdminContext,
+  ensureNutriFlowAdminContext,
   sha256Json,
 } from "../../../../nutriflow/server.ts";
 import { getAdminSession } from "../../../../supabase/server.ts";
@@ -41,7 +41,10 @@ export async function POST(request: Request) {
   try {
     const admin = await getAdminSession();
     if (!admin) throw forbidden();
-    const context = await resolveNutriFlowAdminContext(admin.user.id);
+    const context = await ensureNutriFlowAdminContext({
+      authUserId: admin.user.id,
+      email: admin.user.email ?? "",
+    });
     if (!context) throw forbidden();
     const body = asRecord(await request.json());
     const clientId = Number(body.clientId);
@@ -112,4 +115,3 @@ function forbidden() {
     403,
   );
 }
-

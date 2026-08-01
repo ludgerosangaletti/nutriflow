@@ -23,6 +23,7 @@ import { SaveFoodPlanDraftOperation } from "../modules/nutriflow/application/pla
 import { PublishFoodPlanVersion } from "../modules/nutriflow/application/plans/publish-food-plan-version.ts";
 import { D1FoodPlanPublicationStore } from "../modules/nutriflow/infrastructure/d1/d1-food-plan-publication-store.ts";
 import { ConfigureControlledHomologation, CONTROLLED_HOMOLOGATION_FLAGS } from "../modules/nutriflow/application/homologation/configure-controlled-homologation.ts";
+import { ensurePrimaryOwnerMembership } from "../modules/nutriflow/infrastructure/d1/d1-admin-membership-bootstrap.ts";
 
 class SqliteStatement implements D1PreparedStatementLike {
   readonly query: string;
@@ -208,6 +209,49 @@ test("D1 adapter persists state, audit and outbox atomically in the real schema"
   assert.equal(countRows(sqlite, "nf_plan_versions"), 1);
   assert.equal(countRows(sqlite, "nf_audit_entries"), 1);
   assert.equal(countRows(sqlite, "nf_outbox_events"), 1);
+});
+
+test("official admin bootstraps the primary NutriFlow owner membership once", async () => {
+  const sqlite = new DatabaseSync(":memory:");
+  sqlite.exec("PRAGMA foreign_keys = ON; CREATE TABLE clients (id INTEGER PRIMARY KEY)");
+  apply(sqlite, "0020_parallel_lucky_pierre.sql");
+  apply(sqlite, "0021_true_cerise.sql");
+  const database = new SqliteD1Database(sqlite);
+  const input = {
+    database,
+    authUserId: "auth_admin_01",
+    email: "ADMIN@example.com",
+    expectedAdminEmail: "admin@example.com",
+    environment: "test",
+    now: new Date("2026-08-01T12:00:00.000Z"),
+  } as const;
+
+  const first = await ensurePrimaryOwnerMembership(input);
+  const repeated = await ensurePrimaryOwnerMembership(input);
+
+  assert.equal(first?.role, "owner");
+  assert.equal(repeated?.organization_public_id, first?.organization_public_id);
+  assert.equal((sqlite.prepare("SELECT count(*) AS total FROM nf_organizations").get() as { total: number }).total, 1);
+  assert.equal((sqlite.prepare("SELECT count(*) AS total FROM nf_organization_members").get() as { total: number }).total, 1);
+  assert.equal((sqlite.prepare("SELECT count(*) AS total FROM nf_audit_entries WHERE action = 'organization.owner.bootstrapped'").get() as { total: number }).total, 1);
+  assert.equal((sqlite.prepare("SELECT count(*) AS total FROM nf_outbox_events WHERE event_type = 'organization.owner.bootstrapped'").get() as { total: number }).total, 1);
+});
+
+test("non-admin identity cannot bootstrap a NutriFlow membership", async () => {
+  const sqlite = new DatabaseSync(":memory:");
+  sqlite.exec("PRAGMA foreign_keys = ON; CREATE TABLE clients (id INTEGER PRIMARY KEY)");
+  apply(sqlite, "0020_parallel_lucky_pierre.sql");
+  const result = await ensurePrimaryOwnerMembership({
+    database: new SqliteD1Database(sqlite),
+    authUserId: "auth_patient_01",
+    email: "patient@example.com",
+    expectedAdminEmail: "admin@example.com",
+    environment: "test",
+  });
+
+  assert.equal(result, null);
+  assert.equal((sqlite.prepare("SELECT count(*) AS total FROM nf_organizations").get() as { total: number }).total, 0);
+  assert.equal((sqlite.prepare("SELECT count(*) AS total FROM nf_organization_members").get() as { total: number }).total, 0);
 });
 
 test("a statement failure rolls back every staged D1 write", async () => {
