@@ -22,6 +22,7 @@ import { SaveFoodPlanDraft } from "../modules/nutriflow/application/plans/save-f
 import { SaveFoodPlanDraftOperation } from "../modules/nutriflow/application/plans/save-food-plan-draft-operation.ts";
 import { PublishFoodPlanVersion } from "../modules/nutriflow/application/plans/publish-food-plan-version.ts";
 import { D1FoodPlanPublicationStore } from "../modules/nutriflow/infrastructure/d1/d1-food-plan-publication-store.ts";
+import { ConfigureControlledHomologation, CONTROLLED_HOMOLOGATION_FLAGS } from "../modules/nutriflow/application/homologation/configure-controlled-homologation.ts";
 
 class SqliteStatement implements D1PreparedStatementLike {
   readonly query: string;
@@ -464,6 +465,75 @@ test("a test-account feature override and its audit entry commit atomically", as
   assert.equal(rolledBack.variant, "rollback");
   assert.equal(countRows(sqlite, "nf_feature_flag_overrides"), 2);
   assert.equal(countRows(sqlite, "nf_audit_entries"), 2);
+});
+
+test("controlled homologation enables only the selected client with audit, outbox and idempotency", async () => {
+  const sqlite = databaseWithNutriFlowSchema();
+  apply(sqlite, "0022_fantastic_martin_li.sql");
+  const database = new SqliteD1Database(sqlite);
+  let sequence = 0;
+  const configure = new ConfigureControlledHomologation({
+    unitOfWork: new D1NutriFlowUnitOfWork(database, {
+      organizationId: 1,
+      organizationPublicId: "org_01",
+    }),
+    idempotency: new D1IdempotencyRepository(database),
+    generatePublicId: (prefix) => `${prefix}_homologation_${++sequence}`,
+    environment: "test",
+    clock: () => new Date("2026-08-01T12:00:00.000Z"),
+  });
+  const input = {
+    actor: owner,
+    organizationId: 1,
+    organizationPublicId: "org_01",
+    clientId: 1,
+    enabled: true,
+    reason: "Homologação clínica controlada da conta teste.",
+    expiresAt: "2026-08-31T12:00:00.000Z",
+    confirmedTestAccount: true,
+    correlationId: "corr_homologation_01",
+    idempotencyKey: "homologation-key-01",
+    requestHash: "sha256-homologation-01",
+  } as const;
+  const first = await configure.execute(input);
+  const replay = await configure.execute(input);
+  assert.deepEqual(replay, first);
+  assert.equal(first.flagsConfigured, CONTROLLED_HOMOLOGATION_FLAGS.length);
+  assert.equal(countRows(sqlite, "nf_feature_flag_overrides"), CONTROLLED_HOMOLOGATION_FLAGS.length);
+  assert.equal(countRows(sqlite, "nf_audit_entries"), 1);
+  assert.equal(countRows(sqlite, "nf_outbox_events"), 1);
+  const configuredFlags = sqlite.prepare("SELECT flag_key, enabled, client_id, variant FROM nf_feature_flag_overrides ORDER BY flag_key").all();
+  assert.equal(configuredFlags.length, CONTROLLED_HOMOLOGATION_FLAGS.length);
+  assert.ok(configuredFlags.every((row) => row.enabled === 1 && row.client_id === 1 && row.variant === "controlled-homologation"));
+});
+
+test("controlled homologation rejects an unconfirmed or excessive test window", async () => {
+  const sqlite = databaseWithNutriFlowSchema();
+  apply(sqlite, "0022_fantastic_martin_li.sql");
+  const database = new SqliteD1Database(sqlite);
+  const configure = new ConfigureControlledHomologation({
+    unitOfWork: new D1NutriFlowUnitOfWork(database, { organizationId: 1, organizationPublicId: "org_01" }),
+    idempotency: new D1IdempotencyRepository(database),
+    generatePublicId: (prefix) => `${prefix}_${crypto.randomUUID()}`,
+    environment: "test",
+    clock: () => new Date("2026-08-01T12:00:00.000Z"),
+  });
+  await assert.rejects(configure.execute({
+    actor: owner,
+    organizationId: 1,
+    organizationPublicId: "org_01",
+    clientId: 1,
+    enabled: true,
+    reason: "Conta sem confirmação explícita para homologação.",
+    expiresAt: "2026-08-31T12:00:00.000Z",
+    confirmedTestAccount: false,
+    correlationId: "corr_homologation_invalid",
+    idempotencyKey: "homologation-invalid",
+    requestHash: "sha256-invalid",
+  }), /inválidos/);
+  assert.equal(countRows(sqlite, "nf_feature_flag_overrides"), 0);
+  assert.equal(countRows(sqlite, "nf_audit_entries"), 0);
+  assert.equal(countRows(sqlite, "nf_outbox_events"), 0);
 });
 
 test("a feature override failure leaves neither configuration nor audit", async () => {

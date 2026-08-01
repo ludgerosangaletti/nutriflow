@@ -7746,6 +7746,322 @@ button:disabled {
   .nf-patient-support-grid { grid-template-columns: 1fr; }
 }
 
+/* NutriFlow — homologação controlada, sem exposição global. */
+.nutriflow-homologation {
+  margin-top: 20px;
+  border: 1px solid #deddd6;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.82);
+  overflow: hidden;
+  box-shadow: 0 18px 50px rgba(17, 17, 15, 0.05);
+}
+
+.nutriflow-homologation.is-active {
+  border-color: rgba(40, 148, 91, 0.35);
+}
+
+.nutriflow-homologation.is-partial {
+  border-color: rgba(200, 151, 0, 0.45);
+}
+
+.nutriflow-homologation__summary {
+  width: 100%;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 18px;
+  border: 0;
+  background: transparent;
+  color: #11110f;
+  text-align: left;
+  cursor: pointer;
+}
+
+.nutriflow-homologation__mark {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 13px;
+  background: #11110f;
+  color: #ffe600;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: .08em;
+}
+
+.nutriflow-homologation__summary small,
+.nutriflow-homologation__summary strong {
+  display: block;
+}
+
+.nutriflow-homologation__summary small {
+  margin-bottom: 3px;
+  color: #706f69;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.nutriflow-homologation__summary strong {
+  font-size: 16px;
+}
+
+.nutriflow-homologation__meta {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  color: #68665e;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.nutriflow-homologation__meta i {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #f0efe9;
+  color: #11110f;
+  font-size: 18px;
+  font-style: normal;
+}
+
+.nutriflow-homologation__body {
+  padding: 0 18px 20px;
+  border-top: 1px solid #ebe9e1;
+}
+
+.nutriflow-homologation__progress {
+  padding: 18px 0;
+}
+
+.nutriflow-homologation__progress > div:first-child {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+  font-size: 12px;
+}
+
+.nutriflow-homologation__bar {
+  height: 7px;
+  border-radius: 999px;
+  background: #eceae2;
+  overflow: hidden;
+}
+
+.nutriflow-homologation__bar i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #ffe600, #28a85f);
+  transition: width .25s ease;
+}
+
+.nutriflow-homologation__progress > small {
+  display: block;
+  margin-top: 8px;
+  color: #77746b;
+  font-size: 11px;
+}
+
+.nutriflow-homologation__grid {
+  display: grid;
+  grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr);
+  gap: 28px;
+  padding: 18px;
+  border: 1px solid #e5e3db;
+  border-radius: 18px;
+  background: #faf9f5;
+}
+
+.nutriflow-homologation__grid h3 {
+  margin: 0 0 12px;
+  font-size: 13px;
+}
+
+.nutriflow-homologation__flags,
+.nutriflow-homologation__steps {
+  display: grid;
+  gap: 9px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.nutriflow-homologation__flags li,
+.nutriflow-homologation__steps li {
+  display: grid;
+  grid-template-columns: 24px 1fr;
+  align-items: start;
+  gap: 9px;
+}
+
+.nutriflow-homologation__flags li > span,
+.nutriflow-homologation__steps li > span {
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #d6d3ca;
+  border-radius: 50%;
+  color: transparent;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.nutriflow-homologation__flags li.is-complete > span,
+.nutriflow-homologation__steps li.is-complete > span {
+  border-color: #239254;
+  background: #239254;
+  color: #fff;
+}
+
+.nutriflow-homologation__flags strong,
+.nutriflow-homologation__flags small,
+.nutriflow-homologation__steps strong,
+.nutriflow-homologation__steps small {
+  display: block;
+}
+
+.nutriflow-homologation__flags strong,
+.nutriflow-homologation__steps strong {
+  font-size: 12px;
+}
+
+.nutriflow-homologation__flags small,
+.nutriflow-homologation__steps small {
+  margin-top: 2px;
+  color: #77746b;
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.nutriflow-homologation__controls {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) 180px auto;
+  align-items: end;
+  gap: 12px;
+  margin-top: 16px;
+  padding: 16px;
+  border-radius: 16px;
+  background: #11110f;
+  color: #fff;
+}
+
+.nutriflow-homologation__controls label {
+  display: grid;
+  gap: 7px;
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.nutriflow-homologation__controls input,
+.nutriflow-homologation__controls select {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid #42413d;
+  border-radius: 11px;
+  background: #fff;
+  color: #11110f;
+  padding: 0 12px;
+  font: inherit;
+}
+
+.nutriflow-homologation__controls .nutriflow-homologation__consent {
+  grid-column: 1 / 3;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-weight: 500;
+}
+
+.nutriflow-homologation__consent input {
+  width: 18px;
+  min-height: 18px;
+  accent-color: #ffe600;
+}
+
+.nutriflow-homologation__controls button {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 11px;
+  background: #ffe600;
+  color: #11110f;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.nutriflow-homologation__controls button:disabled {
+  cursor: not-allowed;
+  opacity: .5;
+}
+
+.nutriflow-homologation__controls p {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: #cfcdc5;
+  font-size: 12px;
+}
+
+.nutriflow-homologation__controls button.is-danger {
+  grid-column: 1 / -1;
+  justify-self: start;
+  background: #fff;
+  color: #a22121;
+}
+
+.nutriflow-homologation__message,
+.nutriflow-homologation__readonly {
+  margin: 12px 0 0;
+  color: #5c5a53;
+  font-size: 12px;
+}
+
+@media (max-width: 800px) {
+  .nutriflow-homologation__grid,
+  .nutriflow-homologation__controls {
+    grid-template-columns: 1fr;
+  }
+
+  .nutriflow-homologation__controls .nutriflow-homologation__consent,
+  .nutriflow-homologation__controls button,
+  .nutriflow-homologation__controls p {
+    grid-column: 1;
+  }
+}
+
+@media (max-width: 560px) {
+  .nutriflow-homologation {
+    border-radius: 17px;
+  }
+
+  .nutriflow-homologation__summary {
+    grid-template-columns: auto 1fr;
+    padding: 14px;
+  }
+
+  .nutriflow-homologation__meta {
+    grid-column: 1 / -1;
+    justify-content: space-between;
+    padding-left: 56px;
+  }
+
+  .nutriflow-homologation__body {
+    padding: 0 12px 14px;
+  }
+
+  .nutriflow-homologation__grid,
+  .nutriflow-homologation__controls {
+    padding: 14px;
+  }
+}
+
 @media (max-width: 600px) {
   .nf-patient-dashboard { width: min(100% - 24px, 1180px); padding-top: 8px; }
   .nf-patient-hero h1 { font-size: clamp(3rem, 16vw, 4.7rem); }

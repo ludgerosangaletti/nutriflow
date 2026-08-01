@@ -4,6 +4,7 @@ import { NutriFlowApplicationError } from "../../../../../modules/nutriflow/appl
 import {
   canUseNutriFlowPatientPortal,
   createNutriFlowPatientRuntime,
+  recordNutriFlowPatientPortalView,
   resolveNutriFlowPatientContext,
 } from "../../../../nutriflow/server.ts";
 import { getPatientUser } from "../../../../supabase/server.ts";
@@ -45,14 +46,21 @@ export async function GET(request: Request) {
       patientName: context.patientName,
       modality: context.modality,
     });
+    if (data.plan) {
+      await recordNutriFlowPatientPortalView({
+        context,
+        publicationPublicId: data.plan.publicationPublicId,
+        correlationId: correlation,
+      });
+    }
     console.info("[nutriflow.portal.metric]", JSON.stringify({
       metric: "patient-portal.read",
       durationMs: Math.round(performance.now() - startedAt),
-      queryCount: 6,
+      queryCount: data.plan ? 7 : 6,
       hasPublishedPlan: Boolean(data.plan),
       apiVersion: NUTRIFLOW_API_VERSION,
     }));
-    return Response.json({ apiVersion: NUTRIFLOW_API_VERSION, correlationId: correlation, data }, { headers: headers(startedAt, 6) });
+    return Response.json({ apiVersion: NUTRIFLOW_API_VERSION, correlationId: correlation, data }, { headers: headers(startedAt, data.plan ? 7 : 6) });
   } catch (error) {
     if (error instanceof NutriFlowApplicationError) {
       return Response.json(createNutriFlowApiErrorV1(error.code, correlation), { status: error.httpStatus, headers: headers(startedAt, 6) });

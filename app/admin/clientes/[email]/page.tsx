@@ -15,7 +15,8 @@ import RenewalEmailTest from "./renewal-email-test";
 import { daysRemaining, hasActiveAccess } from "../../../access";
 import InPersonCareManager from "./in-person-care-manager";
 import AppointmentRequests from "./appointment-requests";
-import { canUseNutriFlowEditor, resolveNutriFlowAdminContext } from "../../../nutriflow/server";
+import { canUseNutriFlowEditor, getControlledHomologationSnapshot, resolveNutriFlowAdminContext } from "../../../nutriflow/server";
+import NutriFlowHomologationPanel from "./nutriflow-homologation-panel";
 
 export const dynamic = "force-dynamic";
 
@@ -96,6 +97,9 @@ export default async function ClientAnswers({
   const nutriFlowEnabled = nutriFlowContext
     ? await canUseNutriFlowEditor(nutriFlowContext, row.client.id)
     : false;
+  const homologation = nutriFlowContext
+    ? await getControlledHomologationSnapshot(nutriFlowContext, row.client)
+    : null;
 
   return (
     <main className="portal-shell response-page">
@@ -163,6 +167,14 @@ export default async function ClientAnswers({
           {!isInPerson ? <a href="#metas">Metas</a> : null}
           {!isInPerson ? <a href="#anamnese">Anamnese</a> : null}
         </nav>
+        {homologation && nutriFlowContext ? (
+          <NutriFlowHomologationPanel
+            canConfigure={nutriFlowContext.actor.role === "owner" || nutriFlowContext.actor.role === "admin"}
+            clientId={row.client.id}
+            patientName={row.client.name}
+            snapshot={homologation}
+          />
+        ) : null}
         <details className="admin-tools">
           <summary>Ferramentas administrativas <span>Teste de e-mail de renovação</span></summary>
           <RenewalEmailTest email={row.client.email} />

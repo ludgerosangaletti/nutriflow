@@ -25,6 +25,14 @@ import { GetPatientPortal } from "../../modules/nutriflow/application/portal/get
 import { PublishFoodPlanVersion } from "../../modules/nutriflow/application/plans/publish-food-plan-version.ts";
 import { PublishFoodPlanVersionOperation } from "../../modules/nutriflow/application/plans/publish-food-plan-version-operation.ts";
 import { D1FoodPlanPublicationStore } from "../../modules/nutriflow/infrastructure/d1/d1-food-plan-publication-store.ts";
+import {
+  ConfigureControlledHomologation,
+  CONTROLLED_HOMOLOGATION_FLAGS,
+} from "../../modules/nutriflow/application/homologation/configure-controlled-homologation.ts";
+import type {
+  ControlledHomologationSnapshotV1,
+  HomologationStepV1,
+} from "../../modules/nutriflow/contracts/v1/homologation.ts";
 
 type MembershipRow = Readonly<{
   organization_id: number;
@@ -159,6 +167,152 @@ export async function canUseNutriFlowPatientPortal(
   return evaluation.enabled;
 }
 
+const homologationFlagLabels = Object.freeze({
+  [NUTRIFLOW_FEATURE_FLAGS.ADMIN_EDITOR]: "Editor NutriFlow",
+  [NUTRIFLOW_FEATURE_FLAGS.GLOBAL_CATALOG]: "Biblioteca Global",
+  [NUTRIFLOW_FEATURE_FLAGS.MEAL_TEMPLATES]: "Meal Templates",
+  [NUTRIFLOW_FEATURE_FLAGS.RECIPES]: "Receitas",
+  [NUTRIFLOW_FEATURE_FLAGS.PATIENT_STRUCTURED_PLAN]: "Portal do Paciente",
+});
+
+type HomologationProgressRow = Readonly<{
+  consultation_complete: number;
+  anamnesis_complete: number;
+  plan_complete: number;
+  meal_template_complete: number;
+  recipe_complete: number;
+  publication_complete: number;
+  portal_view_complete: number;
+  physical_assessment_complete: number;
+  checkin_complete: number;
+}>;
+
+export async function getControlledHomologationSnapshot(
+  context: NutriFlowAdminContext,
+  client: Readonly<{
+    id: number;
+    email: string;
+    paymentStatus: string;
+    accessExpiresAt: string | null;
+  }>,
+): Promise<ControlledHomologationSnapshotV1> {
+  const now = new Date();
+  const repository = new D1FeatureFlagRepository(env.DB);
+  const flags = await Promise.all(CONTROLLED_HOMOLOGATION_FLAGS.map(async (flag) => {
+    const evaluation = await evaluateFeatureFlag({
+      flag,
+      context: {
+        organizationId: context.organizationId,
+        clientId: client.id,
+        correlationId: generatePublicId("corr"),
+        now,
+      },
+      repository,
+    });
+    return Object.freeze({
+      flag,
+      label: homologationFlagLabels[flag],
+      enabled: evaluation.enabled,
+      variant: evaluation.variant,
+      source: evaluation.source,
+      scope: evaluation.scope,
+      expiresAt: evaluation.expiresAt,
+    });
+  }));
+  const progress = await env.DB.prepare(`SELECT
+      CASE WHEN client.payment_status = 'approved' AND (client.access_expires_at IS NULL OR client.access_expires_at >= ?) THEN 1 ELSE 0 END AS consultation_complete,
+      CASE WHEN EXISTS (SELECT 1 FROM anamneses WHERE client_email = client.email AND status = 'submitted') THEN 1 ELSE 0 END AS anamnesis_complete,
+      CASE WHEN EXISTS (SELECT 1 FROM nf_plans WHERE organization_id = ? AND client_id = client.id) THEN 1 ELSE 0 END AS plan_complete,
+      CASE WHEN EXISTS (SELECT 1 FROM nf_meal_templates WHERE organization_id = ? AND status = 'active') THEN 1 ELSE 0 END AS meal_template_complete,
+      CASE WHEN EXISTS (SELECT 1 FROM nf_recipes WHERE organization_id = ? AND status = 'active') THEN 1 ELSE 0 END AS recipe_complete,
+      CASE WHEN EXISTS (SELECT 1 FROM nf_publications WHERE organization_id = ? AND client_id = client.id AND status = 'active') THEN 1 ELSE 0 END AS publication_complete,
+      CASE WHEN EXISTS (SELECT 1 FROM nf_audit_entries WHERE organization_id = ? AND action = 'patient-portal.viewed' AND entity_type = 'publication' AND json_extract(after_json, '$.clientId') = client.id) THEN 1 ELSE 0 END AS portal_view_complete,
+      CASE WHEN EXISTS (SELECT 1 FROM patient_documents WHERE client_email = client.email AND document_type = 'physical_assessment' AND is_current = 1) THEN 1 ELSE 0 END AS physical_assessment_complete,
+      CASE WHEN EXISTS (SELECT 1 FROM check_ins WHERE client_email = client.email) THEN 1 ELSE 0 END AS checkin_complete
+    FROM clients AS client WHERE client.id = ? LIMIT 1`)
+    .bind(
+      now.toISOString(),
+      context.organizationId,
+      context.organizationId,
+      context.organizationId,
+      context.organizationId,
+      context.organizationId,
+      client.id,
+    ).first<HomologationProgressRow>();
+  const value = progress ?? {
+    consultation_complete: 0,
+    anamnesis_complete: 0,
+    plan_complete: 0,
+    meal_template_complete: 0,
+    recipe_complete: 0,
+    publication_complete: 0,
+    portal_view_complete: 0,
+    physical_assessment_complete: 0,
+    checkin_complete: 0,
+  };
+  const steps: readonly HomologationStepV1[] = Object.freeze([
+    step("consultation", "Consulta e acesso", value.consultation_complete, "Pagamento e vigência ativos."),
+    step("anamnesis", "Anamnese", value.anamnesis_complete, "Anamnese enviada pelo paciente."),
+    step("plan", "Construção do plano", value.plan_complete, "Rascunho estruturado criado."),
+    step("meal-template", "Meal Templates", value.meal_template_complete, "Template reutilizável criado."),
+    step("recipe", "Receitas", value.recipe_complete, "Receita reutilizável criada."),
+    step("publication", "Publicação", value.publication_complete, "Versão imutável publicada."),
+    step("portal-view", "Visualização do paciente", value.portal_view_complete, "Portal estruturado aberto pela conta de teste."),
+    step("physical-assessment", "Avaliação física", value.physical_assessment_complete, "Avaliação física disponível em PDF."),
+    step("check-in", "Check-in", value.checkin_complete, "Primeiro check-in semanal enviado."),
+  ]);
+  const enabledCount = flags.filter((flag) => flag.enabled).length;
+  const controlledCount = flags.filter((flag) =>
+    flag.enabled &&
+    flag.source === "override" &&
+    flag.scope === "client" &&
+    flag.variant === "controlled-homologation" &&
+    flag.expiresAt !== null &&
+    Date.parse(flag.expiresAt) >= now.getTime()
+  ).length;
+  const completedSteps = steps.filter((item) => item.complete).length;
+  const expiries = flags.flatMap((flag) => flag.enabled && flag.expiresAt ? [flag.expiresAt] : []);
+  return Object.freeze({
+    mode: enabledCount === 0 ? "inactive" : controlledCount === flags.length ? "active" : "partial",
+    enabledCount,
+    controlledCount,
+    totalFlags: flags.length,
+    expiresAt: expiries.length === flags.length ? expiries.toSorted()[0] : null,
+    flags: Object.freeze(flags),
+    steps,
+    completedSteps,
+    totalSteps: steps.length,
+  });
+}
+
+function step(
+  key: HomologationStepV1["key"],
+  label: string,
+  complete: number,
+  description: string,
+): HomologationStepV1 {
+  return Object.freeze({ key, label, complete: complete === 1, description });
+}
+
+export async function recordNutriFlowPatientPortalView(input: Readonly<{
+  context: NutriFlowPatientContext;
+  publicationPublicId: string;
+  correlationId: string;
+}>) {
+  const occurredAt = new Date().toISOString();
+  await env.DB.prepare(
+    "INSERT INTO nf_audit_entries (public_id, organization_id, actor_auth_user_id, actor_role, action, entity_type, entity_public_id, correlation_id, before_json, after_json, occurred_at) VALUES (?, ?, ?, 'patient', 'patient-portal.viewed', 'publication', ?, ?, NULL, ?, ?)",
+  ).bind(
+    generatePublicId("audit"),
+    input.context.organizationId,
+    input.context.actor.authUserId,
+    input.publicationPublicId,
+    input.correlationId,
+    JSON.stringify({ clientId: input.context.actor.clientId }),
+    occurredAt,
+  ).run();
+}
+
 function generatePublicId(kind: string) {
   return `${kind}_${crypto.randomUUID()}`;
 }
@@ -181,6 +335,15 @@ export function createNutriFlowAdminRuntime(context: NutriFlowAdminContext) {
     generateCorrelationId: () => generatePublicId("corr"),
   });
   return Object.freeze({
+    configureHomologation: new ConfigureControlledHomologation({
+      unitOfWork: new D1NutriFlowUnitOfWork(env.DB, {
+        organizationId: context.organizationId,
+        organizationPublicId: context.organizationPublicId,
+      }),
+      idempotency: new D1IdempotencyRepository(env.DB),
+      generatePublicId,
+      environment: process.env.NODE_ENV === "production" ? "production" : "development",
+    }),
     getDraft: new GetFoodPlanDraftOperation({
       runner,
       getDraft: new GetFoodPlanDraft(plans),
