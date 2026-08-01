@@ -26,18 +26,21 @@ export default function GoogleCalendarSettings() {
   }
 
   useEffect(() => {
-    void load();
-    const query = new URLSearchParams(window.location.search);
-    const error = query.get("error");
-    if (query.get("connected") === "1") {
-      setMessage("Conta Google autorizada. A conexão está pronta para sincronizar.");
-    } else if (error === "state") {
-      setMessage("A autorização expirou ou perdeu a validação de segurança. Inicie novamente.");
-    } else if (error === "oauth") {
-      setMessage("O Google autorizou o acesso, mas a conexão não foi concluída. Tente novamente.");
-    } else if (error === "admin") {
-      setMessage("Sua sessão administrativa expirou. Entre novamente antes de autorizar.");
-    }
+    const timer = window.setTimeout(() => {
+      void load();
+      const query = new URLSearchParams(window.location.search);
+      const error = query.get("error");
+      if (query.get("connected") === "1") {
+        setMessage("Conta Google autorizada. A conexão está pronta para sincronizar.");
+      } else if (error === "state") {
+        setMessage("A autorização expirou ou perdeu a validação de segurança. Inicie novamente.");
+      } else if (error === "oauth") {
+        setMessage("O Google autorizou o acesso, mas a conexão não foi concluída. Tente novamente.");
+      } else if (error === "admin") {
+        setMessage("Sua sessão administrativa expirou. Entre novamente antes de autorizar.");
+      }
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, []);
 
   async function save(event: FormEvent<HTMLFormElement>) {

@@ -20,6 +20,11 @@ import { D1ReusableContentRepository } from "../../modules/nutriflow/infrastruct
 import { ReusableContentOperations } from "../../modules/nutriflow/application/reusable-content/reusable-content-operations.ts";
 import { D1IdempotencyRepository } from "../../modules/nutriflow/infrastructure/d1/d1-idempotency-repository.ts";
 import { D1NutriFlowUnitOfWork } from "../../modules/nutriflow/infrastructure/d1/d1-unit-of-work.ts";
+import { D1PatientPortalRepository } from "../../modules/nutriflow/infrastructure/d1/d1-patient-portal-repository.ts";
+import { GetPatientPortal } from "../../modules/nutriflow/application/portal/get-patient-portal.ts";
+import { PublishFoodPlanVersion } from "../../modules/nutriflow/application/plans/publish-food-plan-version.ts";
+import { PublishFoodPlanVersionOperation } from "../../modules/nutriflow/application/plans/publish-food-plan-version-operation.ts";
+import { D1FoodPlanPublicationStore } from "../../modules/nutriflow/infrastructure/d1/d1-food-plan-publication-store.ts";
 
 type MembershipRow = Readonly<{
   organization_id: number;
@@ -31,6 +36,24 @@ export type NutriFlowAdminContext = Readonly<{
   organizationId: number;
   organizationPublicId: string;
   actor: Extract<NutriFlowActor, { kind: "staff" }>;
+}>;
+
+type PatientContextRow = Readonly<{
+  client_id: number;
+  name: string;
+  modality: string;
+  payment_status: string;
+  access_expires_at: string | null;
+  organization_id: number;
+  organization_public_id: string;
+}>;
+
+export type NutriFlowPatientContext = Readonly<{
+  organizationId: number;
+  organizationPublicId: string;
+  patientName: string;
+  modality: "online" | "in_person";
+  actor: Extract<NutriFlowActor, { kind: "patient" }>;
 }>;
 
 const staffRoles = new Set<NutriFlowStaffRole>(["owner", "admin", "nutritionist"]);
@@ -90,6 +113,52 @@ export async function canUseNutriFlowFeature(
   return evaluation.enabled;
 }
 
+export async function resolveNutriFlowPatientContext(
+  authUserId: string,
+): Promise<NutriFlowPatientContext | null> {
+  const row = await env.DB.prepare(
+    `SELECT client.id AS client_id, client.name, client.modality, client.payment_status,
+       client.access_expires_at, organization.id AS organization_id,
+       organization.public_id AS organization_public_id
+     FROM clients AS client
+     INNER JOIN nf_plans AS plan ON plan.client_id = client.id
+     INNER JOIN nf_organizations AS organization ON organization.id = plan.organization_id
+     WHERE client.auth_user_id = ? AND organization.status = 'active'
+     ORDER BY CASE WHEN plan.status = 'published' THEN 0 ELSE 1 END, plan.updated_at DESC, plan.id DESC
+     LIMIT 1`,
+  ).bind(authUserId).first<PatientContextRow>();
+  if (!row || !["online", "in_person"].includes(row.modality)) return null;
+  return Object.freeze({
+    organizationId: row.organization_id,
+    organizationPublicId: row.organization_public_id,
+    patientName: row.name,
+    modality: row.modality as "online" | "in_person",
+    actor: Object.freeze({
+      kind: "patient",
+      authUserId,
+      clientId: row.client_id,
+      accountStatus: row.payment_status === "approved" ? "active" : "suspended",
+      entitlementEndsAt: row.access_expires_at,
+    }),
+  });
+}
+
+export async function canUseNutriFlowPatientPortal(
+  context: NutriFlowPatientContext,
+) {
+  const evaluation = await evaluateFeatureFlag({
+    flag: NUTRIFLOW_FEATURE_FLAGS.PATIENT_STRUCTURED_PLAN,
+    context: {
+      organizationId: context.organizationId,
+      clientId: context.actor.clientId,
+      correlationId: generatePublicId("corr"),
+      now: new Date(),
+    },
+    repository: new D1FeatureFlagRepository(env.DB),
+  });
+  return evaluation.enabled;
+}
+
 function generatePublicId(kind: string) {
   return `${kind}_${crypto.randomUUID()}`;
 }
@@ -136,6 +205,16 @@ export function createNutriFlowAdminRuntime(context: NutriFlowAdminContext) {
         environment: process.env.NODE_ENV === "production" ? "production" : "development",
       }),
     }),
+    publish: new PublishFoodPlanVersionOperation({
+      runner,
+      publish: new PublishFoodPlanVersion({
+        plans,
+        store: new D1FoodPlanPublicationStore(env.DB),
+        generatePublicId,
+        hashJson: sha256Json,
+        environment: process.env.NODE_ENV === "production" ? "production" : "development",
+      }),
+    }),
     searchCatalog: new SearchFoodCatalogOperation({
       runner,
       search: new SearchFoodCatalog(new D1FoodCatalogReadRepository(env.DB)),
@@ -146,6 +225,12 @@ export function createNutriFlowAdminRuntime(context: NutriFlowAdminContext) {
       generatePublicId,
       environment: process.env.NODE_ENV === "production" ? "production" : "development",
     }),
+  });
+}
+
+export function createNutriFlowPatientRuntime() {
+  return Object.freeze({
+    getPortal: new GetPatientPortal(new D1PatientPortalRepository(env.DB)),
   });
 }
 

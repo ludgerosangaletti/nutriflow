@@ -7614,6 +7614,14 @@ button:disabled {
 .nutriflow-library footer { display: flex; justify-content: space-between; gap: 8px; border-top: 1px solid #2d2d28; color: #808078; font-size: .62rem; padding: 9px 13px; }
 .nutriflow-save-now { display: grid; gap: 2px; }
 .nutriflow-save-now small { color: #aead9f; font-size: .62rem; font-weight: 650; }
+.nutriflow-publish { display: grid; gap: 3px; border: 1px solid #11110f !important; background: #ffe600 !important; color: #11110f !important; }
+.nutriflow-publish small { color: #675d00; font-size: .62rem; }
+.nutriflow-publish:disabled { opacity: .4; cursor: not-allowed; }
+.nutriflow-published-confirmation { width: min(840px, calc(100% - 40px)); display: grid; grid-template-columns: 84px 1fr; gap: 24px; align-items: start; margin: 70px auto; border: 1px solid #d8d8cf; border-radius: 26px; background: #fff; padding: 34px; box-shadow: 0 26px 80px rgba(20,20,16,.08); }
+.nutriflow-published-confirmation > span { display: grid; place-items: center; width: 84px; height: 84px; border-radius: 22px; background: #ffe600; color: #11110f; font-size: 2rem; font-weight: 900; }
+.nutriflow-published-confirmation h1 { margin: 8px 0; font-size: clamp(2rem, 5vw, 4rem); line-height: .95; letter-spacing: -.055em; }
+.nutriflow-published-confirmation p { color: #66665e; line-height: 1.55; }
+.nutriflow-published-confirmation a { display: inline-flex; margin-top: 8px; color: #11110f; font-weight: 850; }
 
 @media (max-width: 1180px) {
   .nutriflow-editor-layout.has-library { grid-template-columns: 1fr; }
@@ -7636,6 +7644,8 @@ button:disabled {
   .nutriflow-item-actions { grid-column: 1 / -1; display: flex; }
   .nutriflow-library { border-radius: 16px; }
   .nutriflow-library-results { max-height: 280px; }
+  .nutriflow-published-confirmation { grid-template-columns: 1fr; padding: 24px 20px; }
+  .nutriflow-published-confirmation > span { width: 62px; height: 62px; border-radius: 17px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -7650,4 +7660,106 @@ button:disabled {
 @media (max-width: 920px) {
   .nutriflow-meal-title { grid-template-columns: minmax(140px, 1fr) 104px; }
   .nutriflow-meal-title select { grid-column: 1 / -1; height: 38px; }
+}
+
+/* NutriFlow Sprint 5 — experiência do paciente, isolada pela feature flag. */
+.nutriflow-patient-page { min-height: 100svh; background: radial-gradient(circle at 92% 4%, rgba(255,230,0,.15), transparent 30%), #f5f5f1; }
+.nf-patient-dashboard { width: min(1180px, calc(100% - 40px)); margin: 0 auto; padding: 26px 0 80px; }
+.nf-patient-hero { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(280px, .65fr); gap: 24px; align-items: end; padding: 46px 0 34px; }
+.nf-patient-hero h1 { margin: 10px 0 12px; font-size: clamp(2.8rem, 7vw, 6.4rem); line-height: .88; letter-spacing: -.07em; }
+.nf-patient-hero > div > p:last-child { max-width: 650px; color: #60605a; font-size: 1.08rem; line-height: 1.55; }
+.nf-patient-hero aside { display: grid; gap: 6px; border: 1px solid #d9d9d1; border-radius: 20px; background: rgba(255,255,255,.76); padding: 20px; box-shadow: 0 18px 55px rgba(25,25,20,.06); }
+.nf-patient-hero aside span { color: #6a6a62; font-size: .67rem; font-weight: 850; letter-spacing: .1em; text-transform: uppercase; }
+.nf-patient-hero aside strong { font-size: 1rem; line-height: 1.35; }
+.nf-patient-hero aside small { color: #77776f; line-height: 1.4; }
+.nf-plan-heading { display: flex; align-items: end; justify-content: space-between; gap: 28px; border-radius: 26px 26px 0 0; background: #11110f; color: #fff; padding: 28px 30px; }
+.nf-plan-heading > div:first-child { min-width: 0; }
+.nf-plan-heading span { color: #ffe600; font-size: .68rem; font-weight: 900; letter-spacing: .11em; text-transform: uppercase; }
+.nf-plan-heading h2 { margin: 7px 0 5px; font-size: clamp(1.7rem, 3.5vw, 3rem); letter-spacing: -.045em; }
+.nf-plan-heading p { max-width: 720px; margin: 0; color: #bdbdb5; line-height: 1.5; }
+.nf-plan-sync { flex: 0 0 auto; display: grid; grid-template-columns: 28px auto; align-items: center; gap: 1px 9px; border: 1px solid #3b3b35; border-radius: 15px; padding: 11px 14px; }
+.nf-plan-sync i { grid-row: 1 / 3; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: #ffe600; color: #11110f; font-style: normal; font-weight: 900; }
+.nf-plan-sync span { color: #fff; letter-spacing: 0; text-transform: none; }
+.nf-plan-sync small { color: #888880; font-size: .65rem; }
+.nf-patient-days { display: flex; gap: 8px; overflow-x: auto; border: 1px solid #dadad2; border-top: 0; background: #fff; padding: 13px 15px; scrollbar-width: thin; }
+.nf-patient-days button { min-width: 150px; flex: 0 0 auto; display: grid; grid-template-columns: auto 1fr; gap: 2px 8px; border: 1px solid transparent; border-radius: 14px; background: #f4f4ef; color: #606059; text-align: left; padding: 11px 13px; cursor: pointer; }
+.nf-patient-days button small { grid-row: 1 / 3; align-self: center; color: #aaa99f; font-size: .67rem; font-weight: 900; }
+.nf-patient-days button strong { overflow: hidden; color: #1b1b18; text-overflow: ellipsis; white-space: nowrap; }
+.nf-patient-days button span { font-size: .67rem; }
+.nf-patient-days button.is-active { border-color: #11110f; background: #ffe600; color: #5b5200; box-shadow: inset 0 0 0 1px rgba(0,0,0,.05); }
+.nf-patient-days button.is-active small, .nf-patient-days button.is-active strong { color: #11110f; }
+.nf-patient-day { border: 1px solid #dadad2; border-top: 0; border-radius: 0 0 26px 26px; background: #fff; padding: 26px 28px 30px; }
+.nf-patient-day > header { display: flex; justify-content: space-between; gap: 20px; align-items: end; border-bottom: 1px solid #e8e8e1; padding-bottom: 18px; }
+.nf-patient-day > header span { color: #73736c; font-size: .67rem; font-weight: 850; letter-spacing: .1em; text-transform: uppercase; }
+.nf-patient-day > header h2 { margin: 5px 0 0; font-size: 1.8rem; letter-spacing: -.035em; }
+.nf-patient-day > header p { margin: 0; color: #77776f; font-size: .8rem; }
+.nf-patient-meals { display: grid; gap: 14px; margin-top: 18px; }
+.nf-patient-meal { border: 1px solid #deded6; border-radius: 20px; background: #fbfbf8; padding: 20px; }
+.nf-patient-meal > header { display: flex; gap: 14px; align-items: center; margin-bottom: 16px; }
+.nf-patient-meal-number { display: grid; place-items: center; width: 42px; height: 42px; flex: 0 0 42px; border-radius: 13px; background: #11110f; color: #ffe600; font-size: .75rem; font-weight: 900; }
+.nf-patient-meal > header span { color: #6f6f68; font-size: .7rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.nf-patient-meal h3 { margin: 2px 0 0; font-size: 1.25rem; }
+.nf-patient-foods { display: grid; border-top: 1px solid #e6e6df; }
+.nf-patient-food { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 18px; align-items: center; border-bottom: 1px solid #e6e6df; padding: 13px 2px; }
+.nf-patient-food > div { min-width: 0; }
+.nf-patient-food strong { font-size: .92rem; }
+.nf-patient-food > b { color: #31312d; font-size: .8rem; white-space: nowrap; }
+.nf-patient-food p { margin: 4px 0 0; color: #73736c; font-size: .75rem; line-height: 1.4; }
+.nf-patient-food details { grid-column: 1 / -1; border-radius: 10px; background: #f0f0ea; padding: 8px 10px; }
+.nf-patient-food details summary, .nf-substitutions > summary { color: #32322d; font-size: .75rem; font-weight: 800; cursor: pointer; }
+.nf-content-badge { display: inline-block; margin-left: 7px; border-radius: 999px; background: #fff1a1; color: #665c00; font-size: .55rem; font-weight: 900; letter-spacing: .07em; padding: 3px 6px; text-transform: uppercase; vertical-align: 1px; }
+.nf-meal-guidance { margin-top: 15px; border-left: 3px solid #ffe600; background: #fffdf0; padding: 11px 13px; }
+.nf-meal-guidance span { color: #716700; font-size: .65rem; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
+.nf-meal-guidance p { margin: 5px 0 0; color: #4e4b32; line-height: 1.5; }
+.nf-substitutions { margin-top: 13px; border-radius: 13px; background: #f0f0ea; padding: 12px 14px; }
+.nf-substitutions section { margin-top: 12px; border-top: 1px solid #d9d9d0; padding-top: 10px; }
+.nf-substitutions h4 { margin: 0 0 4px; }
+.nf-substitutions p { color: #6b6b63; font-size: .78rem; }
+.nf-substitutions ul { display: grid; gap: 6px; margin: 10px 0 0; padding: 0; list-style: none; }
+.nf-substitutions li { display: flex; justify-content: space-between; gap: 16px; border-radius: 9px; background: #fff; padding: 8px 10px; font-size: .78rem; }
+.nf-patient-notes { display: grid; gap: 9px; margin-top: 18px; border-radius: 20px; background: #fff1a0; padding: 22px 24px; }
+.nf-patient-notes > span { color: #6d6200; font-size: .68rem; font-weight: 900; letter-spacing: .1em; text-transform: uppercase; }
+.nf-patient-notes p { margin: 0; color: #3d390e; line-height: 1.5; }
+.nf-patient-plan-empty { display: grid; grid-template-columns: 90px 1fr; gap: 25px; align-items: center; border: 1px solid #dadad2; border-radius: 26px; background: #fff; padding: 34px; }
+.nf-patient-plan-empty > span { display: grid; place-items: center; width: 90px; height: 90px; border-radius: 24px; background: #f1f1eb; color: #c0ae00; font-size: 3rem; }
+.nf-patient-plan-empty h2 { margin: 7px 0; font-size: 1.8rem; }
+.nf-patient-plan-empty p { max-width: 680px; color: #66665f; line-height: 1.5; }
+.nf-patient-plan-empty .button { display: inline-flex; margin-top: 7px; }
+.nf-patient-support-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 18px; }
+.nf-patient-support-grid > article { min-width: 0; display: flex; flex-direction: column; gap: 8px; border: 1px solid #dadad2; border-radius: 20px; background: #fff; padding: 20px; }
+.nf-patient-support-grid > article > span { color: #76766f; font-size: .67rem; font-weight: 850; letter-spacing: .1em; text-transform: uppercase; }
+.nf-patient-support-grid > article > strong { font-size: 1.05rem; line-height: 1.3; }
+.nf-patient-support-grid > article > p { margin: 0; color: #6d6d66; font-size: .8rem; line-height: 1.5; }
+.nf-patient-support-grid a { width: max-content; margin-top: auto; color: #11110f; font-size: .78rem; font-weight: 850; }
+.nf-weight-trend { display: grid; grid-template-columns: 1fr 120px; gap: 12px; align-items: end; }
+.nf-weight-trend > div { display: grid; gap: 2px; }
+.nf-weight-trend span, .nf-weight-trend small { color: #787870; font-size: .66rem; }
+.nf-weight-trend strong { font-size: 1.4rem; }
+.nf-weight-trend svg { width: 120px; height: 60px; overflow: visible; }
+.nf-weight-trend polyline { fill: none; stroke: #11110f; stroke-width: 3; vector-effect: non-scaling-stroke; stroke-linecap: round; stroke-linejoin: round; }
+.nf-patient-empty-copy { color: #77776f; font-size: .8rem; line-height: 1.45; }
+
+@media (max-width: 860px) {
+  .nf-patient-hero { grid-template-columns: 1fr; padding-top: 26px; }
+  .nf-plan-heading { align-items: start; flex-direction: column; }
+  .nf-plan-sync { width: 100%; }
+  .nf-patient-support-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 600px) {
+  .nf-patient-dashboard { width: min(100% - 24px, 1180px); padding-top: 8px; }
+  .nf-patient-hero h1 { font-size: clamp(3rem, 16vw, 4.7rem); }
+  .nf-patient-hero aside { border-radius: 16px; }
+  .nf-plan-heading { border-radius: 20px 20px 0 0; padding: 22px 18px; }
+  .nf-patient-days { padding-inline: 10px; }
+  .nf-patient-days button { min-width: 132px; }
+  .nf-patient-day { border-radius: 0 0 20px 20px; padding: 20px 14px; }
+  .nf-patient-day > header { align-items: start; flex-direction: column; }
+  .nf-patient-meal { border-radius: 16px; padding: 16px 13px; }
+  .nf-patient-food { grid-template-columns: 1fr; gap: 5px; }
+  .nf-patient-food > b { grid-row: 2; }
+  .nf-patient-plan-empty { grid-template-columns: 1fr; padding: 24px 20px; }
+  .nf-patient-plan-empty > span { width: 62px; height: 62px; border-radius: 17px; font-size: 2rem; }
+  .nf-weight-trend { grid-template-columns: 1fr 100px; }
+  .nf-weight-trend svg { width: 100px; }
 }

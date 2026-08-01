@@ -20,6 +20,8 @@ import { D1IdempotencyRepository } from "../modules/nutriflow/infrastructure/d1/
 import { D1FoodPlanDraftStore } from "../modules/nutriflow/infrastructure/d1/d1-food-plan-draft-store.ts";
 import { SaveFoodPlanDraft } from "../modules/nutriflow/application/plans/save-food-plan-draft.ts";
 import { SaveFoodPlanDraftOperation } from "../modules/nutriflow/application/plans/save-food-plan-draft-operation.ts";
+import { PublishFoodPlanVersion } from "../modules/nutriflow/application/plans/publish-food-plan-version.ts";
+import { D1FoodPlanPublicationStore } from "../modules/nutriflow/infrastructure/d1/d1-food-plan-publication-store.ts";
 
 class SqliteStatement implements D1PreparedStatementLike {
   readonly query: string;
@@ -101,6 +103,7 @@ function countRows(sqlite: DatabaseSync, table: string) {
     "nf_meals",
     "nf_meal_items",
     "nf_plan_notes",
+    "nf_publications",
   ]);
   if (!allowed.has(table)) throw new Error("Unsupported test table");
   const row = sqlite.prepare(`SELECT count(*) AS total FROM ${table}`).get();
@@ -347,6 +350,46 @@ test("Sprint 1 saves normalized draft content idempotently and rejects stale rev
   assert.deepEqual(afterRollback.content, content);
   assert.equal(countRows(sqlite, "nf_audit_entries"), 2);
   assert.equal(countRows(sqlite, "nf_outbox_events"), 2);
+});
+
+test("Sprint 5 publishes snapshot, audit and outbox atomically", async () => {
+  const sqlite = databaseWithNutriFlowSchema();
+  apply(sqlite, "0022_fantastic_martin_li.sql");
+  apply(sqlite, "0023_nutriflow_base_units.sql");
+  const database = new SqliteD1Database(sqlite);
+  sqlite.exec(`
+    INSERT INTO nf_plans (public_id, organization_id, client_id, title, status, created_by_auth_user_id) VALUES ('plan_publish_01', 1, 1, 'Plano para publicar', 'draft', 'auth_owner_01');
+    INSERT INTO nf_plan_versions (public_id, plan_id, version_number, revision, state, title, created_by_auth_user_id) VALUES ('version_publish_01', (SELECT id FROM nf_plans WHERE public_id = 'plan_publish_01'), 1, 1, 'draft', 'Plano para publicar', 'auth_owner_01');
+    INSERT INTO nf_plan_days (public_id, plan_version_id, label, day_index, sort_order) VALUES ('day_publish_01', (SELECT id FROM nf_plan_versions WHERE public_id = 'version_publish_01'), 'Dia padrão', 1, 0);
+    INSERT INTO nf_meals (public_id, plan_version_id, plan_day_id, title, scheduled_time, sort_order) VALUES ('meal_publish_01', (SELECT id FROM nf_plan_versions WHERE public_id = 'version_publish_01'), (SELECT id FROM nf_plan_days WHERE public_id = 'day_publish_01'), 'Café da manhã', '08:00', 0);
+    INSERT INTO nf_meal_items (public_id, meal_id, source_type, display_name_snapshot, quantity_milli, unit_id, unit_code_snapshot, unit_label_snapshot, sort_order) VALUES ('item_publish_01', (SELECT id FROM nf_meals WHERE public_id = 'meal_publish_01'), 'manual', 'Banana', 1000, (SELECT id FROM nf_units WHERE public_id = 'unit_piece'), 'piece', 'unidade', 0);
+  `);
+  const ids = ["publication_01", "event_publish_01", "audit_publish_01"];
+  const published = await new PublishFoodPlanVersion({
+    plans: new D1FoodPlanReadRepository(database),
+    store: new D1FoodPlanPublicationStore(database),
+    generatePublicId: () => ids.shift() ?? "missing_id",
+    hashJson: async () => "sha256_publish_01",
+    clock: () => new Date("2026-08-01T12:00:00.000Z"),
+    environment: "test",
+  }).execute({
+    actor: owner,
+    organizationId: 1,
+    organizationPublicId: "org_01",
+    clientId: 1,
+    command: { apiVersion: "v1", planPublicId: "plan_publish_01", planVersionPublicId: "version_publish_01", expectedRevision: 1, correlationId: "corr_publish_01" },
+  });
+
+  assert.equal(published.publicationPublicId, "publication_01");
+  assert.equal(countRows(sqlite, "nf_publications"), 1);
+  assert.equal(countRows(sqlite, "nf_audit_entries"), 1);
+  assert.equal(countRows(sqlite, "nf_outbox_events"), 1);
+  const version = sqlite.prepare("SELECT state, revision, snapshot_json, content_hash FROM nf_plan_versions WHERE public_id = 'version_publish_01'").get();
+  assert.equal(version?.state, "published");
+  assert.equal(version?.revision, 3);
+  assert.equal(version?.content_hash, "sha256_publish_01");
+  assert.match(String(version?.snapshot_json), /Plano para publicar/);
+  assert.throws(() => sqlite.prepare("UPDATE nf_plan_versions SET title = 'alterado' WHERE public_id = 'version_publish_01'").run(), /NF_PUBLICATION_IMMUTABLE/);
 });
 
 test("a test-account feature override and its audit entry commit atomically", async () => {

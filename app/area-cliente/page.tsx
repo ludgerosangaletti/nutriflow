@@ -15,6 +15,10 @@ import {
 import { hasActiveAccess } from "../access";
 import { isPlanId, plans } from "../plans";
 import { requirePatient } from "../supabase/server";
+import {
+  canUseNutriFlowPatientPortal,
+  resolveNutriFlowPatientContext,
+} from "../nutriflow/server";
 import AccessCountdown from "./access-countdown";
 
 export const dynamic = "force-dynamic";
@@ -94,6 +98,10 @@ export default async function ClientArea() {
 
   const active = hasActiveAccess(client);
   const currentDocuments = documents.filter((document) => document.isCurrent);
+  const nutriFlowContext = await resolveNutriFlowPatientContext(user.id);
+  const structuredPlanEnabled = Boolean(
+    nutriFlowContext && (await canUseNutriFlowPatientPortal(nutriFlowContext)),
+  );
   if (client.modality === "in_person" && !client.profileCompletedAt) {
     redirect("/primeiro-acesso");
   }
@@ -116,6 +124,8 @@ export default async function ClientArea() {
     );
     const nextAppointment =
       client.nextAppointmentAt &&
+      // Server-rendered request time; it is not reused as client state.
+      // eslint-disable-next-line react-hooks/purity
       new Date(client.nextAppointmentAt).getTime() > Date.now()
         ? new Date(client.nextAppointmentAt)
         : null;
@@ -246,6 +256,14 @@ export default async function ClientArea() {
           </section>
 
           <div className="patient-primary-grid in-person-resource-grid">
+            {structuredPlanEnabled ? (
+              <Link className="patient-feature-card is-priority" href="/plano-alimentar">
+                <span>NutriFlow · Plano interativo</span>
+                <strong>Seu plano alimentar no dia a dia</strong>
+                <p>Navegue por dias, refeições, receitas e orientações.</p>
+                <b>Abrir plano →</b>
+              </Link>
+            ) : null}
             <Link className="patient-feature-card" href="/documentos">
               <span>01 · Protocolo alimentar</span>
               <strong>{currentProtocol ? "Disponível para download" : "Em elaboração"}</strong>
@@ -556,6 +574,14 @@ export default async function ClientArea() {
               <p>Os recursos mais importantes para manter a estratégia atualizada.</p>
             </section>
             <div className="patient-primary-grid">
+              {structuredPlanEnabled ? (
+                <Link className="patient-feature-card is-priority" href="/plano-alimentar">
+                  <span>NutriFlow · Plano interativo</span>
+                  <strong>Seu plano alimentar no dia a dia</strong>
+                  <p>Navegue por dias, refeições, receitas e orientações.</p>
+                  <b>Abrir plano →</b>
+                </Link>
+              ) : null}
               <Link className="patient-feature-card" href="/documentos">
                 <span>01 · Protocolo e materiais</span>
                 <strong>{currentDocuments.length ? `${currentDocuments.length} arquivo(s) atual(is)` : "Em elaboração"}</strong>

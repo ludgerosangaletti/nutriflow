@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import Link from "next/link";
 
 type LegalLayoutProps = {
   eyebrow: string;
@@ -16,14 +17,14 @@ export default function LegalLayout({
   return (
     <main className="legal-page">
       <header className="legal-header">
-        <a className="brand" href="/" aria-label="Ir para a página inicial">
+        <Link className="brand" href="/" aria-label="Ir para a página inicial">
           <span className="brand-mark" aria-hidden="true" />
           <span className="brand-copy">
             <strong>Ludgero Sangaletti</strong>
             <small>Nutrição clínica &amp; esportiva</small>
           </span>
-        </a>
-        <a className="legal-back" href="/">Voltar ao site</a>
+        </Link>
+        <Link className="legal-back" href="/">Voltar ao site</Link>
       </header>
 
       <article className="legal-document">
@@ -37,9 +38,9 @@ export default function LegalLayout({
           </div>
         </header>
         <nav className="legal-document-nav" aria-label="Documentos relacionados">
-          <a href="/politica-de-privacidade">Política de Privacidade</a>
-          <a href="/termos-de-uso">Termos de Uso</a>
-          <a href="/exclusao-de-dados">Exclusão de Dados</a>
+          <Link href="/politica-de-privacidade">Política de Privacidade</Link>
+          <Link href="/termos-de-uso">Termos de Uso</Link>
+          <Link href="/exclusao-de-dados">Exclusão de Dados</Link>
         </nav>
         <div className="legal-content">{children}</div>
         <aside className="legal-contact">
@@ -55,9 +56,9 @@ export default function LegalLayout({
       <footer className="legal-footer">
         <p>Ludgero Sangaletti · CRN-8 11719</p>
         <nav aria-label="Documentos legais">
-          <a href="/politica-de-privacidade">Privacidade</a>
-          <a href="/termos-de-uso">Termos de uso</a>
-          <a href="/exclusao-de-dados">Exclusão de dados</a>
+          <Link href="/politica-de-privacidade">Privacidade</Link>
+          <Link href="/termos-de-uso">Termos de uso</Link>
+          <Link href="/exclusao-de-dados">Exclusão de dados</Link>
         </nav>
       </footer>
     </main>

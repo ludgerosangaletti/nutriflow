@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import type { FoodCatalogItemV1 } from "../../../../../modules/nutriflow/contracts/v1/catalog.ts";
-import type { FoodPlanDraftV1 } from "../../../../../modules/nutriflow/contracts/v1/plans.ts";
+import type { FoodPlanDraftV1, PublishedFoodPlanV1 } from "../../../../../modules/nutriflow/contracts/v1/plans.ts";
 import type { MealTemplateVersionV1, RecipeVersionV1 } from "../../../../../modules/nutriflow/contracts/v1/reusable-content.ts";
 import { EditorLoadingSkeleton, EditorNotice, SyncIndicator, type EditorSyncState } from "./editor-components";
 import FoodLibraryPanel from "./food-library-panel";
@@ -31,6 +32,7 @@ import {
 } from "./editor-state";
 
 type ApiEnvelope = { data?: FoodPlanDraftV1; errorCode?: string; message?: string };
+type PublicationEnvelope = { data?: PublishedFoodPlanV1; errorCode?: string; message?: string };
 type EditorTools = Readonly<{ catalogEnabled: boolean; recipesEnabled: boolean; mealTemplatesEnabled: boolean }>;
 
 function formatSavedAt(value: string | null) {
@@ -63,6 +65,7 @@ export default function NutriFlowEditor({ clientId, patientName, tools }: { clie
   const [message, setMessage] = useState("");
   const [notice, setNotice] = useState("");
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
+  const [publication, setPublication] = useState<PublishedFoodPlanV1 | null>(null);
   const latestDraft = useRef<FoodPlanDraftV1 | null>(null);
   const syncStateRef = useRef<EditorSyncState>("loading");
   const changeVersion = useRef(0);
@@ -261,8 +264,34 @@ export default function NutriFlowEditor({ clientId, patientName, tools }: { clie
     }
   }
 
+  async function publishDraft() {
+    const snapshot = latestDraft.current;
+    if (!snapshot || syncStateRef.current !== "saved") return;
+    if (!window.confirm("Publicar esta versão para o paciente? O conteúdo publicado ficará imutável e auditável.")) return;
+    const startedAt = performance.now();
+    transition("saving");
+    setMessage("");
+    const correlation = `corr_${crypto.randomUUID()}`;
+    try {
+      const response = await fetch("/api/admin/nutriflow/publications", {
+        method: "POST",
+        headers: { "content-type": "application/json", "idempotency-key": `publish_${crypto.randomUUID()}`, "x-correlation-id": correlation },
+        body: JSON.stringify({ clientId, command: { apiVersion: "v1", planPublicId: snapshot.planPublicId, planVersionPublicId: snapshot.publicId, expectedRevision: snapshot.revision, correlationId: correlation } }),
+      });
+      const result = await response.json().catch(() => ({})) as PublicationEnvelope;
+      if (!response.ok || !result.data) throw new Error(result.message || "Não foi possível publicar o plano.");
+      setPublication(result.data);
+      transition("saved");
+      recordClientMetric("editor.publish.duration", performance.now() - startedAt, { success: true, version: result.data.versionNumber });
+    } catch (error) {
+      transition("error");
+      setMessage(error instanceof Error ? error.message : "Não foi possível publicar o plano.");
+    }
+  }
+
   if (syncState === "loading") return <EditorLoadingSkeleton />;
   if (!draft) return <section className="nutriflow-empty"><p className="section-kicker">Primeiro plano estruturado</p><h1>Comece o plano de {patientName}</h1><p>Crie um rascunho seguro para organizar dias, refeições, alimentos e orientações em um único fluxo.</p><button type="button" onClick={createDraft}>Criar rascunho</button>{message ? <p role="alert">{message}</p> : null}</section>;
+  if (publication) return <section className="nutriflow-published-confirmation"><span aria-hidden="true">✓</span><div><p className="section-kicker">Publicação concluída</p><h1>Plano disponível para o rollout controlado.</h1><p>A versão {publication.versionNumber} foi registrada como imutável, auditada e vinculada ao paciente. A visualização continua protegida pela flag do Portal do Paciente.</p><Link href="/admin/clientes">Voltar à gestão de pacientes</Link></div></section>;
 
   const activeDayId = selectedDayId && draft.content.days.some((day) => day.publicId === selectedDayId) ? selectedDayId : draft.content.days[0]?.publicId ?? null;
   const activeDay = draft.content.days.find((day) => day.publicId === activeDayId);
@@ -308,7 +337,7 @@ export default function NutriFlowEditor({ clientId, patientName, tools }: { clie
       <div className="nutriflow-tools-rail">
         {tools.catalogEnabled ? <FoodLibraryPanel clientId={clientId} targetMealTitle={activeMeal?.title ?? null} onInsert={(food) => activeMealId && insertCatalogFood(food, activeMealId)} /> : null}
         {tools.recipesEnabled || tools.mealTemplatesEnabled ? <ReusableContentPanel clientId={clientId} activeMeal={activeMeal} templatesEnabled={tools.mealTemplatesEnabled} recipesEnabled={tools.recipesEnabled} onApplyTemplate={insertTemplate} onApplyRecipe={insertRecipe} onProductivityAction={trackProductivityAction} /> : null}
-        <aside className="nutriflow-sidebar"><div><span>Paciente</span><strong>{patientName}</strong><small>Rascunho · versão {draft.versionNumber}.{draft.revision}</small></div><label><span>Observações gerais</span><textarea maxLength={4000} placeholder="Contexto clínico, estratégia e pontos importantes para revisão." value={draft.planNotes ?? ""} onChange={(event) => mutate((current) => ({ ...current, planNotes: event.target.value || null }))} /></label><section><span>Estrutura atual</span><dl><div><dt>Dias</dt><dd>{draft.content.days.length}</dd></div><div><dt>Refeições</dt><dd>{draft.content.meals.length}</dd></div><div><dt>Alimentos</dt><dd>{draft.content.meals.reduce((total, meal) => total + meal.items.length, 0)}</dd></div></dl></section><button className="nutriflow-save-now" type="button" disabled={syncState === "saving" || syncState === "saved"} onClick={saveNow}>{syncState === "saving" ? "Salvando…" : "Salvar agora"}<small>Ctrl/⌘ + S</small></button><p>O plano ainda não está visível ao paciente.</p></aside>
+        <aside className="nutriflow-sidebar"><div><span>Paciente</span><strong>{patientName}</strong><small>Rascunho · versão {draft.versionNumber}.{draft.revision}</small></div><label><span>Observações gerais</span><textarea maxLength={4000} placeholder="Contexto clínico, estratégia e pontos importantes para revisão." value={draft.planNotes ?? ""} onChange={(event) => mutate((current) => ({ ...current, planNotes: event.target.value || null }))} /></label><section><span>Estrutura atual</span><dl><div><dt>Dias</dt><dd>{draft.content.days.length}</dd></div><div><dt>Refeições</dt><dd>{draft.content.meals.length}</dd></div><div><dt>Alimentos</dt><dd>{draft.content.meals.reduce((total, meal) => total + meal.items.length, 0)}</dd></div></dl></section><button className="nutriflow-save-now" type="button" disabled={syncState === "saving" || syncState === "saved"} onClick={saveNow}>{syncState === "saving" ? "Salvando…" : "Salvar agora"}<small>Ctrl/⌘ + S</small></button><button className="nutriflow-publish" type="button" disabled={syncState !== "saved" || draft.content.meals.length === 0 || draft.content.meals.some((meal) => meal.items.length === 0)} onClick={publishDraft}>Publicar para o paciente<small>Versão imutável e auditada</small></button><p>A publicação só ficará visível quando a flag do paciente for homologada.</p></aside>
       </div>
     </div>
   </div>;

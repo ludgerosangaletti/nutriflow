@@ -33,6 +33,7 @@ export const NUTRIFLOW_ACTIONS = {
   PUBLISH_VERSION: "plan:publish-version",
   REVOKE_PUBLICATION: "plan:revoke-publication",
   READ_PUBLISHED_PLAN: "publication:read",
+  READ_PATIENT_PORTAL: "patient-portal:read",
   READ_CATALOG: "catalog:read",
   MANAGE_MEAL_TEMPLATES: "meal-template:manage",
   MANAGE_RECIPES: "recipe:manage",
@@ -50,7 +51,10 @@ export const NUTRIFLOW_AUTHORIZATION_MATRIX = Object.freeze({
       (action) => action !== NUTRIFLOW_ACTIONS.CONFIGURE_FEATURE_FLAG,
     ),
   ),
-  patient: Object.freeze([NUTRIFLOW_ACTIONS.READ_PUBLISHED_PLAN]),
+  patient: Object.freeze([
+    NUTRIFLOW_ACTIONS.READ_PUBLISHED_PLAN,
+    NUTRIFLOW_ACTIONS.READ_PATIENT_PORTAL,
+  ]),
   service: Object.freeze([NUTRIFLOW_ACTIONS.READ_PUBLISHED_PLAN]),
 });
 
@@ -99,14 +103,20 @@ export function authorizeNutriFlow(
 
   if (actor.kind === "patient") {
     if (actor.accountStatus !== "active") return denied("inactive-identity");
-    if (action !== NUTRIFLOW_ACTIONS.READ_PUBLISHED_PLAN) {
+    if (
+      action !== NUTRIFLOW_ACTIONS.READ_PUBLISHED_PLAN &&
+      action !== NUTRIFLOW_ACTIONS.READ_PATIENT_PORTAL
+    ) {
       return denied("unsupported-action");
     }
     if (actor.clientId !== resource.clientId) return denied("wrong-patient");
     if (!entitlementIsActive(actor.entitlementEndsAt, now)) {
       return denied("expired-entitlement");
     }
-    if (resource.publicationStatus !== "active") {
+    if (
+      action === NUTRIFLOW_ACTIONS.READ_PUBLISHED_PLAN &&
+      resource.publicationStatus !== "active"
+    ) {
       return denied("inactive-publication");
     }
     return Object.freeze({ allowed: true, reason: "allowed" });
