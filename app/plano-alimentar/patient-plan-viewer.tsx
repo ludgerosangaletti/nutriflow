@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { PatientPortalV1 } from "../../modules/nutriflow/contracts/v1/patient-portal.ts";
 
 function quantity(quantityMilli: number, unit: string) {
@@ -34,6 +34,23 @@ function WeightTrend({ values }: { values: PatientPortalV1["weightEvolution"] })
 export default function PatientPlanViewer({ portal }: { portal: PatientPortalV1 }) {
   const [selectedDayId, setSelectedDayId] = useState(portal.plan?.days[0]?.publicId ?? null);
   const selectedDay = useMemo(() => portal.plan?.days.find((day) => day.publicId === selectedDayId) ?? portal.plan?.days[0] ?? null, [portal.plan, selectedDayId]);
+
+  useEffect(() => {
+    if (!portal.plan?.publicationPublicId) return;
+    const controller = new AbortController();
+    void fetch("/api/nutriflow/v1/portal", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        apiVersion: "v1",
+        publicationPublicId: portal.plan.publicationPublicId,
+      }),
+      cache: "no-store",
+      credentials: "same-origin",
+      signal: controller.signal,
+    }).catch(() => undefined);
+    return () => controller.abort();
+  }, [portal.plan?.publicationPublicId]);
 
   return <div className="nf-patient-dashboard">
     <section className="nf-patient-hero">
@@ -73,4 +90,3 @@ export default function PatientPlanViewer({ portal }: { portal: PatientPortalV1 
     </section>
   </div>;
 }
-

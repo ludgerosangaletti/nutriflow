@@ -6,6 +6,7 @@ import {
   parseCreateFoodPlanCommandV1,
   parseGetPublishedFoodPlanQueryV1,
   parsePublishedFoodPlanV1,
+  parseRecordPatientPortalViewCommandV1,
   parseSaveMealTemplateCommandV1,
   parseSaveFoodPlanDraftCommandV1,
   parseSaveRecipeCommandV1,
@@ -109,6 +110,19 @@ test("patient query contract accepts only the published resource identifier", ()
     publicationPublicId: "publication_01",
     correlationId: "corr_contract_04",
   });
+});
+
+test("patient portal view command is versioned and discards transport fields", () => {
+  const command = parseRecordPatientPortalViewCommandV1({
+    apiVersion: "v1",
+    publicationPublicId: " publication_01 ",
+    clientId: 999,
+  });
+  assert.deepEqual(command, {
+    apiVersion: "v1",
+    publicationPublicId: "publication_01",
+  });
+  assert.equal(Object.isFrozen(command), true);
 });
 
 test("published DTO and safe error envelope are runtime validated", () => {

@@ -23,6 +23,7 @@ import { ReusableContentOperations } from "../../modules/nutriflow/application/r
 import { D1IdempotencyRepository } from "../../modules/nutriflow/infrastructure/d1/d1-idempotency-repository.ts";
 import { D1NutriFlowUnitOfWork } from "../../modules/nutriflow/infrastructure/d1/d1-unit-of-work.ts";
 import { D1PatientPortalRepository } from "../../modules/nutriflow/infrastructure/d1/d1-patient-portal-repository.ts";
+import { D1PatientPortalViewRecorder } from "../../modules/nutriflow/infrastructure/d1/d1-patient-portal-view-recorder.ts";
 import { GetPatientPortal } from "../../modules/nutriflow/application/portal/get-patient-portal.ts";
 import { PublishFoodPlanVersion } from "../../modules/nutriflow/application/plans/publish-food-plan-version.ts";
 import { PublishFoodPlanVersionOperation } from "../../modules/nutriflow/application/plans/publish-food-plan-version-operation.ts";
@@ -320,17 +321,15 @@ export async function recordNutriFlowPatientPortalView(input: Readonly<{
   correlationId: string;
 }>) {
   const occurredAt = new Date().toISOString();
-  await env.DB.prepare(
-    "INSERT INTO nf_audit_entries (public_id, organization_id, actor_auth_user_id, actor_role, action, entity_type, entity_public_id, correlation_id, before_json, after_json, occurred_at) VALUES (?, ?, ?, 'patient', 'patient-portal.viewed', 'publication', ?, ?, NULL, ?, ?)",
-  ).bind(
-    generatePublicId("audit"),
-    input.context.organizationId,
-    input.context.actor.authUserId,
-    input.publicationPublicId,
-    input.correlationId,
-    JSON.stringify({ clientId: input.context.actor.clientId }),
+  return new D1PatientPortalViewRecorder(env.DB).record({
+    publicId: generatePublicId("audit"),
+    organizationId: input.context.organizationId,
+    clientId: input.context.actor.clientId,
+    actorAuthUserId: input.context.actor.authUserId,
+    publicationPublicId: input.publicationPublicId,
+    correlationId: input.correlationId,
     occurredAt,
-  ).run();
+  });
 }
 
 function generatePublicId(kind: string) {

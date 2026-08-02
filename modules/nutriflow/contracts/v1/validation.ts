@@ -23,6 +23,7 @@ import type {
   SaveRecipeCommandV1,
   SearchReusableContentQueryV1,
 } from "./reusable-content.ts";
+import type { RecordPatientPortalViewCommandV1 } from "./patient-portal.ts";
 
 const SAFE_ERROR_MESSAGES: Readonly<Record<NutriFlowErrorCode, string>> = Object.freeze({
   [NUTRIFLOW_ERROR_CODES.FEATURE_DISABLED]: "Recurso indisponível.",
@@ -328,6 +329,20 @@ export function parsePublishedFoodPlanV1(value: unknown): PublishedFoodPlanV1 {
     contentHash: textValue(input.contentHash, "contentHash", 200),
     publishedAt: textValue(input.publishedAt, "publishedAt", 40),
     content: parseFoodPlanContentV1(input.content),
+  });
+}
+
+export function parseRecordPatientPortalViewCommandV1(
+  value: unknown,
+): RecordPatientPortalViewCommandV1 {
+  const input = object(value, "command");
+  return Object.freeze({
+    apiVersion: apiVersion(input.apiVersion),
+    publicationPublicId: textValue(
+      input.publicationPublicId,
+      "publicationPublicId",
+      200,
+    ),
   });
 }
 

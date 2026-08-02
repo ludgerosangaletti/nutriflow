@@ -89,3 +89,7 @@ export type PatientPortalV1 = Readonly<{
   }>;
 }>;
 
+export type RecordPatientPortalViewCommandV1 = Readonly<{
+  apiVersion: typeof NUTRIFLOW_API_VERSION;
+  publicationPublicId: string;
+}>;
