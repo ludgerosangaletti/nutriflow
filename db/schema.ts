@@ -15,6 +15,7 @@ export const clients = sqliteTable(
     email: text("email").notNull(),
     name: text("name").notNull(),
     whatsapp: text("whatsapp").notNull(),
+    whatsappActivationOptInAt: text("whatsapp_activation_opt_in_at"),
     birthDate: text("birth_date"),
     modality: text("modality").notNull().default("online"),
     profileCompletedAt: text("profile_completed_at"),
@@ -216,6 +217,33 @@ export const appointmentReminders = sqliteTable(
     uniqueIndex("appointment_reminders_client_date_unique").on(
       table.clientEmail,
       table.appointmentAt,
+    ),
+  ],
+);
+
+export const patientActivationMessages = sqliteTable(
+  "patient_activation_messages",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    clientEmail: text("client_email").notNull(),
+    deliveryKey: text("delivery_key").notNull(),
+    kind: text("kind").notNull(),
+    channel: text("channel").notNull().default("whatsapp"),
+    status: text("status").notNull().default("pending"),
+    providerId: text("provider_id"),
+    attemptCount: integer("attempt_count").notNull().default(0),
+    error: text("error"),
+    sentAt: text("sent_at"),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("patient_activation_messages_delivery_key_unique").on(
+      table.deliveryKey,
+    ),
+    index("patient_activation_messages_client_status_idx").on(
+      table.clientEmail,
+      table.status,
     ),
   ],
 );

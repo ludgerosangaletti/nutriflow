@@ -37,12 +37,14 @@ export default function InPersonCareManager(props: Props) {
       });
       const result = (await response.json().catch(() => ({}))) as {
         error?: string;
-        invite?: { id?: string; sent?: boolean };
+        invite?: { id?: string; sent?: boolean; whatsapp?: string };
       };
       if (!response.ok) throw new Error(result.error || "Não foi possível concluir a ação.");
       if (action === "resend_invite") {
         setMessage(
-          `Convite reenviado por e-mail.${result.invite?.id ? ` Código do envio: ${result.invite.id}` : ""}`,
+          result.invite?.whatsapp === "sent"
+            ? "Convite reenviado por e-mail e WhatsApp."
+            : "Convite reenviado por e-mail. O WhatsApp ainda não foi entregue.",
         );
         return;
       }

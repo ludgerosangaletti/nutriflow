@@ -17,38 +17,58 @@ function escapeHtml(value: string) {
   });
 }
 
+function safeEqual(received: string, expected: string) {
+  if (received.length !== expected.length) return false;
+  let difference = 0;
+  for (let index = 0; index < received.length; index += 1) {
+    difference |= received.charCodeAt(index) ^ expected.charCodeAt(index);
+  }
+  return difference === 0;
+}
+
 Deno.serve(async (request) => {
   if (request.method !== "POST") return json({ error: "Método não permitido." }, 405);
+  const body = (await request.json().catch(() => null)) as {
+    email?: string;
+    resend?: boolean;
+    systemReminder?: boolean;
+  } | null;
+  const email = String(body?.email || "").trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return json({ error: "E-mail do paciente inválido." }, 400);
+  }
+
   const token = request.headers
     .get("authorization")
     ?.replace(/^Bearer\s+/i, "");
   if (!token) return json({ error: "Não autorizado." }, 401);
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-  const userClient = createClient(
-    supabaseUrl,
-    Deno.env.get("SUPABASE_ANON_KEY")!,
+  const suppliedSecret = request.headers.get("x-checkin-reminder-secret") || "";
+  const expectedSecret = Deno.env.get("CHECKIN_REMINDER_SECRET") || "";
+  const systemAuthorized = Boolean(
+    body?.systemReminder &&
+      expectedSecret &&
+      safeEqual(suppliedSecret, expectedSecret),
   );
-  const {
-    data: { user: adminUser },
-    error: authError,
-  } = await userClient.auth.getUser(token);
-  const adminEmail = Deno.env.get("ADMIN_EMAIL")?.toLowerCase();
-  if (
-    authError ||
-    !adminUser?.email ||
-    adminUser.email.toLowerCase() !== adminEmail
-  ) {
-    return json({ error: "Acesso administrativo necessário." }, 403);
-  }
 
-  const body = (await request.json().catch(() => null)) as {
-    email?: string;
-    resend?: boolean;
-  } | null;
-  const email = String(body?.email || "").trim().toLowerCase();
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    return json({ error: "E-mail do paciente inválido." }, 400);
+  if (!systemAuthorized) {
+    const userClient = createClient(
+      supabaseUrl,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
+    );
+    const {
+      data: { user: adminUser },
+      error: authError,
+    } = await userClient.auth.getUser(token);
+    const adminEmail = Deno.env.get("ADMIN_EMAIL")?.toLowerCase();
+    if (
+      authError ||
+      !adminUser?.email ||
+      adminUser.email.toLowerCase() !== adminEmail
+    ) {
+      return json({ error: "Acesso administrativo necessário." }, 403);
+    }
   }
 
   const service = createClient(
@@ -57,7 +77,7 @@ Deno.serve(async (request) => {
   );
   const redirectTo =
     "https://ludgerosangaletti.com.br/auth/callback?next=/primeiro-acesso";
-  let linkType: "invite" | "magiclink" = body?.resend
+  let linkType: "invite" | "magiclink" = body?.resend || body?.systemReminder
     ? "magiclink"
     : "invite";
   let linkResult = await service.auth.admin.generateLink({
@@ -84,13 +104,18 @@ Deno.serve(async (request) => {
     );
   }
 
+  const activationPath =
+    `/ativar-conta?token_hash=${encodeURIComponent(tokenHash)}&type=${linkType}`;
+  if (systemAuthorized) return json({ ok: true, activationPath });
+
   const apiKey = Deno.env.get("RESEND_API_KEY");
   const fromEmail = Deno.env.get("RESEND_FROM_EMAIL");
   if (!apiKey || !fromEmail) {
     return json({ error: "Configuração de e-mail incompleta." }, 500);
   }
+
   const actionLink = escapeHtml(
-    `https://ludgerosangaletti.com.br/ativar-conta?token_hash=${encodeURIComponent(tokenHash)}&type=${linkType}`,
+    `https://ludgerosangaletti.com.br${activationPath}`,
   );
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -126,5 +151,5 @@ Deno.serve(async (request) => {
   if (!response.ok) {
     return json({ error: result.message || "O provedor recusou o envio." }, 502);
   }
-  return json({ ok: true, id: result.id });
+  return json({ ok: true, id: result.id, activationPath });
 });

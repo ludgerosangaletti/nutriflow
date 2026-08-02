@@ -1,6 +1,10 @@
 import { eq } from "drizzle-orm";
 import { getDb } from "../../../../db";
-import { appointmentChangeRequests, clients } from "../../../../db/schema";
+import {
+  appointmentChangeRequests,
+  clients,
+  patientActivationMessages,
+} from "../../../../db/schema";
 import { calculateAccessPeriod } from "../../../access";
 import { getAdminSession } from "../../../supabase/server";
 import {
@@ -13,6 +17,7 @@ import {
   googleCalendarHasConflict,
   upsertPatientCalendarEvent,
 } from "../../../google-calendar";
+import { sendActivationWhatsApp } from "../../../whatsapp-activation";
 
 const allowedPlans = ["mensal", "trimestral", "semestral"];
 
@@ -65,6 +70,7 @@ async function sendInvite(
   const result = (await response.json().catch(() => ({}))) as {
     error?: string;
     id?: string;
+    activationPath?: string;
   };
   if (!response.ok) throw new Error(result.error || "Falha ao enviar o convite.");
   if (!result.id) {
@@ -72,6 +78,45 @@ async function sendInvite(
       "O provedor de e-mail não confirmou o envio. Tente novamente em instantes.",
     );
   }
+  if (!result.activationPath) {
+    throw new Error("O provedor não devolveu um link de ativação seguro.");
+  }
+  return result;
+}
+
+async function deliverActivationWhatsApp(input: {
+  email: string;
+  name: string;
+  whatsapp: string;
+  activationPath: string;
+  kind: "initial" | "manual_resend";
+}) {
+  const db = getDb();
+  const now = new Date().toISOString();
+  const deliveryKey =
+    input.kind === "initial"
+      ? `activation:initial:${input.email}`
+      : `activation:manual:${input.email}:${now}`;
+  const result = await sendActivationWhatsApp({
+    accessToken: process.env.WHATSAPP_ACCESS_TOKEN,
+    phoneNumberId: process.env.WHATSAPP_PHONE_NUMBER_ID,
+    templateName: process.env.WHATSAPP_ACTIVATION_TEMPLATE_NAME,
+    recipient: input.whatsapp,
+    patientName: input.name,
+    activationPath: input.activationPath,
+  });
+  await db.insert(patientActivationMessages).values({
+    clientEmail: input.email,
+    deliveryKey,
+    kind: input.kind,
+    status: result.status,
+    providerId: result.providerId || null,
+    attemptCount: 1,
+    error: result.error || null,
+    sentAt: result.status === "sent" ? now : null,
+    createdAt: now,
+    updatedAt: now,
+  });
   return result;
 }
 
@@ -83,6 +128,7 @@ export async function POST(request: Request) {
     email?: string;
     name?: string;
     whatsapp?: string;
+    whatsappOptIn?: boolean;
     plan?: string;
     startsAt?: string;
     nextAppointmentAt?: string;
@@ -101,6 +147,8 @@ export async function POST(request: Request) {
 
   if (
     !validEmail(email) || name.length < 3 ||
+    !/^55\d{10,11}$/.test(whatsapp) ||
+    body.whatsappOptIn !== true ||
     !allowedPlans.includes(plan) ||
     Number.isNaN(startsAt.getTime())
   ) {
@@ -129,6 +177,7 @@ export async function POST(request: Request) {
     email,
     name,
     whatsapp,
+    whatsappActivationOptInAt: now,
     modality: "in_person",
     plan,
     paymentStatus: "approved",
@@ -145,6 +194,13 @@ export async function POST(request: Request) {
 
   try {
     const result = await sendInvite(admin.session.access_token, { email });
+    const whatsappResult = await deliverActivationWhatsApp({
+      email,
+      name,
+      whatsapp,
+      activationPath: result.activationPath!,
+      kind: "initial",
+    });
     await db
       .update(clients)
       .set({
@@ -154,7 +210,22 @@ export async function POST(request: Request) {
         updatedAt: now,
       })
       .where(eq(clients.email, email));
-    return Response.json({ ok: true, patient: { email, anamnesisUrl: `/admin/clientes/${encodeURIComponent(email)}/anamnese` }, invite: { sent: true, id: result.id } });
+    return Response.json({
+      ok: true,
+      warning:
+        whatsappResult.status === "sent"
+          ? undefined
+          : "O prontuário e o convite por e-mail foram criados. O WhatsApp de ativação ainda não foi entregue.",
+      patient: {
+        email,
+        anamnesisUrl: `/admin/clientes/${encodeURIComponent(email)}/anamnese`,
+      },
+      invite: {
+        sent: true,
+        id: result.id,
+        whatsapp: whatsappResult.status,
+      },
+    });
   } catch (error) {
     const message =
       error instanceof Error ? error.message.slice(0, 300) : "Falha desconhecida.";
@@ -200,6 +271,13 @@ export async function PATCH(request: Request) {
         email,
         resend: true,
       });
+      const whatsappResult = await deliverActivationWhatsApp({
+        email,
+        name: client.name,
+        whatsapp: client.whatsapp,
+        activationPath: result.activationPath!,
+        kind: "manual_resend",
+      });
       await db
         .update(clients)
         .set({
@@ -209,7 +287,14 @@ export async function PATCH(request: Request) {
           updatedAt: now,
         })
         .where(eq(clients.email, email));
-      return Response.json({ ok: true, invite: { sent: true, id: result.id } });
+      return Response.json({
+        ok: true,
+        invite: {
+          sent: true,
+          id: result.id,
+          whatsapp: whatsappResult.status,
+        },
+      });
     } catch (error) {
       const message =
         error instanceof Error ? error.message.slice(0, 300) : "Falha desconhecida.";

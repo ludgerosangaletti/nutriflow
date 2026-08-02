@@ -5037,6 +5037,27 @@ button:disabled {
   grid-column: 1 / -1;
 }
 
+.in-person-invite-form .invite-whatsapp-consent {
+  align-items: center;
+  background: rgb(255 255 255 / 0.08);
+  border: 1px solid rgb(255 255 255 / 0.14);
+  border-radius: 12px;
+  color: #e8e8df;
+  flex-direction: row;
+  font-size: 10px;
+  line-height: 1.55;
+  padding: 13px 15px;
+  text-transform: none;
+}
+
+.in-person-invite-form .invite-whatsapp-consent input {
+  accent-color: #ffea00;
+  flex: 0 0 auto;
+  min-height: 18px;
+  padding: 0;
+  width: 18px;
+}
+
 .in-person-invite-form .admin-action {
   background: #ffea00;
   color: #111;

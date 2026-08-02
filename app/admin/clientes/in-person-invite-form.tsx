@@ -21,6 +21,7 @@ export default function InPersonInviteForm() {
           name: form.get("name"),
           email: form.get("email"),
           whatsapp: form.get("whatsapp"),
+          whatsappOptIn: form.get("whatsappOptIn") === "on",
           plan: form.get("plan"),
           startsAt: `${form.get("startsAt")}T12:00:00Z`,
           nextAppointmentAt: form.get("nextAppointmentAt")
@@ -58,7 +59,13 @@ export default function InPersonInviteForm() {
         </label>
         <label>
           WhatsApp
-          <input autoComplete="tel" inputMode="tel" name="whatsapp" placeholder="(42) 99999-9999" />
+          <input
+            autoComplete="tel"
+            inputMode="tel"
+            name="whatsapp"
+            placeholder="(42) 99999-9999"
+            required
+          />
         </label>
         <label>
           Plano
@@ -83,6 +90,11 @@ export default function InPersonInviteForm() {
             maxLength={180}
             name="appointmentLocation"
           />
+        </label>
+        <label className="invite-location-field invite-whatsapp-consent">
+          <input name="whatsappOptIn" required type="checkbox" />
+          Confirmo que o paciente autorizou mensagens transacionais no WhatsApp
+          sobre ativação da conta e acompanhamento presencial.
         </label>
       </div>
       <button className="admin-action" disabled={saving}>
