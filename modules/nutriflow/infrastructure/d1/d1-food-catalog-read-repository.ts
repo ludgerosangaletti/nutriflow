@@ -3,7 +3,7 @@ import type { FoodCatalogItemV1, FoodCatalogSearchResultV1 } from "../../contrac
 import type { FoodCatalogReadRepository } from "../../application/ports/food-catalog-repository.ts";
 import type { D1OperationDatabaseLike } from "./d1-operation-database.ts";
 
-type FoodRow = Readonly<{ public_id: string; revision_public_id: string; revision_number: number; name: string; category_code: string | null; aliases_json: string; reference_quantity_milli: number; unit_public_id: string; unit_code: string; unit_label: string; scope: "global" | "organization" }>;
+type FoodRow = Readonly<{ public_id: string; revision_public_id: string; revision_number: number; name: string; category_code: string | null; aliases_json: string; reference_quantity_milli: number; unit_public_id: string; unit_code: string; unit_label: string; scope: "global" | "organization"; source: string }>;
 
 function escapeLike(value: string) { return value.replace(/[\\%_]/g, (character) => `\\${character}`); }
 function parseAliases(value: string): readonly string[] {
@@ -27,7 +27,7 @@ export class D1FoodCatalogReadRepository implements FoodCatalogReadRepository {
               revision.name, revision.category_code, revision.aliases_json,
               COALESCE(revision.reference_quantity_milli, 100000) AS reference_quantity_milli,
               unit.public_id AS unit_public_id, unit.code AS unit_code, unit.label AS unit_label,
-              food.scope
+              food.scope, food.source
        FROM nf_foods AS food
        INNER JOIN nf_food_revisions AS revision ON revision.food_id = food.id
        INNER JOIN nf_units AS unit ON unit.id = revision.reference_unit_id AND unit.status = 'active'
@@ -38,6 +38,7 @@ export class D1FoodCatalogReadRepository implements FoodCatalogReadRepository {
          AND (? = '' OR lower(revision.name) LIKE ? ESCAPE '\\' OR lower(revision.aliases_json) LIKE ? ESCAPE '\\')
          AND (? IS NULL OR revision.category_code = ?)
        ORDER BY CASE WHEN lower(revision.name) = ? THEN 0 WHEN lower(revision.name) LIKE ? ESCAPE '\\' THEN 1 WHEN lower(revision.aliases_json) LIKE ? ESCAPE '\\' THEN 2 ELSE 3 END,
+                CASE WHEN food.scope = 'organization' THEN 0 WHEN food.source = 'taco' THEN 1 ELSE 2 END,
                 revision.name COLLATE NOCASE, revision.revision_number DESC
        LIMIT ?`,
     ).bind(input.organizationId, query, `%${escapedQuery}%`, `%${escapedQuery}%`, category, category, query, `${escapedQuery}%`, `%${escapedQuery}%`, requestedLimit + 1).all<FoodRow>();
@@ -53,8 +54,8 @@ export class D1FoodCatalogReadRepository implements FoodCatalogReadRepository {
       referenceQuantityMilli: row.reference_quantity_milli,
       referenceUnit: Object.freeze({ publicId: row.unit_public_id, code: row.unit_code, label: row.unit_label }),
       scope: row.scope,
+      source: row.source,
     })));
     return Object.freeze({ apiVersion: NUTRIFLOW_API_VERSION, query: input.query.query, items, hasMore: result.results.length > requestedLimit });
   }
 }
-

@@ -17,6 +17,7 @@ export type FoodCatalogItemV1 = Readonly<{
   referenceQuantityMilli: number;
   referenceUnit: FoodCatalogUnitV1;
   scope: "global" | "organization";
+  source?: string;
 }>;
 
 export type SearchFoodCatalogQueryV1 = Readonly<{

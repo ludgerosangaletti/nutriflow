@@ -7596,10 +7596,10 @@ button:disabled {
 .nutriflow-library-search > span { color: #ffe600; font-size: 1.25rem; }
 .nutriflow-library-search input { width: 100%; height: 44px; border: 0; outline: 0; background: transparent; color: #fff; font: inherit; }
 .nutriflow-library-search input::placeholder { color: #8f8f87; }
-.nutriflow-library-categories { display: flex; gap: 6px; overflow-x: auto; padding: 11px 13px 5px; scrollbar-width: none; }
-.nutriflow-library-categories::-webkit-scrollbar { display: none; }
-.nutriflow-library-categories button { flex: 0 0 auto; border: 1px solid #3d3d37; border-radius: 999px; background: transparent; color: #aaa9a1; font: inherit; font-size: .68rem; font-weight: 750; padding: 6px 9px; cursor: pointer; }
-.nutriflow-library-categories button.is-active { border-color: #ffe600; background: #ffe600; color: #11110f; }
+.nutriflow-library-category { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 10px; padding: 11px 13px 5px; }
+.nutriflow-library-category > span { color: #aaa9a1; font-size: .65rem; font-weight: 850; letter-spacing: .08em; text-transform: uppercase; }
+.nutriflow-library-category select { min-width: 0; width: 100%; height: 36px; border: 1px solid #3d3d37; border-radius: 10px; outline: 0; background: #22221f; color: #fff; font: inherit; font-size: .72rem; padding: 0 30px 0 10px; }
+.nutriflow-library-category select:focus { border-color: #ffe600; box-shadow: 0 0 0 2px rgba(255,230,0,.14); }
 .nutriflow-library-target { margin: 8px 13px; border-radius: 9px; background: #292925; color: #aaa9a1; font-size: .72rem; line-height: 1.35; padding: 8px 10px; }
 .nutriflow-library-target.is-ready { background: #31300e; color: #d9d597; }
 .nutriflow-library-target strong { color: #fff; }
@@ -7611,6 +7611,7 @@ button:disabled {
 .nutriflow-library-results button span { min-width: 0; display: grid; gap: 3px; }
 .nutriflow-library-results button strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .82rem; }
 .nutriflow-library-results button small { color: #999990; font-size: .68rem; }
+.nutriflow-library-results button small em { display: inline-block; margin-left: 4px; border: 1px solid #4b4b43; border-radius: 999px; color: #d6d6cf; font-size: .55rem; font-style: normal; font-weight: 850; letter-spacing: .08em; padding: 2px 5px; vertical-align: 1px; }
 .nutriflow-library-results button b { display: grid; place-items: center; width: 28px; height: 28px; flex: 0 0 28px; border-radius: 50%; background: #ffe600; color: #11110f; font-size: 1rem; }
 .nutriflow-library-skeleton { height: 54px; border-radius: 11px; background: linear-gradient(100deg, #22221f 20%, #30302b 40%, #22221f 60%); background-size: 200% 100%; animation: nutriflow-shimmer 1.1s ease-in-out infinite; }
 .nutriflow-library-empty { color: #a5a59d; font-size: .78rem; line-height: 1.5; padding: 18px 10px; text-align: center; }

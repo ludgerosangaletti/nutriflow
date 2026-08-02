@@ -6,6 +6,7 @@ export const NUTRIFLOW_FEATURE_FLAGS = {
   GLOBAL_CATALOG: "nutriflow.catalog.global.enabled",
   RECIPES: "nutriflow.recipes.enabled",
   MEAL_TEMPLATES: "nutriflow.meal_templates.enabled",
+  NUTRITION_TOTALS: "nutriflow.nutrition_totals.enabled",
 } as const;
 
 export type NutriFlowFeatureFlag =
@@ -21,6 +22,7 @@ export const NUTRIFLOW_DEFAULT_FEATURE_FLAGS: Readonly<
   [NUTRIFLOW_FEATURE_FLAGS.GLOBAL_CATALOG]: false,
   [NUTRIFLOW_FEATURE_FLAGS.RECIPES]: false,
   [NUTRIFLOW_FEATURE_FLAGS.MEAL_TEMPLATES]: false,
+  [NUTRIFLOW_FEATURE_FLAGS.NUTRITION_TOTALS]: false,
 });
 
 export const NUTRIFLOW_FEATURE_FLAG_GOVERNANCE = Object.freeze({

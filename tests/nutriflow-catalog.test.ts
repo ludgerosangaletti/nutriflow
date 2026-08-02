@@ -42,6 +42,12 @@ function catalogDatabase() {
   return sqlite;
 }
 
+function tacoCatalogDatabase() {
+  const sqlite = catalogDatabase();
+  apply(sqlite, "0029_nutriflow_taco_catalog.sql");
+  return sqlite;
+}
+
 function query(search: string, categoryCode: string | null = null) {
   return parseSearchFoodCatalogQueryV1({ apiVersion: "v1", query: search, categoryCode, limit: 12, correlationId: "corr_catalog_01" });
 }
@@ -69,6 +75,23 @@ test("food search uses one query, ranks name and aliases and preserves the relea
   const proteins = await repository.search({ organizationId: 1, query: query("", "proteins") });
   assert.equal(proteins.items.every((item) => item.categoryCode === "proteins"), true);
   assert.equal(proteins.items.some((item) => item.name === "Peito de frango grelhado"), true);
+});
+
+test("TACO search supports clinical synonyms, source traceability and official categories", async () => {
+  const database = new CountingDatabase(tacoCatalogDatabase());
+  const repository = new D1FoodCatalogReadRepository(database);
+  database.prepareCount = 0;
+
+  const mandioca = await repository.search({ organizationId: 1, query: query("macaxeira") });
+  assert.equal(database.prepareCount, 1);
+  assert.equal(mandioca.items.length > 0, true);
+  assert.equal(mandioca.items[0]?.source, "taco");
+  assert.match(mandioca.items[0]?.name ?? "", /mandioca|aipim/i);
+
+  const beverages = await repository.search({ organizationId: 1, query: query("", "beverages") });
+  assert.equal(beverages.items.length, 12);
+  assert.equal(beverages.items.every((item) => item.categoryCode === "beverages"), true);
+  assert.equal(beverages.items.some((item) => item.source === "taco"), true);
 });
 
 test("editor tool registry makes recipes and templates available without enabling them", () => {

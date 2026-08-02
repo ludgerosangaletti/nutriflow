@@ -8,14 +8,29 @@ type SearchState = "idle" | "loading" | "ready" | "error";
 
 const categories = [
   { code: "", label: "Todos" },
-  { code: "proteins", label: "Proteínas" },
-  { code: "carbohydrates", label: "Carboidratos" },
+  { code: "cereals", label: "Cereais e derivados" },
+  { code: "vegetables", label: "Verduras e hortaliças" },
   { code: "fruits", label: "Frutas" },
-  { code: "vegetables", label: "Vegetais" },
+  { code: "fats_oils", label: "Gorduras e óleos" },
+  { code: "fish_seafood", label: "Pescados e frutos do mar" },
+  { code: "meats", label: "Carnes e derivados" },
+  { code: "dairy", label: "Leite e derivados" },
+  { code: "beverages", label: "Bebidas" },
+  { code: "eggs", label: "Ovos e derivados" },
+  { code: "sugars_sweets", label: "Açúcares e doces" },
+  { code: "legumes", label: "Leguminosas" },
+  { code: "nuts_seeds", label: "Nozes e sementes" },
+  { code: "prepared_foods", label: "Alimentos preparados" },
+  { code: "industrialized", label: "Industrializados" },
+  { code: "miscellaneous", label: "Miscelâneas" },
+  { code: "proteins", label: "Seleção clínica · proteínas" },
+  { code: "carbohydrates", label: "Seleção clínica · carboidratos" },
+  { code: "fats", label: "Seleção clínica · gorduras" },
+  { code: "supplements", label: "Suplementos" },
 ] as const;
 
 const categoryLabels: Record<string, string> = {
-  proteins: "Proteína", carbohydrates: "Carboidrato", fruits: "Fruta", vegetables: "Vegetal", legumes: "Leguminosa", dairy: "Lácteo", fats: "Gordura", supplements: "Suplemento",
+  cereals: "Cereais", vegetables: "Verduras e hortaliças", fruits: "Frutas", fats_oils: "Gorduras e óleos", fish_seafood: "Pescados", meats: "Carnes", dairy: "Leite e derivados", beverages: "Bebidas", eggs: "Ovos", sugars_sweets: "Açúcares e doces", legumes: "Leguminosas", nuts_seeds: "Nozes e sementes", prepared_foods: "Preparados", industrialized: "Industrializados", miscellaneous: "Miscelâneas", proteins: "Proteína", carbohydrates: "Carboidrato", fats: "Gordura", supplements: "Suplemento",
 };
 
 function reference(item: FoodCatalogItemV1) {
@@ -82,13 +97,13 @@ export default function FoodLibraryPanel({ clientId, targetMealTitle, onInsert }
       if (event.key === "ArrowUp") { event.preventDefault(); setActiveIndex((index) => Math.max(index - 1, 0)); }
       if (event.key === "Enter" && results[activeIndex]) { event.preventDefault(); insert(results[activeIndex]); }
     }} placeholder="Buscar banana, frango, arroz…" aria-label="Pesquisar alimento" /></label>
-    <div className="nutriflow-library-categories" aria-label="Categorias">{categories.map((item) => <button className={category === item.code ? "is-active" : ""} key={item.code || "all"} type="button" onClick={() => setCategory(item.code)}>{item.label}</button>)}</div>
+    <label className="nutriflow-library-category"><span>Categoria</span><select value={category} onChange={(event) => setCategory(event.target.value)} aria-label="Filtrar alimentos por categoria">{categories.map((item) => <option key={item.code || "all"} value={item.code}>{item.label}</option>)}</select></label>
     <p className={`nutriflow-library-target ${targetMealTitle ? "is-ready" : ""}`}>{targetMealTitle ? <>Adicionando em <strong>{targetMealTitle}</strong></> : "Selecione uma refeição para adicionar."}</p>
     <div className="nutriflow-library-results" aria-busy={state === "loading"}>
       {state === "loading" ? Array.from({ length: 4 }, (_, index) => <span className="nutriflow-library-skeleton" key={index} />) : null}
       {state === "error" ? <button className="nutriflow-library-error" type="button" onClick={() => { cache.current.delete(cacheKey); setRetryVersion((value) => value + 1); }}>{message} Tentar novamente.</button> : null}
       {state === "ready" && results.length === 0 ? <p className="nutriflow-library-empty">Nenhum alimento encontrado. Você ainda pode adicioná-lo manualmente.</p> : null}
-      {state === "ready" ? results.map((item, index) => <button className={index === activeIndex ? "is-active" : ""} disabled={!targetMealTitle} key={`${item.publicId}:${item.revisionNumber}`} type="button" onMouseEnter={() => setActiveIndex(index)} onClick={() => insert(item)}><span><strong>{item.name}</strong><small>{categoryLabels[item.categoryCode ?? ""] ?? "Alimento"} · {reference(item)}</small></span><b aria-hidden="true">＋</b></button>) : null}
+      {state === "ready" ? results.map((item, index) => <button className={index === activeIndex ? "is-active" : ""} disabled={!targetMealTitle} key={`${item.publicId}:${item.revisionNumber}`} type="button" onMouseEnter={() => setActiveIndex(index)} onClick={() => insert(item)}><span><strong>{item.name}</strong><small>{categoryLabels[item.categoryCode ?? ""] ?? "Alimento"} · {reference(item)} {item.source === "taco" ? <em>TACO</em> : null}</small></span><b aria-hidden="true">＋</b></button>) : null}
     </div>
     <footer><span>Pesquisa por nome e sinônimos</span><span>↑↓ + Enter</span></footer>
   </section>;

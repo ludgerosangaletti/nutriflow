@@ -671,6 +671,46 @@ export const nfNutrients = sqliteTable(
   ],
 );
 
+export const nfFoodDataSources = sqliteTable(
+  "nf_food_data_sources",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    publicId: text("public_id").notNull(),
+    code: text("code").notNull(),
+    version: text("version").notNull(),
+    name: text("name").notNull(),
+    sourceUrl: text("source_url").notNull(),
+    fileSha256: text("file_sha256"),
+    usageStatus: text("usage_status").notNull(),
+    termsNote: text("terms_note").notNull(),
+    importedAt: text("imported_at"),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("nf_food_data_sources_public_id_unique").on(table.publicId),
+    uniqueIndex("nf_food_data_sources_code_version_unique").on(
+      table.code,
+      table.version,
+    ),
+  ],
+);
+
+export const nfFoodCategories = sqliteTable(
+  "nf_food_categories",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    code: text("code").notNull(),
+    label: text("label").notNull(),
+    sourceGroup: text("source_group"),
+    sortOrder: integer("sort_order").notNull(),
+    status: text("status").notNull().default("active"),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("nf_food_categories_code_unique").on(table.code),
+  ],
+);
+
 export const nfFoods = sqliteTable(
   "nf_foods",
   {
