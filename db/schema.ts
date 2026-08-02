@@ -142,6 +142,7 @@ export const checkIns = sqliteTable(
     mainDifficulty: text("main_difficulty").notNull().default(""),
     weeklyWin: text("weekly_win").notNull().default(""),
     notes: text("notes").notNull().default(""),
+    feedback: text("feedback").notNull().default(""),
     adminStatus: text("admin_status").notNull().default("new"),
     reviewedAt: text("reviewed_at"),
     createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),

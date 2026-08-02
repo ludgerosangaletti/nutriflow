@@ -45,6 +45,7 @@ export type FoodPlanItemV1 = Readonly<{
   notes: string | null;
   sortOrder: number;
 }>;
+export type FoodPlanSubstitutionGroupV1 = Readonly<{ publicId: string; mealItemPublicId: string | null; title: string; ruleCode: "choose_one"; notes: string | null; sortOrder: number; options: readonly FoodPlanItemV1[] }>;
 
 export type FoodPlanMealV1 = Readonly<{
   publicId: string;
@@ -58,6 +59,7 @@ export type FoodPlanMealV1 = Readonly<{
   }> | null;
   sortOrder: number;
   items: readonly FoodPlanItemV1[];
+  substitutions?: readonly FoodPlanSubstitutionGroupV1[];
 }>;
 
 export type FoodPlanDayV1 = Readonly<{

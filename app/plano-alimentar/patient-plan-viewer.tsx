@@ -33,6 +33,7 @@ function WeightTrend({ values }: { values: PatientPortalV1["weightEvolution"] })
 
 export default function PatientPlanViewer({ portal }: { portal: PatientPortalV1 }) {
   const [selectedDayId, setSelectedDayId] = useState(portal.plan?.days[0]?.publicId ?? null);
+  const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
   const selectedDay = useMemo(() => portal.plan?.days.find((day) => day.publicId === selectedDayId) ?? portal.plan?.days[0] ?? null, [portal.plan, selectedDayId]);
 
   useEffect(() => {
@@ -75,7 +76,11 @@ export default function PatientPlanViewer({ portal }: { portal: PatientPortalV1 
             <header><div className="nf-patient-meal-number">{String(index + 1).padStart(2, "0")}</div><div><span>{meal.scheduledTime || "Horário flexível"}</span><h3>{meal.title}</h3></div></header>
             <div className="nf-patient-foods">{meal.items.map((item) => <div className="nf-patient-food" key={item.publicId}><div><strong>{item.displayName}</strong>{item.kind === "recipe" ? <span className="nf-content-badge">Receita</span> : null}<p>{item.preparation || item.notes || "Conforme orientação do plano."}</p></div><b>{quantity(item.quantityMilli, item.unit.label)}</b>{item.recipe ? <details><summary>Ver modo de preparo</summary><p>{item.recipe.instructions || "Siga o preparo indicado pelo nutricionista."}</p></details> : null}</div>)}</div>
             {meal.instructions ? <div className="nf-meal-guidance"><span>Orientação desta refeição</span><p>{meal.instructions}</p></div> : null}
-            {meal.substitutions.length ? <details className="nf-substitutions"><summary>Opções de substituição ({meal.substitutions.length})</summary>{meal.substitutions.map((group) => <section key={group.publicId}><h4>{group.title}</h4>{group.notes ? <p>{group.notes}</p> : null}<ul>{group.options.map((option) => <li key={option.publicId}><span>{option.displayName}</span><b>{quantity(option.quantityMilli, option.unit.label)}</b></li>)}</ul></section>)}</details> : null}
+            {meal.substitutions.length ? <details className="nf-substitutions"><summary>Opções e substituições ({meal.substitutions.length})</summary>{meal.substitutions.map((group) => {
+              const selectedId = selectedOptions[group.publicId] ?? group.options[0]?.publicId;
+              const selected = group.options.find((option) => option.publicId === selectedId) ?? group.options[0];
+              return <section key={group.publicId}><div className="nf-option-picker"><h4>{group.title}</h4>{group.options.length > 1 ? <div role="tablist" aria-label={`Opções para ${group.title}`}>{group.options.map((option, optionIndex) => <button className={option.publicId === selected?.publicId ? "is-active" : ""} key={option.publicId} type="button" role="tab" aria-selected={option.publicId === selected?.publicId} onClick={() => setSelectedOptions((current) => ({ ...current, [group.publicId]: option.publicId }))}>Opção {optionIndex + 1}</button>)}</div> : null}</div>{group.notes ? <p>{group.notes}</p> : null}{selected ? <ul><li><span>{selected.displayName}</span><b>{quantity(selected.quantityMilli, selected.unit.label)}</b></li></ul> : null}</section>;
+            })}</details> : null}
           </article>)}
         </div>
       </section> : null}

@@ -250,7 +250,7 @@ export default async function ClientAnswers({
             <div className="admin-checkin-list">
               {patientCheckIns.toSorted((a, b) => b.weekStart.localeCompare(a.weekStart)).map((item) => (
                 <article className={item.adminStatus === "new" ? "is-new" : ""} key={item.id}>
-                  <header><div><span>Semana de {new Intl.DateTimeFormat("pt-BR", { timeZone: "UTC" }).format(new Date(`${item.weekStart}T00:00:00Z`))}</span><strong>{item.weightKg ? `${item.weightKg.replace(".", ",")} kg` : "Peso não informado"}</strong></div><CheckInReviewButton id={item.id} reviewed={item.adminStatus === "reviewed"} /></header>
+                  <header><div><span>Semana de {new Intl.DateTimeFormat("pt-BR", { timeZone: "UTC" }).format(new Date(`${item.weekStart}T00:00:00Z`))}</span><strong>{item.weightKg ? `${item.weightKg.replace(".", ",")} kg` : "Peso não informado"}</strong></div><CheckInReviewButton id={item.id} reviewed={item.adminStatus === "reviewed"} feedback={item.feedback} /></header>
                   <div className="admin-checkin-metrics"><span>Aderência <b>{item.adherence}/5</b></span><span>Fome <b>{item.hunger}/5</b></span><span>Saciedade <b>{item.satiety}/5</b></span><span>Sono <b>{item.sleep}/5</b></span><span>Energia <b>{item.energy}/5</b></span><span>Treinos <b>{item.trainingSessions}</b></span></div>
                   <dl>
                     <div><dt>Intestino</dt><dd>{({ regular: "Regular, sem desconforto", constipation: "Mais preso que o habitual", diarrhea: "Mais solto que o habitual", alternating: "Alternando entre preso e solto", discomfort: "Com dor, gases ou desconforto" } as Record<string, string>)[item.bowelFunction] || item.bowelFunction}</dd></div>

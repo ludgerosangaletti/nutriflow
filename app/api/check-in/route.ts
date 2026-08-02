@@ -21,7 +21,7 @@ export async function POST(request: Request) {
   const bowelOptions = new Set(["regular", "constipation", "diarrhea", "alternating", "discomfort"]);
   if ([adherence, hunger, satiety, sleep, energy].some((value) => value === null) || !Number.isInteger(trainingSessions) || trainingSessions < 0 || trainingSessions > 21 || !bowelOptions.has(bowelFunction) || !mainDifficulty || !weeklyWin || (weight !== null && (!Number.isFinite(weight) || weight < 20 || weight > 400))) return Response.json({ error: "Revise os campos obrigatórios e tente novamente." }, { status: 400 });
   try {
-    await db.insert(checkIns).values({ clientEmail: client.email, weekStart: currentWeekStart(), weightKg: weight === null ? null : weight.toFixed(1), adherence: adherence!, hunger: hunger!, satiety: satiety!, sleep: sleep!, energy: energy!, trainingSessions, bowelFunction, mainDifficulty: mainDifficulty.slice(0, 800), weeklyWin: weeklyWin.slice(0, 800), notes: notes.slice(0, 1200) });
+    await db.insert(checkIns).values({ clientEmail: client.email, weekStart: currentWeekStart(), weightKg: weight === null ? null : weight.toFixed(1), adherence: adherence!, hunger: hunger!, satiety: satiety!, sleep: sleep!, energy: energy!, trainingSessions, bowelFunction, mainDifficulty: mainDifficulty.slice(0, 800), weeklyWin: weeklyWin.slice(0, 800), notes: notes.slice(0, 1200), feedback: "" });
   } catch { return Response.json({ error: "O check-in desta semana já foi enviado." }, { status: 409 }); }
   return Response.json({ ok: true });
 }

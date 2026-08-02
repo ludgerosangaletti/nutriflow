@@ -68,7 +68,7 @@ export class PublishFoodPlanVersion {
         notes: item.notes,
         sortOrder: sortOrder(item.sortOrder),
       }))),
-      substitutions: Object.freeze([]),
+      substitutions: Object.freeze((meal.substitutions ?? []).map((group) => Object.freeze({ ...group, publicId: publicId(group.publicId), mealItemPublicId: group.mealItemPublicId ? publicId(group.mealItemPublicId) : null, options: Object.freeze(group.options.map((option) => Object.freeze({ ...option, publicId: publicId(option.publicId), unitPublicId: publicId(option.unit.publicId), quantityMilli: quantityMilli(option.quantityMilli), sortOrder: sortOrder(option.sortOrder), source: Object.freeze({ ...option.source, publicId: option.source.publicId ? publicId(option.source.publicId) : null, revisionNumber: option.source.revisionNumber ? versionNumber(option.source.revisionNumber) : null }) }))) }))),
     }));
     const draft = FoodPlanDraft.rehydrate({
       organizationPublicId: publicId(input.organizationPublicId),
@@ -138,4 +138,3 @@ export class PublishFoodPlanVersion {
     });
   }
 }
-

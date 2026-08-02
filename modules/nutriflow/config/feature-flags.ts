@@ -7,6 +7,10 @@ export const NUTRIFLOW_FEATURE_FLAGS = {
   RECIPES: "nutriflow.recipes.enabled",
   MEAL_TEMPLATES: "nutriflow.meal_templates.enabled",
   NUTRITION_TOTALS: "nutriflow.nutrition_totals.enabled",
+  PLAN_PUBLICATION_NOTIFICATIONS: "nutriflow.plan_publication_notifications.enabled",
+  CHECKIN_FEEDBACK: "nutriflow.checkin_feedback.enabled",
+  MEAL_OPTIONS: "nutriflow.meal_options.enabled",
+  SMART_SUBSTITUTIONS: "nutriflow.smart_substitutions.enabled",
 } as const;
 
 export type NutriFlowFeatureFlag =
@@ -23,6 +27,10 @@ export const NUTRIFLOW_DEFAULT_FEATURE_FLAGS: Readonly<
   [NUTRIFLOW_FEATURE_FLAGS.RECIPES]: false,
   [NUTRIFLOW_FEATURE_FLAGS.MEAL_TEMPLATES]: false,
   [NUTRIFLOW_FEATURE_FLAGS.NUTRITION_TOTALS]: false,
+  [NUTRIFLOW_FEATURE_FLAGS.PLAN_PUBLICATION_NOTIFICATIONS]: false,
+  [NUTRIFLOW_FEATURE_FLAGS.CHECKIN_FEEDBACK]: false,
+  [NUTRIFLOW_FEATURE_FLAGS.MEAL_OPTIONS]: false,
+  [NUTRIFLOW_FEATURE_FLAGS.SMART_SUBSTITUTIONS]: false,
 });
 
 export const NUTRIFLOW_FEATURE_FLAG_GOVERNANCE = Object.freeze({
