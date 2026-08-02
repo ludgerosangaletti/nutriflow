@@ -271,13 +271,15 @@ export async function PATCH(request: Request) {
         email,
         resend: true,
       });
-      const whatsappResult = await deliverActivationWhatsApp({
-        email,
-        name: client.name,
-        whatsapp: client.whatsapp,
-        activationPath: result.activationPath!,
-        kind: "manual_resend",
-      });
+      const whatsappResult = client.whatsappActivationOptInAt
+        ? await deliverActivationWhatsApp({
+            email,
+            name: client.name,
+            whatsapp: client.whatsapp,
+            activationPath: result.activationPath!,
+            kind: "manual_resend",
+          })
+        : { status: "not_authorized" as const };
       await db
         .update(clients)
         .set({
