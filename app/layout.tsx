@@ -37,6 +37,22 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR">
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function () {
+                var standalone = window.matchMedia && window.matchMedia('(display-mode: standalone)').matches;
+                if (!standalone && 'standalone' in navigator) standalone = !!navigator.standalone;
+                if (standalone && window.location.pathname === '/') {
+                  document.documentElement.classList.add('nf-standalone-opening');
+                  window.location.replace('/entrar');
+                }
+              })();
+            `,
+          }}
+        />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
