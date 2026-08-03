@@ -5,6 +5,7 @@ import { clients, progressPhotos } from "../../db/schema";
 import { hasActiveAccess } from "../access";
 import { requirePatient } from "../supabase/server";
 import PhotoUploadForm from "./photo-upload-form";
+import { PatientShell } from "../patient-experience/shell/PatientShell";
 
 export const dynamic = "force-dynamic";
 
@@ -56,7 +57,7 @@ export default async function ProgressPage() {
   const currentPeriod = new Date().toISOString().slice(0, 7);
 
   return (
-    <main className="portal-shell progress-page">
+    <PatientShell><main className="portal-shell progress-page nf-experience-page">
       <header className="portal-header">
         <Link className="portal-brand" href="/area-cliente">← Área do paciente</Link>
         <form action="/auth/sair" method="post">
@@ -150,6 +151,6 @@ export default async function ProgressPage() {
           ))
         )}
       </section>
-    </main>
+    </main></PatientShell>
   );
 }

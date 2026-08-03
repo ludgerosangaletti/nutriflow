@@ -20,6 +20,7 @@ import {
   resolveNutriFlowPatientContext,
 } from "../nutriflow/server";
 import AccessCountdown from "./access-countdown";
+import { PatientShell } from "../patient-experience/shell/PatientShell";
 
 export const dynamic = "force-dynamic";
 
@@ -188,7 +189,7 @@ export default async function ClientArea() {
     })();
 
     return (
-      <main className="portal-shell patient-home in-person-home">
+      <PatientShell><main className="portal-shell patient-home in-person-home nf-experience-page">
         <header className="portal-header">
           <Link className="portal-brand" href="/">Ludgero Sangaletti</Link>
           <form action="/auth/sair" method="post">
@@ -313,7 +314,7 @@ export default async function ClientArea() {
             </Link>
           </nav>
         </section>
-      </main>
+      </main></PatientShell>
     );
   }
 
@@ -460,7 +461,7 @@ export default async function ClientArea() {
   })();
 
   return (
-    <main className="portal-shell patient-home">
+    <PatientShell><main className="portal-shell patient-home nf-experience-page">
       <header className="portal-header">
         <Link className="portal-brand" href="/">Ludgero Sangaletti</Link>
         <form action="/auth/sair" method="post"><button className="auth-signout" type="submit">Sair</button></form>
@@ -619,6 +620,6 @@ export default async function ClientArea() {
           </>
         ) : null}
       </section>
-    </main>
+    </main></PatientShell>
   );
 }

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import "./patient-experience/ui/shell-tokens.css";
 import { PwaRegister } from "./pwa-register";
 
 const geistSans = Geist({
@@ -25,6 +26,8 @@ export const metadata: Metadata = {
   appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "NutriFlow" },
   other: { "codex-preview": "development", "theme-color": "#0a0a0a" },
 };
+
+export const viewport = { viewportFit: "cover" as const, themeColor: "#0a0a0a" };
 
 export default function RootLayout({
   children,

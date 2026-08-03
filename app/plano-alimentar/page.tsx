@@ -7,6 +7,7 @@ import {
   resolveNutriFlowPatientContext,
 } from "../nutriflow/server";
 import PatientPlanViewer from "./patient-plan-viewer";
+import { PatientShell } from "../patient-experience/shell/PatientShell";
 
 export const dynamic = "force-dynamic";
 
@@ -23,13 +24,12 @@ export default async function StructuredFoodPlanPage() {
   });
 
   return (
-    <main className="portal-shell nutriflow-patient-page">
+    <PatientShell><main className="portal-shell nutriflow-patient-page nf-experience-page">
       <header className="portal-header">
         <Link className="portal-brand" href="/area-cliente">← Área do Paciente</Link>
         <form action="/auth/sair" method="post"><button className="auth-signout" type="submit">Sair</button></form>
       </header>
       <PatientPlanViewer portal={portal} />
-    </main>
+    </main></PatientShell>
   );
 }
-

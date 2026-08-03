@@ -12,6 +12,22 @@
   --line: rgba(10, 10, 10, 0.14);
 }
 
+/* App Experience: the compact shell owns navigation on patient routes. */
+.nf-experience-page .portal-header { display: none; }
+.nf-experience-page { padding-top: 18px; padding-bottom: 26px; }
+.nf-experience-shell .portal-shell { width: 100%; max-width: 1180px; margin: 0 auto; }
+.nf-experience-shell .portal-shell > .dashboard,
+.nf-experience-shell .portal-shell > .checkin-hero,
+.nf-experience-shell .portal-shell > .progress-hero,
+.nf-experience-shell .portal-shell > .photo-upload-section,
+.nf-experience-shell .portal-shell > .comparison-section,
+.nf-experience-shell .portal-shell > .photo-history,
+.nf-experience-shell .portal-shell > .nf-patient-dashboard { margin-top: 0; }
+@media (max-width: 720px) {
+  .nf-experience-page { padding-left: 0; padding-right: 0; }
+  .nf-experience-shell .portal-shell { max-width: none; }
+}
+
 .google-calendar-page {
   max-width: 980px;
 }
