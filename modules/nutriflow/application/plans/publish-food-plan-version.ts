@@ -46,6 +46,13 @@ export class PublishFoodPlanVersion {
     const existing = await this.plans.findDraftByVersion({ organizationId: input.organizationId, clientId: input.clientId, planVersionPublicId: input.command.planVersionPublicId });
     if (!existing || existing.planPublicId !== input.command.planPublicId) throw new NutriFlowApplicationError(NUTRIFLOW_ERROR_CODES.NOT_FOUND, "Recurso não encontrado.", 404);
     if (existing.revision !== input.command.expectedRevision) throw new NutriFlowApplicationError(NUTRIFLOW_ERROR_CODES.VERSION_CONFLICT, "O rascunho foi alterado em outra sessão.", 409);
+    const checklist = [
+      !existing.title.trim() ? "título do plano" : null,
+      existing.content.days.length === 0 ? "ao menos um dia" : null,
+      existing.content.meals.length === 0 ? "ao menos uma refeição" : null,
+      ...existing.content.meals.filter((meal) => meal.items.length === 0).map((meal) => `alimentos em ${meal.title || "refeição sem nome"}`),
+    ].filter((item): item is string => Boolean(item));
+    if (checklist.length) throw new NutriFlowApplicationError(NUTRIFLOW_ERROR_CODES.INVALID_INPUT, `Checklist de publicação incompleto: ${checklist.join(", ")}.`, 400);
 
     const meals = existing.content.meals.map((meal) => Object.freeze({
       publicId: publicId(meal.publicId),
