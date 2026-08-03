@@ -2,7 +2,7 @@
   "name": "Ludgero Sangaletti | Nutrição Clínica e Esportiva",
   "short_name": "NutriFlow",
   "description": "Portal do paciente: plano alimentar, evolução, consultas e materiais.",
-  "start_url": "/",
+  "start_url": "/entrar",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait-primary",
