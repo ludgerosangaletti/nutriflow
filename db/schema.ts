@@ -153,6 +153,24 @@ export const checkIns = sqliteTable(
   ],
 );
 
+export const pushSubscriptions = sqliteTable(
+  "push_subscriptions",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    clientEmail: text("client_email").notNull(),
+    endpoint: text("endpoint").notNull(),
+    p256dh: text("p256dh").notNull(),
+    auth: text("auth").notNull(),
+    userAgent: text("user_agent"),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("push_subscriptions_endpoint_unique").on(table.endpoint),
+    index("push_subscriptions_client_email_idx").on(table.clientEmail),
+  ],
+);
+
 export const checkInReminders = sqliteTable(
   "check_in_reminders",
   {

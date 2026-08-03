@@ -4,6 +4,8 @@ import { getDb } from "../../db";
 import { clients, patientDocuments } from "../../db/schema";
 import { hasActiveAccess } from "../access";
 import { requirePatient } from "../supabase/server";
+import { NotificationOptIn } from "../notification-opt-in";
+import { InstallPrompt } from "../install-prompt";
 
 export const dynamic = "force-dynamic";
 
@@ -65,6 +67,7 @@ export default async function DocumentsPage() {
             : "Este é o canal oficial dos documentos da sua consultoria. Sempre use a versão marcada como atual."}
         </p>
       </section>
+      <section className="patient-document-card" aria-label="Notificações e acesso rápido"><InstallPrompt /><NotificationOptIn /></section>
 
       <section className="current-documents">
         <h2>Disponíveis agora</h2>
