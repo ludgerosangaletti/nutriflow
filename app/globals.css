@@ -23,6 +23,52 @@
 .nf-experience-shell .portal-shell > .comparison-section,
 .nf-experience-shell .portal-shell > .photo-history,
 .nf-experience-shell .portal-shell > .nf-patient-dashboard { margin-top: 0; }
+
+/* Preview-aligned mobile patient home. Data remains supplied by the real portal. */
+.nf-home-screen { width: min(100%, 430px); margin: 0 auto; padding: 0 0 24px; color: var(--ink); }
+.nf-eyebrow { margin: 0; color: var(--ink-muted); font-size: 10.5px; font-weight: 900; letter-spacing: .11em; text-transform: uppercase; }
+.nf-home-title { margin: 5px 0 7px; font-size: clamp(28px, 8vw, 36px); line-height: 1.04; letter-spacing: -.055em; font-weight: 800; }
+.nf-home-intro { margin: 0 0 18px; color: var(--ink-soft); font-size: 15px; line-height: 1.55; }
+.nf-card { margin: 0 0 12px; border: 1px solid var(--line); border-radius: 24px; padding: 16px 18px; overflow: hidden; }
+.nf-card-lime { background: var(--lime); border-color: var(--lime); }
+.nf-card-dark { background: var(--ink); border-color: var(--ink); color: #fff; }
+.nf-card-paper { background: var(--paper); }
+.nf-card .nf-eyebrow { color: var(--ink-muted); }
+.nf-card-dark .nf-eyebrow { color: rgba(255,255,255,.62); }
+.nf-appointment-card strong { display: block; margin: 7px 0 7px; font-size: 20px; line-height: 1.25; text-transform: capitalize; }
+.nf-appointment-card span { display: block; color: rgba(255,255,255,.72); font-size: 13px; }
+.nf-appointment-card b { display: inline-flex; margin-top: 12px; border-radius: 999px; background: var(--lime); color: var(--ink); padding: 8px 13px; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; }
+.nf-action-card h3 { margin: 7px 0 5px; font-size: 22px; line-height: 1.12; letter-spacing: -.03em; }
+.nf-action-card p:not(.nf-eyebrow) { margin: 0 0 14px; font-size: 14px; line-height: 1.5; }
+.nf-btn { display: inline-flex; width: 100%; min-height: 44px; align-items: center; justify-content: center; border-radius: 12px; padding: 11px 15px; font-size: 14px; font-weight: 800; text-decoration: none; }
+.nf-btn-dark { background: var(--ink); color: #fff; }
+.nf-btn-plain { border: 1px solid var(--line); color: var(--ink); background: var(--paper); }
+.nf-constancy-card > div { display: flex; align-items: baseline; gap: 7px; margin: 8px 0; }
+.nf-constancy-card > div strong { font: 700 36px/1 var(--nf-mono, ui-monospace, monospace); }
+.nf-constancy-card > div span { color: rgba(255,255,255,.72); font-size: 13px; }
+.nf-constancy-card > p:not(.nf-eyebrow) { margin: 0 0 13px; color: rgba(255,255,255,.84); font-size: 13px; line-height: 1.5; }
+.nf-progress { height: 5px; border-radius: 5px; background: rgba(255,255,255,.2); overflow: hidden; }
+.nf-progress i { display: block; height: 100%; border-radius: inherit; background: var(--lime); }
+.nf-constancy-card small { display: block; margin-top: 9px; color: rgba(255,255,255,.6); font-size: 11px; }
+.nf-resource-card h3 { margin: 8px 0 5px; font-size: 18px; letter-spacing: -.02em; }
+.nf-resource-card p:not(.nf-eyebrow) { margin: 0 0 13px; color: var(--ink-muted); font-size: 13px; line-height: 1.5; }
+.nf-home-links { display: grid; gap: 8px; }
+.nf-home-links a { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 52px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 15px; background: var(--paper); color: var(--ink); text-decoration: none; }
+.nf-home-links span { font-size: 13px; font-weight: 700; }
+.nf-home-links b { color: var(--ink-muted); font-size: 11px; white-space: nowrap; }
+
+/* Keep the real photo evolution page within the viewport on narrow phones. */
+.progress-page, .progress-hero, .photo-upload-section, .comparison-section, .photo-history { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
+.progress-hero h1 { max-width: 100%; font-size: clamp(34px, 10vw, 70px); line-height: .98; overflow-wrap: anywhere; }
+.progress-hero > div, .progress-hero > aside { min-width: 0; }
+.photo-guidance, .comparison-section, .photo-history { overflow: hidden; }
+.photo-guidance ul { padding-left: 1.1rem; }
+.comparison-angles, .photo-month-grid { min-width: 0; }
+@media (max-width: 520px) {
+  .nf-experience-shell > #conteudo { padding-left: max(16px, var(--nf-safe-left)); padding-right: max(16px, var(--nf-safe-right)); padding-bottom: calc(80px + var(--nf-safe-bottom)); }
+  .progress-hero h1 { font-size: clamp(34px, 11vw, 52px); }
+  .progress-hero p { max-width: 100%; }
+}
 .auth-page:has(.app-login-card) { background: #0a0a0a; color: #fff; min-height: 100dvh; display: grid; place-items: center; }
 .auth-page:has(.app-login-card) .portal-brand,
 .auth-page:has(.app-login-card) .portal-copy { display: none; }

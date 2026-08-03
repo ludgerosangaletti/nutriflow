@@ -21,6 +21,7 @@ import {
 } from "../nutriflow/server";
 import AccessCountdown from "./access-countdown";
 import { PatientShell } from "../patient-experience/shell/PatientShell";
+import { PatientHomeExperience } from "../patient-experience/PatientHomeExperience";
 
 export const dynamic = "force-dynamic";
 
@@ -188,6 +189,27 @@ export default async function ClientArea() {
       };
     })();
 
+    return (
+      <PatientShell>
+        <PatientHomeExperience
+          name={client.name}
+          modality="in_person"
+          planLabel={client.plan}
+          active={active}
+          action={nextAction}
+          structuredPlanEnabled={structuredPlanEnabled}
+          documentsCount={currentDocuments.length}
+          checkInsCount={patientCheckIns.length}
+          checkInDone={checkInDoneThisWeek}
+          nextAppointment={nextAppointment}
+          appointmentLocation={client.appointmentLocation}
+          currentProtocol={Boolean(currentProtocol)}
+          photosCount={photos.length}
+        />
+      </PatientShell>
+    );
+
+    /* legacy dashboard retained below for rollback during homologation */
     return (
       <PatientShell><main className="portal-shell patient-home in-person-home nf-experience-page">
         <header className="portal-header">
@@ -460,6 +482,25 @@ export default async function ClientArea() {
     };
   })();
 
+  return (
+    <PatientShell>
+      <PatientHomeExperience
+        name={client.name}
+        modality="online"
+        planLabel={isPlanId(client.plan) ? plans[client.plan].name : client.plan}
+        active={active}
+        action={nextAction}
+        structuredPlanEnabled={structuredPlanEnabled}
+        documentsCount={currentDocuments.length}
+        checkInsCount={patientCheckIns.length}
+        checkInDone={checkInDoneThisWeek}
+        currentProtocol={Boolean(currentDocuments.length)}
+        photosCount={photos.length}
+      />
+    </PatientShell>
+  );
+
+  /* legacy dashboard retained below for rollback during homologation */
   return (
     <PatientShell><main className="portal-shell patient-home nf-experience-page">
       <header className="portal-header">
