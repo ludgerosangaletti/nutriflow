@@ -16,7 +16,7 @@ export function StandaloneEntryRedirect() {
     const isStandalone = window.matchMedia("(display-mode: standalone)").matches ||
       Boolean((window.navigator as Navigator & { standalone?: boolean }).standalone);
     setStandalone(isStandalone);
-    if (pathname === "/" && isStandalone) window.location.replace("/entrar");
+    if (pathname === "/" && isStandalone) window.location.replace("/app");
   }, [pathname]);
 
   if (pathname === "/" && standalone) {

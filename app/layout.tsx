@@ -47,7 +47,7 @@ export default function RootLayout({
                 if (!standalone && 'standalone' in navigator) standalone = !!navigator.standalone;
                 if (standalone && window.location.pathname === '/') {
                   document.documentElement.classList.add('nf-standalone-opening');
-                  window.location.replace('/entrar');
+                  window.location.replace('/app');
                 }
               })();
             `,

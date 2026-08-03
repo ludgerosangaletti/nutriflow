@@ -3,7 +3,7 @@
 // tudo que é HTML/API passa direto pela rede (dados clínicos nunca ficam
 // em cache do navegador).
 
-const CACHE_VERSION = "nutriflow-static-v1";
+const CACHE_VERSION = "nutriflow-static-v2";
 const STATIC_ASSETS = [
   "/manifest.webmanifest",
   "/icons/icon-192.png",

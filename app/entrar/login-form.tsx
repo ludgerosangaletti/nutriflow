@@ -7,9 +7,11 @@ import { createClient } from "../supabase/client";
 export default function LoginForm({
   next,
   confirmationError,
+  appMode = false,
 }: {
   next: string;
   confirmationError: boolean;
+  appMode?: boolean;
 }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -20,6 +22,7 @@ export default function LoginForm({
   const [displayMode, setDisplayMode] = useState<"standalone" | "browser" | null>(null);
 
   useEffect(() => {
+    if (appMode) return;
     const standalone = window.matchMedia("(display-mode: standalone)").matches ||
       // iOS Safari exposes this legacy flag instead of display-mode.
       ("standalone" in window.navigator && Boolean((window.navigator as Navigator & { standalone?: boolean }).standalone));
@@ -42,11 +45,11 @@ export default function LoginForm({
     window.location.assign(next);
   }
 
-  if (displayMode === null) {
+  if (!appMode && displayMode === null) {
     return <div className="app-login-splash" role="status" aria-label="Carregando o NutriFlow"><img src="/logo-ludgero.png" alt="" /><span className="app-login-loader" /></div>;
   }
 
-  if (displayMode === "standalone") {
+  if (appMode || displayMode === "standalone") {
     return (
       <form className="app-login-card" onSubmit={submit}>
         <div className="app-login-brand"><img src="/logo-ludgero.png" alt="Ludgero Sangaletti" /><span>NutriFlow</span><p>Seu acompanhamento nutricional, organizado.</p></div>

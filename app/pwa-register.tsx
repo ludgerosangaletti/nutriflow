@@ -12,7 +12,9 @@ export function PwaRegister() {
     if (typeof window === "undefined") return;
     if (!("serviceWorker" in navigator)) return;
 
-    navigator.serviceWorker.register("/sw.js").catch((error) => {
+    navigator.serviceWorker.register("/sw.js", { updateViaCache: "none" }).then((registration) => {
+      void registration.update();
+    }).catch((error) => {
       console.error("Falha ao registrar o service worker do PWA:", error);
     });
   }, []);
