@@ -2,6 +2,7 @@ import { NUTRIFLOW_API_VERSION } from "../../contracts/v1/errors.ts";
 import type {
   PatientPortalDayV1,
   PatientPortalItemV1,
+  PatientPortalMealV1,
   PatientPortalPlanV1,
   PatientPortalSubstitutionV1,
   PatientPortalUnitV1,
@@ -52,6 +53,7 @@ function unit(publicId: string, code: string, label: string): PatientPortalUnitV
 }
 
 function portalItem(item: PublishedFoodPlanSnapshotV1["meals"][number]["items"][number]): PatientPortalItemV1 {
+  const nutrition = (item as typeof item & { macros?: PatientPortalItemV1["macros"] }).macros ?? null;
   return Object.freeze({
     publicId: item.publicId,
     kind: item.source.type,
@@ -60,6 +62,7 @@ function portalItem(item: PublishedFoodPlanSnapshotV1["meals"][number]["items"][
     unit: unit(item.unitPublicId, item.unitCode, item.unitLabel),
     preparation: item.preparation,
     notes: item.notes,
+    macros: nutrition,
     recipe: item.source.type === "recipe" && item.source.publicId && item.source.revisionNumber
       ? Object.freeze({ publicId: item.source.publicId, versionNumber: item.source.revisionNumber, instructions: item.preparation })
       : null,
@@ -98,6 +101,7 @@ function planFrom(row: PublicationRow, snapshot: PublishedFoodPlanSnapshotV1): P
           instructions: meal.instructions,
           items: Object.freeze(meal.items.toSorted((left, right) => left.sortOrder - right.sortOrder).map(portalItem)),
           substitutions: Object.freeze(meal.substitutions.toSorted((left, right) => left.sortOrder - right.sortOrder).map(substitution)),
+          macros: (meal as typeof meal & { macros?: PatientPortalMealV1["macros"] }).macros ?? null,
         }))),
     }));
   return Object.freeze({

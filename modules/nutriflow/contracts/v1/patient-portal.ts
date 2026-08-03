@@ -14,6 +14,13 @@ export type PatientPortalItemV1 = Readonly<{
   unit: PatientPortalUnitV1;
   preparation: string | null;
   notes: string | null;
+  /** Optional nutrition snapshot. Older publications may not contain it. */
+  macros?: Readonly<{
+    energyKcal?: number | null;
+    protein?: number | null;
+    carbohydrate?: number | null;
+    fat?: number | null;
+  }> | null;
   recipe: Readonly<{
     publicId: string;
     versionNumber: number;
@@ -41,6 +48,8 @@ export type PatientPortalMealV1 = Readonly<{
   instructions: string | null;
   items: readonly PatientPortalItemV1[];
   substitutions: readonly PatientPortalSubstitutionV1[];
+  /** Optional total calculated from the published snapshot. */
+  macros?: PatientPortalItemV1["macros"];
 }>;
 
 export type PatientPortalDayV1 = Readonly<{

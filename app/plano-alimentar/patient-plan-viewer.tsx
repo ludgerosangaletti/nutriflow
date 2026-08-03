@@ -9,6 +9,17 @@ function quantity(quantityMilli: number, unit: string) {
   return `${value.toLocaleString("pt-BR", { maximumFractionDigits: 2 })} ${unit}`;
 }
 
+function macroLabel(macros?: { energyKcal?: number | null; protein?: number | null; carbohydrate?: number | null; fat?: number | null } | null) {
+  if (!macros) return null;
+  const parts = [
+    macros.energyKcal != null ? `${Math.round(macros.energyKcal)} kcal` : null,
+    macros.protein != null ? `P ${Number(macros.protein).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} g` : null,
+    macros.carbohydrate != null ? `C ${Number(macros.carbohydrate).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} g` : null,
+    macros.fat != null ? `G ${Number(macros.fat).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} g` : null,
+  ].filter(Boolean);
+  return parts.length ? parts.join(" · ") : null;
+}
+
 function shortDate(value: string) {
   return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" }).format(new Date(value));
 }
@@ -34,6 +45,7 @@ function WeightTrend({ values }: { values: PatientPortalV1["weightEvolution"] })
 export default function PatientPlanViewer({ portal }: { portal: PatientPortalV1 }) {
   const [selectedDayId, setSelectedDayId] = useState(portal.plan?.days[0]?.publicId ?? null);
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
+  const [collapsedMeals, setCollapsedMeals] = useState<Record<string, boolean>>({});
   const selectedDay = useMemo(() => portal.plan?.days.find((day) => day.publicId === selectedDayId) ?? portal.plan?.days[0] ?? null, [portal.plan, selectedDayId]);
 
   useEffect(() => {
@@ -73,14 +85,17 @@ export default function PatientPlanViewer({ portal }: { portal: PatientPortalV1 
         <header><div><span>Organização do dia</span><h2>{selectedDay.label}</h2></div><p>{selectedDay.meals.length} refeição(ões) planejada(s)</p></header>
         <div className="nf-patient-meals">
           {selectedDay.meals.map((meal, index) => <article className="nf-patient-meal" key={meal.publicId}>
-            <header><div className="nf-patient-meal-number">{String(index + 1).padStart(2, "0")}</div><div><span>{meal.scheduledTime || "Horário flexível"}</span><h3>{meal.title}</h3></div></header>
-            <div className="nf-patient-foods">{meal.items.map((item) => <div className="nf-patient-food" key={item.publicId}><div><strong>{item.displayName}</strong>{item.kind === "recipe" ? <span className="nf-content-badge">Receita</span> : null}<p>{item.preparation || item.notes || "Conforme orientação do plano."}</p></div><b>{quantity(item.quantityMilli, item.unit.label)}</b>{item.recipe ? <details><summary>Ver modo de preparo</summary><p>{item.recipe.instructions || "Siga o preparo indicado pelo nutricionista."}</p></details> : null}</div>)}</div>
+            <header className="nf-meal-toggle-header"><div className="nf-patient-meal-number">{String(index + 1).padStart(2, "0")}</div><button type="button" className="nf-meal-toggle" aria-expanded={!collapsedMeals[meal.publicId]} onClick={() => setCollapsedMeals((current) => ({ ...current, [meal.publicId]: !current[meal.publicId] }))}><span>{meal.scheduledTime || "Horário flexível"}</span><h3>{meal.title}</h3></button><button type="button" className="nf-meal-chevron" aria-label={collapsedMeals[meal.publicId] ? `Expandir ${meal.title}` : `Recolher ${meal.title}`} onClick={() => setCollapsedMeals((current) => ({ ...current, [meal.publicId]: !current[meal.publicId] }))}>{collapsedMeals[meal.publicId] ? "＋" : "−"}</button></header>
+            {!collapsedMeals[meal.publicId] ? <>
+            {macroLabel(meal.macros) ? <div className="nf-meal-macros" aria-label="Macronutrientes da refeição">{macroLabel(meal.macros)}</div> : null}
+            <div className="nf-patient-foods">{meal.items.map((item) => <div className="nf-patient-food" key={item.publicId}><div><strong>{item.displayName}</strong>{item.kind === "recipe" ? <span className="nf-content-badge">Receita</span> : null}<p>{item.preparation || item.notes || "Conforme orientação do plano."}</p>{macroLabel(item.macros) ? <small className="nf-food-macros">{macroLabel(item.macros)}</small> : null}</div><b>{quantity(item.quantityMilli, item.unit.label)}</b>{item.recipe ? <details><summary>Ver modo de preparo</summary><p>{item.recipe.instructions || "Siga o preparo indicado pelo nutricionista."}</p></details> : null}</div>)}</div>
             {meal.instructions ? <div className="nf-meal-guidance"><span>Orientação desta refeição</span><p>{meal.instructions}</p></div> : null}
             {meal.substitutions.length ? <details className="nf-substitutions"><summary>Opções e substituições ({meal.substitutions.length})</summary>{meal.substitutions.map((group) => {
               const selectedId = selectedOptions[group.publicId] ?? group.options[0]?.publicId;
               const selected = group.options.find((option) => option.publicId === selectedId) ?? group.options[0];
               return <section key={group.publicId}><div className="nf-option-picker"><h4>{group.title}</h4>{group.options.length > 1 ? <div role="tablist" aria-label={`Opções para ${group.title}`}>{group.options.map((option, optionIndex) => <button className={option.publicId === selected?.publicId ? "is-active" : ""} key={option.publicId} type="button" role="tab" aria-selected={option.publicId === selected?.publicId} onClick={() => setSelectedOptions((current) => ({ ...current, [group.publicId]: option.publicId }))}>Opção {optionIndex + 1}</button>)}</div> : null}</div>{group.notes ? <p>{group.notes}</p> : null}{selected ? <ul><li><span>{selected.displayName}</span><b>{quantity(selected.quantityMilli, selected.unit.label)}</b></li></ul> : null}</section>;
             })}</details> : null}
+            </> : <p className="nf-meal-collapsed-summary">{meal.items.length} item(ns) · toque para expandir</p>}
           </article>)}
         </div>
       </section> : null}

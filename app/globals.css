@@ -7782,6 +7782,13 @@ button:disabled {
 .nf-patient-meals { display: grid; gap: 14px; margin-top: 18px; }
 .nf-patient-meal { border: 1px solid #deded6; border-radius: 20px; background: #fbfbf8; padding: 20px; }
 .nf-patient-meal > header { display: flex; gap: 14px; align-items: center; margin-bottom: 16px; }
+.nf-meal-toggle-header { margin-bottom: 0 !important; }
+.nf-meal-toggle { flex: 1; min-width: 0; border: 0; background: transparent; padding: 0; text-align: left; font: inherit; cursor: pointer; }
+.nf-meal-toggle h3 { text-align: left; }
+.nf-meal-chevron { width: 34px; height: 34px; border: 1px solid #dadad2; border-radius: 50%; background: #fff; color: #11110f; font-size: 1.15rem; cursor: pointer; }
+.nf-meal-macros { margin: 14px 0 2px; color: #5f5f57; font-size: .73rem; font-weight: 800; letter-spacing: .03em; }
+.nf-food-macros { display: block; margin-top: 5px; color: #77776f; font-size: .7rem; }
+.nf-meal-collapsed-summary { margin: 14px 0 0 56px; color: #77776f; font-size: .76rem; }
 .nf-patient-meal-number { display: grid; place-items: center; width: 42px; height: 42px; flex: 0 0 42px; border-radius: 13px; background: #11110f; color: #ffe600; font-size: .75rem; font-weight: 900; }
 .nf-patient-meal > header span { color: #6f6f68; font-size: .7rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
 .nf-patient-meal h3 { margin: 2px 0 0; font-size: 1.25rem; }
