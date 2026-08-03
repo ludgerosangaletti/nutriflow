@@ -57,7 +57,7 @@ export default async function ProgressPage() {
   const currentPeriod = new Date().toISOString().slice(0, 7);
 
   return (
-    <PatientShell><main className="portal-shell progress-page nf-experience-page">
+    <PatientShell><main className="portal-shell progress-page nf-experience-page nf-progress-v2">
       <header className="portal-header">
         <Link className="portal-brand" href="/area-cliente">← Área do paciente</Link>
         <form action="/auth/sair" method="post">
@@ -65,40 +65,24 @@ export default async function ProgressPage() {
         </form>
       </header>
 
-      <section className="progress-hero">
-        <div>
-          <p className="section-kicker">Registro fotográfico</p>
-          <h1>
-            {client.modality === "in_person"
-              ? "Suas fotos de acompanhamento."
-              : "Seu registro de evolução."}
-          </h1>
-          <p>
-            Este espaço é totalmente opcional. Envie as imagens somente se
-            você se sentir confortável. Elas serão utilizadas para acompanhar
-            sua evolução ao longo da consultoria.
-          </p>
-        </div>
-        <aside className="photo-guidance">
-          <strong>Para um comparativo mais fiel</strong>
-          <ul>
-            <li>Use o mínimo de roupa com que se sentir confortável.</li>
-            <li>Escolha um ambiente bem iluminado e fundo neutro.</li>
-            <li>Mantenha distância, posição e iluminação semelhantes.</li>
-            <li>Faça as fotos de frente, lado e costas, com postura natural.</li>
-          </ul>
-        </aside>
+      <section className="nf-progress-intro">
+        <div><p className="section-kicker">Sua evolução</p><h1>Acompanhe mudanças reais, no seu ritmo.</h1><p>As fotos são opcionais e ficam protegidas no seu acompanhamento.</p></div>
+        <div className="nf-progress-count"><strong>{periods.length}</strong><span>{periods.length === 1 ? "registro mensal" : "registros mensais"}</span></div>
       </section>
 
+      <details className="nf-photo-guide">
+        <summary><span>Como tirar fotos comparáveis</span><small>4 orientações rápidas</small></summary>
+        <ul><li>Use o mínimo de roupa com que se sentir confortável.</li><li>Escolha um ambiente bem iluminado e fundo neutro.</li><li>Mantenha distância, posição e iluminação semelhantes.</li><li>Faça frente, lado e costas com postura natural.</li></ul>
+      </details>
+
       <section className="photo-upload-section">
-        <p className="section-kicker">Novo registro mensal</p>
-        <h2>Adicionar três ângulos</h2>
+        <div className="nf-section-heading"><div><p className="section-kicker">Novo registro</p><h2>Adicionar fotos do mês</h2></div><span>Opcional</span></div>
         <PhotoUploadForm defaultPeriod={currentPeriod} />
       </section>
 
       {firstPeriod && latestPeriod && firstPeriod !== latestPeriod ? (
         <section className="comparison-section">
-          <p className="section-kicker">Comparativo de evolução</p>
+          <p className="section-kicker">Antes e agora</p>
           <h2>{periodLabel(firstPeriod)} × {periodLabel(latestPeriod)}</h2>
           <p className="comparison-note">
             Observe principalmente contorno corporal, postura e proporções. A

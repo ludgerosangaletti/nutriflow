@@ -39,7 +39,10 @@ export function TabBar() {
     <nav
       aria-label="Navegação principal"
       style={{
-        position: "sticky",
+        position: "fixed",
+        left: "50%",
+        transform: "translateX(-50%)",
+        width: "min(100%, 560px)",
         bottom: 0,
         zIndex: 40,
         display: "flex",

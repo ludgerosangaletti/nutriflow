@@ -45,7 +45,11 @@ function WeightTrend({ values }: { values: PatientPortalV1["weightEvolution"] })
 export default function PatientPlanViewer({ portal }: { portal: PatientPortalV1 }) {
   const [selectedDayId, setSelectedDayId] = useState(portal.plan?.days[0]?.publicId ?? null);
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
-  const [collapsedMeals, setCollapsedMeals] = useState<Record<string, boolean>>({});
+  const [collapsedMeals, setCollapsedMeals] = useState<Record<string, boolean>>(() => {
+    const initial: Record<string, boolean> = {};
+    portal.plan?.days.forEach((day) => day.meals.forEach((meal, index) => { initial[meal.publicId] = index > 0; }));
+    return initial;
+  });
   const selectedDay = useMemo(() => portal.plan?.days.find((day) => day.publicId === selectedDayId) ?? portal.plan?.days[0] ?? null, [portal.plan, selectedDayId]);
 
   useEffect(() => {
@@ -65,24 +69,25 @@ export default function PatientPlanViewer({ portal }: { portal: PatientPortalV1 
     return () => controller.abort();
   }, [portal.plan?.publicationPublicId]);
 
-  return <div className="nf-patient-dashboard">
-    <section className="nf-patient-hero">
-      <div><p className="section-kicker">NutriFlow · seu plano alimentar</p><h1>Olá, {portal.patient.firstName}.</h1><p>Sua estratégia alimentar organizada para consultar de forma simples ao longo do dia.</p></div>
-      <aside><span>{portal.patient.modality === "in_person" ? "Acompanhamento presencial" : "Consultoria online"}</span><strong>{portal.plan ? `Plano atualizado em ${shortDate(portal.plan.publishedAt)}` : "Plano em preparação"}</strong><small>Os PDFs atuais continuam disponíveis durante a transição.</small></aside>
+  return <div className="nf-patient-dashboard nf-plan-v2">
+    <section className="nf-plan-intro">
+      <div><p className="section-kicker">Seu plano de hoje</p><h1>Olá, {portal.patient.firstName}.</h1><p>Escolha o dia e consulte cada refeição.</p></div>
+      {portal.plan ? <div className="nf-plan-status"><i aria-hidden="true">✓</i><span>Atualizado</span><small>{shortDate(portal.plan.publishedAt)}</small></div> : null}
     </section>
 
     {portal.plan ? <>
-      <section className="nf-plan-heading">
-        <div><span>Versão {portal.plan.versionNumber}</span><h2>{portal.plan.title}</h2>{portal.plan.notes ? <p>{portal.plan.notes}</p> : null}</div>
-        <div className="nf-plan-sync"><i aria-hidden="true">✓</i><span>Sincronizado</span><small>Conteúdo publicado pelo nutricionista</small></div>
+      <section className="nf-plan-summary">
+        <div><span>Plano alimentar · versão {portal.plan.versionNumber}</span><strong>{portal.plan.title}</strong></div>
+        <small>{portal.patient.modality === "in_person" ? "Acompanhamento presencial" : "Consultoria online"}</small>
       </section>
 
+      <div className="nf-day-label"><span>Selecione o dia</span><small>Deslize para ver os demais</small></div>
       <nav className="nf-patient-days" aria-label="Dias do plano">
         {portal.plan.days.map((day, index) => <button className={day.publicId === selectedDay?.publicId ? "is-active" : ""} key={day.publicId} type="button" onClick={() => setSelectedDayId(day.publicId)}><small>{String(index + 1).padStart(2, "0")}</small><strong>{day.label}</strong><span>{day.meals.length} refeições</span></button>)}
       </nav>
 
       {selectedDay ? <section className="nf-patient-day">
-        <header><div><span>Organização do dia</span><h2>{selectedDay.label}</h2></div><p>{selectedDay.meals.length} refeição(ões) planejada(s)</p></header>
+        <header><div><span>Roteiro alimentar</span><h2>{selectedDay.label}</h2></div><p>{selectedDay.meals.length} {selectedDay.meals.length === 1 ? "refeição" : "refeições"}</p></header>
         <div className="nf-patient-meals">
           {selectedDay.meals.map((meal, index) => <article className="nf-patient-meal" key={meal.publicId}>
             <header className="nf-meal-toggle-header"><div className="nf-patient-meal-number">{String(index + 1).padStart(2, "0")}</div><button type="button" className="nf-meal-toggle" aria-expanded={!collapsedMeals[meal.publicId]} onClick={() => setCollapsedMeals((current) => ({ ...current, [meal.publicId]: !current[meal.publicId] }))}><span>{meal.scheduledTime || "Horário flexível"}</span><h3>{meal.title}</h3></button><button type="button" className="nf-meal-chevron" aria-label={collapsedMeals[meal.publicId] ? `Expandir ${meal.title}` : `Recolher ${meal.title}`} onClick={() => setCollapsedMeals((current) => ({ ...current, [meal.publicId]: !current[meal.publicId] }))}>{collapsedMeals[meal.publicId] ? "＋" : "−"}</button></header>
@@ -95,7 +100,7 @@ export default function PatientPlanViewer({ portal }: { portal: PatientPortalV1 
               const selected = group.options.find((option) => option.publicId === selectedId) ?? group.options[0];
               return <section key={group.publicId}><div className="nf-option-picker"><h4>{group.title}</h4>{group.options.length > 1 ? <div role="tablist" aria-label={`Opções para ${group.title}`}>{group.options.map((option, optionIndex) => <button className={option.publicId === selected?.publicId ? "is-active" : ""} key={option.publicId} type="button" role="tab" aria-selected={option.publicId === selected?.publicId} onClick={() => setSelectedOptions((current) => ({ ...current, [group.publicId]: option.publicId }))}>Opção {optionIndex + 1}</button>)}</div> : null}</div>{group.notes ? <p>{group.notes}</p> : null}{selected ? <ul><li><span>{selected.displayName}</span><b>{quantity(selected.quantityMilli, selected.unit.label)}</b></li></ul> : null}</section>;
             })}</details> : null}
-            </> : <p className="nf-meal-collapsed-summary">{meal.items.length} item(ns) · toque para expandir</p>}
+            </> : <p className="nf-meal-collapsed-summary">{meal.items.length} {meal.items.length === 1 ? "item" : "itens"} · toque para abrir</p>}
           </article>)}
         </div>
       </section> : null}
@@ -103,10 +108,13 @@ export default function PatientPlanViewer({ portal }: { portal: PatientPortalV1 
       {portal.plan.patientNotes.length ? <section className="nf-patient-notes"><span>Orientações importantes</span>{portal.plan.patientNotes.map((note, index) => <p key={`${index}-${note.slice(0, 16)}`}>{note}</p>)}</section> : null}
     </> : <section className="nf-patient-plan-empty"><span aria-hidden="true">◌</span><div><p className="section-kicker">Em preparação</p><h2>Seu plano estruturado aparecerá aqui.</h2><p>Enquanto isso, seus protocolos em PDF continuam disponíveis normalmente na área de documentos.</p><Link className="button button-dark" href="/documentos">Ver documentos atuais</Link></div></section>}
 
-    <section className="nf-patient-support-grid">
+    <details className="nf-plan-more">
+      <summary><span>Mais do seu acompanhamento</span><small>Avaliação, evolução e check-in</small></summary>
+      <section className="nf-patient-support-grid">
       <article><span>Avaliação física</span><strong>{portal.physicalAssessment.available ? portal.physicalAssessment.title : "Aguardando registro"}</strong><p>{portal.physicalAssessment.available && portal.physicalAssessment.publishedAt ? `Publicada em ${shortDate(portal.physicalAssessment.publishedAt)}.` : "Quando disponibilizada, a avaliação ficará vinculada ao seu acompanhamento."}</p>{portal.physicalAssessment.href ? <Link href={portal.physicalAssessment.href}>Abrir avaliação →</Link> : null}</article>
       <article><span>Evolução de peso</span><WeightTrend values={portal.weightEvolution} /></article>
       <article><span>Check-in periódico</span><strong>{portal.checkIn.status === "completed-this-week" ? "Concluído nesta semana" : "Disponível para preencher"}</strong><p>Seus próximos registros alimentarão a evolução e ajudarão nos ajustes do plano.</p><Link href={portal.checkIn.href}>{portal.checkIn.status === "completed-this-week" ? "Ver histórico" : "Responder check-in"} →</Link></article>
-    </section>
+      </section>
+    </details>
   </div>;
 }

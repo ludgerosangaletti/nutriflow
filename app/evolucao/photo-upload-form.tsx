@@ -15,6 +15,7 @@ export default function PhotoUploadForm({
 }) {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
+  const [selected, setSelected] = useState<Record<string, string>>({});
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -50,14 +51,16 @@ export default function PhotoUploadForm({
       </label>
       <div className="photo-input-grid">
         {angles.map((angle) => (
-          <label className="photo-input" key={angle.id}>
+          <label className={`photo-input ${selected[angle.id] ? "has-file" : ""}`} key={angle.id}>
+            <i aria-hidden="true">{selected[angle.id] ? "✓" : "+"}</i>
             <span>{angle.label}</span>
-            <small>JPG, PNG ou WEBP · até 8 MB</small>
+            <small>{selected[angle.id] || "Toque para escolher"}</small>
             <input
               accept="image/jpeg,image/png,image/webp"
               name={angle.id}
               required
               type="file"
+              onChange={(event) => setSelected((current) => ({ ...current, [angle.id]: event.target.files?.[0]?.name || "" }))}
             />
           </label>
         ))}

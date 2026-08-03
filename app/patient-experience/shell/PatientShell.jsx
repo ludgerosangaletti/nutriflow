@@ -74,7 +74,7 @@ export function PatientShell({ children, onBack }) {
           paddingLeft: "max(16px, var(--nf-safe-left))",
           paddingRight: "max(16px, var(--nf-safe-right))",
           paddingTop: 16,
-          paddingBottom: 24,
+          paddingBottom: "calc(88px + var(--nf-safe-bottom))",
         }}
       >
         {children}

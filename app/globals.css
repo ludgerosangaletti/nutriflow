@@ -8307,3 +8307,139 @@ button:disabled {
   .nf-weight-trend { grid-template-columns: 1fr 100px; }
   .nf-weight-trend svg { width: 100px; }
 }
+/* Patient app UX refresh — plan-first, guided check-in and visual progress */
+.nf-experience-shell #conteudo { width: 100%; }
+.nf-experience-page { max-width: 760px; margin: 0 auto; }
+.nf-experience-page > .portal-header { display: none; }
+
+.nf-plan-v2 { display: grid; gap: 14px; }
+.nf-plan-intro { display:flex; align-items:flex-end; justify-content:space-between; gap:16px; padding:8px 2px 2px; }
+.nf-plan-intro h1 { margin:4px 0; font-size:clamp(2rem,10vw,3.4rem); line-height:.92; letter-spacing:-.055em; }
+.nf-plan-intro p:not(.section-kicker) { margin:0; color:#66635d; font-size:.95rem; }
+.nf-plan-status { min-width:92px; display:grid; justify-items:end; gap:2px; padding-bottom:4px; }
+.nf-plan-status i { display:grid; place-items:center; width:28px; height:28px; border-radius:50%; background:#dff5e8; color:#198754; font-style:normal; font-weight:900; }
+.nf-plan-status span { font-weight:800; font-size:.76rem; text-transform:uppercase; letter-spacing:.08em; }
+.nf-plan-status small { color:#77736c; font-size:.68rem; }
+.nf-plan-summary { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:14px 16px; border-radius:18px; background:#101010; color:#fff; }
+.nf-plan-summary div { display:grid; gap:3px; min-width:0; }
+.nf-plan-summary span,.nf-plan-summary small { color:#aaa; font-size:.67rem; text-transform:uppercase; letter-spacing:.08em; }
+.nf-plan-summary strong { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.nf-day-label { display:flex; justify-content:space-between; align-items:center; margin-top:2px; }
+.nf-day-label span { font-size:.76rem; font-weight:900; text-transform:uppercase; letter-spacing:.1em; }
+.nf-day-label small { color:#77736c; }
+.nf-plan-v2 .nf-patient-days { position:sticky; top:57px; z-index:15; display:flex; gap:8px; overflow-x:auto; padding:8px 0 10px; background:var(--nf-cream,#f5f5f2); scrollbar-width:none; }
+.nf-plan-v2 .nf-patient-days::-webkit-scrollbar { display:none; }
+.nf-plan-v2 .nf-patient-days button { flex:0 0 auto; min-width:104px; min-height:58px; display:grid; grid-template-columns:auto 1fr; column-gap:8px; align-items:center; padding:9px 12px; border:1px solid #d9d7d0; border-radius:15px; background:#fff; text-align:left; }
+.nf-plan-v2 .nf-patient-days button small { grid-row:1/3; font-size:.65rem; }
+.nf-plan-v2 .nf-patient-days button strong { font-size:.85rem; }
+.nf-plan-v2 .nf-patient-days button span { font-size:.64rem; color:#77736c; }
+.nf-plan-v2 .nf-patient-days button.is-active { background:#ffea00; border-color:#111; box-shadow:0 3px 0 #111; }
+.nf-plan-v2 .nf-patient-day { padding:0; background:transparent; border:0; box-shadow:none; }
+.nf-plan-v2 .nf-patient-day > header { display:flex; align-items:end; justify-content:space-between; padding:8px 2px 12px; border-bottom:0; }
+.nf-plan-v2 .nf-patient-day > header span { color:#77736c; font-size:.68rem; font-weight:800; text-transform:uppercase; letter-spacing:.1em; }
+.nf-plan-v2 .nf-patient-day > header h2 { margin:3px 0 0; font-size:1.6rem; }
+.nf-plan-v2 .nf-patient-day > header p { color:#77736c; font-size:.78rem; }
+.nf-plan-v2 .nf-patient-meals { display:grid; gap:10px; }
+.nf-plan-v2 .nf-patient-meal { overflow:hidden; border:1px solid #d9d7d0; border-radius:20px; background:#fff; box-shadow:0 8px 28px rgba(12,12,10,.04); }
+.nf-plan-v2 .nf-meal-toggle-header { display:grid; grid-template-columns:38px minmax(0,1fr) 38px; align-items:center; gap:10px; padding:14px; }
+.nf-plan-v2 .nf-patient-meal-number { display:grid; place-items:center; width:38px; height:38px; border-radius:12px; background:#111; color:#ffea00; font-size:.68rem; font-weight:900; }
+.nf-plan-v2 .nf-meal-toggle { text-align:left; background:none; border:0; min-width:0; }
+.nf-plan-v2 .nf-meal-toggle span { color:#77736c; font-size:.65rem; font-weight:800; text-transform:uppercase; letter-spacing:.08em; }
+.nf-plan-v2 .nf-meal-toggle h3 { margin:2px 0 0; font-size:1.08rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.nf-plan-v2 .nf-meal-chevron { width:34px; height:34px; border:1px solid #ddd; border-radius:50%; background:#fafafa; font-size:1.05rem; }
+.nf-plan-v2 .nf-meal-macros { margin:0 14px 10px; padding:8px 10px; border-radius:10px; background:#f5f4ed; color:#4f4c46; font-size:.72rem; font-weight:800; }
+.nf-plan-v2 .nf-patient-foods { padding:0 14px 8px; }
+.nf-plan-v2 .nf-patient-food { display:grid; grid-template-columns:1fr auto; gap:6px 12px; padding:12px 0; border-top:1px solid #eceae4; }
+.nf-plan-v2 .nf-patient-food:first-child { border-top:0; }
+.nf-plan-v2 .nf-patient-food strong { font-size:.92rem; }
+.nf-plan-v2 .nf-patient-food p { margin:3px 0 0; color:#77736c; font-size:.73rem; }
+.nf-plan-v2 .nf-patient-food > b { font-size:.78rem; white-space:nowrap; }
+.nf-plan-v2 .nf-meal-collapsed-summary { margin:-5px 14px 13px 62px; color:#77736c; font-size:.72rem; }
+.nf-plan-more { margin-top:2px; border:1px solid #d9d7d0; border-radius:18px; background:#fff; }
+.nf-plan-more > summary { list-style:none; display:grid; gap:2px; padding:15px 16px; cursor:pointer; }
+.nf-plan-more > summary::-webkit-details-marker { display:none; }
+.nf-plan-more > summary span { font-weight:800; }
+.nf-plan-more > summary small { color:#77736c; }
+.nf-plan-more .nf-patient-support-grid { padding:0 12px 12px; display:grid; gap:8px; }
+.nf-plan-more .nf-patient-support-grid article { border:0; background:#f5f4ed; border-radius:14px; padding:13px; }
+
+.nf-checkin-v2 { display:grid; gap:14px; }
+.nf-checkin-intro { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; padding:8px 2px; }
+.nf-checkin-intro h1 { margin:3px 0 5px; font-size:clamp(2rem,10vw,3.3rem); line-height:.96; letter-spacing:-.05em; }
+.nf-checkin-intro p:not(.section-kicker) { margin:0; color:#66635d; }
+.nf-checkin-intro > span { margin-top:8px; padding:8px 10px; border-radius:999px; background:#ffea00; font-size:.68rem; font-weight:900; text-transform:uppercase; }
+.nf-checkin-intro > span.is-done { background:#dff5e8; color:#18794e; }
+.checkin-form-section { padding:0; border:0; background:transparent; }
+.nf-checkin-flow { overflow:hidden; border:1px solid #d9d7d0; border-radius:24px; background:#fff; box-shadow:0 12px 36px rgba(12,12,10,.06); }
+.nf-checkin-progress { padding:16px 18px 12px; background:#111; color:#fff; }
+.nf-checkin-progress div { display:flex; justify-content:space-between; font-size:.75rem; text-transform:uppercase; letter-spacing:.08em; }
+.nf-checkin-progress progress { width:100%; height:5px; margin:10px 0 4px; border:0; accent-color:#ffea00; }
+.nf-checkin-progress progress::-webkit-progress-bar { background:#333; border-radius:99px; }
+.nf-checkin-progress progress::-webkit-progress-value { background:#ffea00; border-radius:99px; }
+.nf-checkin-progress p { margin:3px 0 0; color:#aaa; font-size:.73rem; }
+.nf-checkin-slide { min-height:330px; display:grid; align-content:center; padding:28px 20px; animation:nf-slide-in .22s ease both; }
+@keyframes nf-slide-in { from { opacity:0; transform:translateX(14px); } to { opacity:1; transform:none; } }
+.nf-checkin-slide label,.nf-checkin-slide fieldset { display:grid; gap:12px; margin:0; padding:0; border:0; }
+.nf-checkin-slide label > span,.nf-checkin-slide legend { font-size:1.55rem; font-weight:800; line-height:1.08; letter-spacing:-.03em; }
+.nf-checkin-slide label > p,.nf-checkin-slide fieldset > p { margin:0; color:#77736c; }
+.nf-checkin-slide input:not([type=range]),.nf-checkin-slide textarea { width:100%; border:1px solid #cbc8bf; border-radius:15px; background:#faf9f5; font-size:1rem; }
+.nf-checkin-slide textarea { min-height:150px; padding:14px; resize:vertical; }
+.nf-stepper { display:grid; grid-template-columns:58px 1fr 58px; align-items:center; margin-top:14px; border:1px solid #d9d7d0; border-radius:20px; overflow:hidden; }
+.nf-stepper button { height:62px; border:0; background:#f5f4ed; font-size:1.5rem; }
+.nf-stepper strong { text-align:center; font-size:2rem; }
+.nf-range-question output { display:block; padding:18px; border-radius:16px; background:#ffea00; font-size:1.15rem; font-weight:900; text-align:center; }
+.nf-range-question input[type=range] { width:100%; height:34px; accent-color:#111; }
+.nf-range-question > div { display:flex; justify-content:space-between; gap:20px; color:#77736c; font-size:.7rem; }
+.nf-range-question > div span:last-child { text-align:right; }
+.nf-choice-question button { min-height:48px; padding:11px 14px; border:1px solid #d9d7d0; border-radius:13px; background:#faf9f5; text-align:left; font-weight:700; }
+.nf-choice-question button.is-selected { background:#ffea00; border-color:#111; box-shadow:0 2px 0 #111; }
+.nf-checkin-actions { display:grid; grid-template-columns:1fr 2fr; gap:10px; padding:0 18px 18px; }
+.nf-checkin-actions button { min-height:50px; border-radius:14px; font-weight:900; }
+.nf-flow-back { border:1px solid #d9d7d0; background:#fff; }
+.nf-flow-next { border:1px solid #111; background:#111; color:#fff; }
+.nf-flow-next:disabled { opacity:.4; }
+.nf-checkin-v2 .checkin-history { margin-top:4px; padding:16px; border-radius:20px; background:#f0efe9; }
+.nf-checkin-v2 .checkin-history h2 { font-size:1.25rem; }
+
+.nf-progress-v2 { display:grid; gap:14px; }
+.nf-progress-intro { display:flex; align-items:flex-end; justify-content:space-between; gap:16px; padding:8px 2px; }
+.nf-progress-intro h1 { max-width:500px; margin:4px 0 8px; font-size:clamp(2rem,9vw,3.5rem); line-height:.96; letter-spacing:-.05em; }
+.nf-progress-intro p:not(.section-kicker) { margin:0; color:#66635d; }
+.nf-progress-count { flex:0 0 80px; display:grid; place-items:center; padding:14px 8px; border-radius:18px; background:#ffea00; text-align:center; }
+.nf-progress-count strong { font-size:1.7rem; }
+.nf-progress-count span { font-size:.64rem; font-weight:800; }
+.nf-photo-guide { border:1px solid #d9d7d0; border-radius:16px; background:#fff; }
+.nf-photo-guide summary { list-style:none; display:grid; gap:2px; padding:14px 16px; }
+.nf-photo-guide summary::-webkit-details-marker { display:none; }
+.nf-photo-guide summary span { font-weight:800; }
+.nf-photo-guide summary small { color:#77736c; }
+.nf-photo-guide ul { margin:0; padding:0 26px 16px 38px; color:#5f5b55; font-size:.85rem; }
+.nf-photo-guide li + li { margin-top:7px; }
+.nf-progress-v2 .photo-upload-section { padding:18px; border:1px solid #d9d7d0; border-radius:22px; background:#fff; }
+.nf-section-heading { display:flex; justify-content:space-between; align-items:start; gap:12px; }
+.nf-section-heading h2 { margin:3px 0 14px; font-size:1.4rem; }
+.nf-section-heading > span { padding:6px 8px; border-radius:99px; background:#f0efe9; color:#66635d; font-size:.67rem; font-weight:800; text-transform:uppercase; }
+.nf-progress-v2 .photo-input-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+.nf-progress-v2 .photo-input { min-width:0; min-height:112px; display:grid; place-items:center; align-content:center; gap:5px; padding:10px; border:1px dashed #aaa69d; border-radius:16px; background:#faf9f5; text-align:center; cursor:pointer; }
+.nf-progress-v2 .photo-input i { display:grid; place-items:center; width:30px; height:30px; border-radius:50%; background:#111; color:#ffea00; font-style:normal; }
+.nf-progress-v2 .photo-input span { font-weight:900; }
+.nf-progress-v2 .photo-input small { max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#77736c; font-size:.61rem; }
+.nf-progress-v2 .photo-input.has-file { border-style:solid; border-color:#198754; background:#effaf3; }
+.nf-progress-v2 .photo-input input { position:absolute; width:1px; height:1px; opacity:0; }
+.nf-progress-v2 .photo-period { display:grid; gap:6px; margin-bottom:12px; font-size:.75rem; font-weight:800; }
+.nf-progress-v2 .photo-period input { min-height:46px; border:1px solid #d9d7d0; border-radius:12px; padding:0 12px; background:#fff; }
+.nf-progress-v2 .photo-consent { margin:14px 0; font-size:.72rem; }
+.nf-progress-v2 .comparison-section,.nf-progress-v2 .photo-history { padding:18px; border:1px solid #d9d7d0; border-radius:22px; background:#fff; }
+
+@media (max-width:520px) {
+  .nf-experience-shell #conteudo { padding-left:14px !important; padding-right:14px !important; padding-top:10px !important; }
+  .nf-plan-intro h1,.nf-checkin-intro h1 { font-size:2.15rem; }
+  .nf-plan-summary small { display:none; }
+  .nf-plan-v2 .nf-patient-days { margin-left:-14px; margin-right:-14px; padding-left:14px; padding-right:14px; }
+  .nf-checkin-slide { min-height:320px; }
+  .nf-progress-intro { align-items:flex-start; }
+  .nf-progress-intro h1 { font-size:2.2rem; }
+  .nf-progress-count { flex-basis:70px; }
+  .nf-progress-v2 .photo-input-grid { gap:6px; }
+  .nf-progress-v2 .photo-input { min-height:105px; padding:8px 4px; }
+}
