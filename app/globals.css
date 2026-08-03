@@ -106,6 +106,95 @@
   .nf-experience-shell .portal-shell { max-width: none; }
 }
 
+/* Preview contract: patient routes use one calm, mobile-first visual language. */
+.nf-patient-dashboard { width: min(100%, 430px); margin: 0 auto; }
+.nf-patient-hero { display: block; margin: 0 0 14px; padding: 32px 32px 28px; border: 0; border-radius: 0; background: #f7f5d9; }
+.nf-patient-hero > div { max-width: none; }
+.nf-patient-hero .section-kicker { color: #676760; }
+.nf-patient-hero h1 { margin: 10px 0 10px; font-size: clamp(48px, 13vw, 74px); line-height: .92; letter-spacing: -.07em; }
+.nf-patient-hero > div > p:last-child { max-width: 100%; margin: 0; color: #676760; font-size: 16px; line-height: 1.55; }
+.nf-patient-hero aside { margin-top: 24px; padding: 18px; border: 1px solid rgba(10,10,10,.15); border-radius: 18px; background: #fff; }
+.nf-patient-hero aside span { display: block; color: #676760; font-size: 10px; font-weight: 900; letter-spacing: .1em; text-transform: uppercase; }
+.nf-patient-hero aside strong { display: block; margin-top: 8px; font-size: 18px; line-height: 1.25; }
+.nf-patient-hero aside small { display: block; margin-top: 7px; color: #6b6b68; font-size: 13px; line-height: 1.4; }
+.nf-plan-heading { margin: 0 16px 14px; padding: 24px 18px; border-radius: 22px; background: #0a0a0a; color: #fff; }
+.nf-plan-heading > div:first-child > span { color: #ffea00; font-size: 10px; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; }
+.nf-plan-heading h2 { margin: 10px 0 0; color: #fff; font-size: 28px; line-height: 1.15; letter-spacing: -.04em; }
+.nf-plan-heading p { color: rgba(255,255,255,.72); }
+.nf-plan-sync { display: none; }
+.nf-patient-days { display: flex; gap: 8px; overflow-x: auto; margin: 0 16px 14px; padding: 2px 0 5px; }
+.nf-patient-days button { flex: 0 0 auto; min-width: 70px; border: 1px solid var(--line); border-radius: 14px; background: #fff; padding: 9px 11px; color: var(--ink); text-align: left; }
+.nf-patient-days button.is-active { border-color: #ffea00; background: #ffea00; }
+.nf-patient-days button small, .nf-patient-days button span { display: block; color: #6b6b68; font-size: 10px; }
+.nf-patient-days button strong { display: block; margin: 3px 0; font-size: 13px; }
+.nf-patient-day { margin: 0 16px; }
+.nf-patient-day > header { display: flex; align-items: end; justify-content: space-between; gap: 10px; margin: 14px 0 10px; }
+.nf-patient-day > header span { color: #6b6b68; font-size: 10px; font-weight: 900; letter-spacing: .1em; text-transform: uppercase; }
+.nf-patient-day > header h2 { margin: 4px 0 0; font-size: 24px; letter-spacing: -.04em; }
+.nf-patient-day > header p { margin: 0; color: #6b6b68; font-size: 11px; text-align: right; }
+.nf-patient-meals { display: grid; gap: 10px; }
+.nf-patient-meal { border: 1px solid var(--line); border-radius: 18px; background: #fff; overflow: hidden; }
+.nf-patient-meal:has(.nf-meal-collapsed-summary) { background: #f7f7f2; }
+.nf-meal-toggle-header { display: flex; align-items: center; gap: 10px; padding: 14px 14px 10px; }
+.nf-patient-meal-number { display: grid; flex: 0 0 30px; height: 30px; place-items: center; border-radius: 10px; background: #ffea00; color: #0a0a0a; font-size: 11px; font-weight: 900; }
+.nf-meal-toggle { flex: 1; border: 0; background: transparent; padding: 0; text-align: left; }
+.nf-meal-toggle span { display: block; color: #6b6b68; font-size: 10px; font-weight: 900; letter-spacing: .08em; }
+.nf-meal-toggle h3 { margin: 4px 0 0; font-size: 17px; letter-spacing: -.02em; }
+.nf-meal-chevron { width: 34px; height: 34px; border: 0; border-radius: 50%; background: #f0f0eb; font-size: 18px; }
+.nf-meal-macros { margin: 0 14px 9px; border-radius: 9px; background: #f4f4ee; padding: 7px 9px; color: #5f5f59; font-size: 11px; font-weight: 700; }
+.nf-patient-foods { padding: 0 14px; }
+.nf-patient-food { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 8px; padding: 10px 0; border-top: 1px solid rgba(10,10,10,.08); }
+.nf-patient-food strong { font-size: 14px; }
+.nf-patient-food p { margin: 3px 0 0; color: #6b6b68; font-size: 12px; line-height: 1.4; }
+.nf-patient-food > b { font: 600 12px/1.3 ui-monospace, SFMono-Regular, Menlo, monospace; color: #6b6b68; white-space: nowrap; }
+.nf-meal-guidance, .nf-substitutions { margin: 10px 14px 14px; border-radius: 12px; background: #f5f5f2; padding: 11px; }
+.nf-meal-guidance span { color: #6b6b68; font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: .08em; }
+.nf-meal-guidance p { margin: 5px 0 0; font-size: 12px; line-height: 1.45; }
+.nf-substitutions summary { cursor: pointer; font-size: 13px; font-weight: 800; }
+.nf-option-picker { margin-top: 12px; }
+.nf-option-picker h4 { margin: 0 0 7px; font-size: 13px; }
+.nf-option-picker [role="tablist"] { display: flex; gap: 6px; overflow-x: auto; }
+.nf-option-picker button { border: 1px solid var(--line); border-radius: 9px; background: #fff; padding: 7px 9px; font-size: 11px; }
+.nf-option-picker button.is-active { border-color: var(--ink); background: var(--ink); color: #fff; }
+.nf-meal-collapsed-summary { margin: 0; padding: 0 14px 14px; color: #6b6b68; font-size: 12px; }
+.nf-patient-notes { margin: 14px 16px; border: 1px dashed var(--line-strong); border-radius: 16px; background: #f7f7f2; padding: 15px; }
+.nf-patient-notes > span { color: #6b6b68; font-size: 10px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
+.nf-patient-notes p { margin: 8px 0 0; font-size: 13px; line-height: 1.5; }
+.nf-patient-support-grid { display: grid; gap: 10px; margin: 14px 16px 0; }
+.nf-patient-support-grid > article { border: 1px solid var(--line); border-radius: 18px; background: #fff; padding: 15px; }
+.nf-patient-support-grid > article > span { color: #6b6b68; font-size: 10px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
+.nf-patient-support-grid > article > strong { display: block; margin-top: 7px; font-size: 16px; }
+.nf-patient-support-grid > article > p { color: #6b6b68; font-size: 12px; line-height: 1.45; }
+.nf-patient-support-grid a { color: var(--ink); font-size: 12px; font-weight: 800; }
+
+/* Check-in follows the preview's one-column story on mobile. */
+.checkin-page { width: min(100%, 430px); margin: 0 auto; }
+.checkin-hero { display: block; margin: 0 0 12px; }
+.checkin-hero > div, .checkin-hero > aside { border-radius: 22px; padding: 24px; }
+.checkin-hero > div { background: #0a0a0a; }
+.checkin-hero h1 { font-size: clamp(42px, 12vw, 58px); line-height: .94; letter-spacing: -.07em; }
+.checkin-hero > aside { margin-top: 12px; background: #ffea00; }
+.checkin-form-section { border-radius: 22px !important; padding: 18px !important; background: #0a0a0a !important; }
+.checkin-history { margin-top: 12px; border-radius: 22px !important; padding: 18px !important; }
+
+.progress-page { width: min(100%, 430px); margin: 0 auto; }
+.progress-hero { display: block; margin: 0 0 12px; padding: 28px 18px; border-radius: 0; background: #f7f5d9; }
+.progress-hero h1 { margin: 9px 0 20px; font-size: clamp(42px, 12vw, 58px) !important; line-height: .95 !important; letter-spacing: -.065em; }
+.progress-hero > div > p:last-child { margin: 0; color: #6b6b68; font-size: 15px; line-height: 1.6; }
+.photo-guidance { margin-top: 24px; padding: 22px !important; border-radius: 20px !important; background: #0a0a0a !important; color: #fff; }
+.photo-guidance strong { color: #ffea00; font-size: 24px; line-height: 1.2; }
+.photo-guidance li { color: rgba(255,255,255,.9); font-size: 14px; line-height: 1.5; }
+.photo-upload-section, .comparison-section, .photo-history { margin-top: 12px; border-radius: 20px; padding: 18px; background: #fff; }
+.photo-upload-section h2, .comparison-section h2, .photo-history h2 { font-size: 24px; letter-spacing: -.04em; }
+
+@media (max-width: 520px) {
+  .nf-patient-hero { margin-left: 0; margin-right: 0; padding: 30px 32px 26px; }
+  .nf-plan-heading, .nf-patient-days, .nf-patient-day, .nf-patient-notes, .nf-patient-support-grid { margin-left: 0; margin-right: 0; }
+  .nf-patient-hero h1 { font-size: clamp(46px, 14vw, 62px); }
+  .nf-patient-food { grid-template-columns: minmax(0,1fr) auto; }
+  .checkin-hero > div, .checkin-hero > aside { padding: 22px; }
+}
+
 .google-calendar-page {
   max-width: 980px;
 }
