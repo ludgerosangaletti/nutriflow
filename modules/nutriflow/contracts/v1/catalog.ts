@@ -18,6 +18,7 @@ export type FoodCatalogItemV1 = Readonly<{
   referenceUnit: FoodCatalogUnitV1;
   scope: "global" | "organization";
   source?: string;
+  nutrients?: Readonly<{ energyKcal?: number | null; protein?: number | null; carbohydrate?: number | null; fat?: number | null }> | null;
 }>;
 
 export type SearchFoodCatalogQueryV1 = Readonly<{

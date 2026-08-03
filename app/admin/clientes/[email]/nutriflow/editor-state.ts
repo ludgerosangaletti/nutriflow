@@ -134,7 +134,7 @@ export function addItem(draft: FoodPlanDraftV1, mealPublicId: string, publicId =
 }
 
 export function addCatalogItem(draft: FoodPlanDraftV1, mealPublicId: string, food: FoodCatalogItemV1, publicId = editorId("item")) {
-  return updateContent(draft, { ...draft.content, meals: draft.content.meals.map((meal) => meal.publicId === mealPublicId ? { ...meal, items: [...meal.items, { publicId, source: { type: "food", publicId: food.publicId, revisionNumber: food.revisionNumber }, displayName: food.name, quantityMilli: food.referenceQuantityMilli, unit: food.referenceUnit, preparation: null, notes: null, sortOrder: meal.items.length }] } : meal) });
+  return updateContent(draft, { ...draft.content, meals: draft.content.meals.map((meal) => meal.publicId === mealPublicId ? { ...meal, items: [...meal.items, { publicId, source: { type: "food", publicId: food.publicId, revisionNumber: food.revisionNumber }, displayName: food.name, quantityMilli: food.referenceQuantityMilli, unit: food.referenceUnit, preparation: null, notes: null, macros: food.nutrients ?? null, sortOrder: meal.items.length }] } : meal) });
 }
 
 export function addRecipeItem(draft: FoodPlanDraftV1, mealPublicId: string, recipe: RecipeVersionV1, publicId = editorId("item")) {

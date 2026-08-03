@@ -38,6 +38,7 @@ export type MealItem = Readonly<{
   unitLabel: string;
   preparation: string | null;
   notes: string | null;
+  macros?: Readonly<{ energyKcal?: number | null; protein?: number | null; carbohydrate?: number | null; fat?: number | null }> | null;
   sortOrder: SortOrder;
 }>;
 
@@ -50,6 +51,7 @@ export type SubstitutionOption = Readonly<{
   unitCode: UnitCode;
   unitLabel: string;
   notes: string | null;
+  macros?: Readonly<{ energyKcal?: number | null; protein?: number | null; carbohydrate?: number | null; fat?: number | null }> | null;
   sortOrder: SortOrder;
 }>;
 

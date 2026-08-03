@@ -43,6 +43,7 @@ export type FoodPlanItemV1 = Readonly<{
   }>;
   preparation: string | null;
   notes: string | null;
+  macros?: Readonly<{ energyKcal?: number | null; protein?: number | null; carbohydrate?: number | null; fat?: number | null }> | null;
   sortOrder: number;
 }>;
 export type FoodPlanSubstitutionGroupV1 = Readonly<{ publicId: string; mealItemPublicId: string | null; title: string; ruleCode: "choose_one"; notes: string | null; sortOrder: number; options: readonly FoodPlanItemV1[] }>;
