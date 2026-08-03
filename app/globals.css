@@ -45,6 +45,16 @@
 .app-login-submit:disabled { opacity: .6; cursor: wait; }
 .app-login-forgot { min-height: 44px; display: grid; place-items: center; color: rgba(255,255,255,.72); font-size: 13.5px; text-decoration: underline; text-underline-offset: 3px; }
 .app-login-card small { margin-top: 18px; color: rgba(255,255,255,.45); font-size: 11.5px; text-align: center; }
+.mobile-app-banner { position: fixed; z-index: 90; left: 14px; right: 14px; bottom: max(14px, env(safe-area-inset-bottom)); display: flex; align-items: center; gap: 10px; padding: 12px; border: 1px solid rgba(10,10,10,.12); border-radius: 18px; background: rgba(255,255,255,.96); box-shadow: 0 14px 38px rgba(10,10,10,.18); }
+.mobile-app-banner-icon { width: 38px; height: 38px; flex: 0 0 38px; display: grid; place-items: center; border-radius: 12px; background: #ffea00; overflow: hidden; }
+.mobile-app-banner-icon img { width: 34px; height: 34px; object-fit: contain; }
+.mobile-app-banner strong { display: block; font-size: 13px; }
+.mobile-app-banner p { margin: 2px 0 0; color: #66625b; font-size: 11.5px; line-height: 1.35; }
+.mobile-app-banner > div:nth-child(2) { flex: 1; }
+.mobile-app-banner > button { flex: 0 0 auto; min-height: 40px; border: 0; border-radius: 11px; padding: 0 12px; background: #0a0a0a; color: #fff; font: inherit; font-size: 11.5px; font-weight: 800; }
+.mobile-app-help { position: absolute; left: 0; right: 0; bottom: calc(100% + 8px); display: grid; gap: 6px; padding: 14px; border-radius: 16px; background: #0a0a0a; color: #fff; box-shadow: 0 12px 34px rgba(0,0,0,.24); font-size: 12px; line-height: 1.45; }
+.mobile-app-help button { justify-self: start; border: 0; background: transparent; color: #ffea00; padding: 3px 0; font: inherit; font-weight: 700; }
+@media (min-width: 721px) { .mobile-app-banner { display: none; } }
 @media (max-width: 720px) {
   .nf-experience-page { padding-left: 0; padding-right: 0; }
   .nf-experience-shell .portal-shell { max-width: none; }

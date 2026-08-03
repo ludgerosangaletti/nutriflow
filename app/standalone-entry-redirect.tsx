@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 
 /**
@@ -10,13 +10,17 @@ import { usePathname } from "next/navigation";
  */
 export function StandaloneEntryRedirect() {
   const pathname = usePathname();
+  const [standalone, setStandalone] = useState<boolean | null>(null);
 
   useEffect(() => {
-    if (pathname !== "/") return;
-    const standalone = window.matchMedia("(display-mode: standalone)").matches ||
+    const isStandalone = window.matchMedia("(display-mode: standalone)").matches ||
       Boolean((window.navigator as Navigator & { standalone?: boolean }).standalone);
-    if (standalone) window.location.replace("/entrar");
+    setStandalone(isStandalone);
+    if (pathname === "/" && isStandalone) window.location.replace("/entrar");
   }, [pathname]);
 
+  if (pathname === "/" && standalone) {
+    return <div className="app-login-splash" role="status" aria-label="Abrindo o NutriFlow"><img src="/logo-ludgero.png" alt="" /><strong>NutriFlow</strong><span className="app-login-loader" /></div>;
+  }
   return null;
 }

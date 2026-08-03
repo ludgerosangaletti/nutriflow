@@ -4,6 +4,7 @@ import "./globals.css";
 import "./patient-experience/ui/shell-tokens.css";
 import { PwaRegister } from "./pwa-register";
 import { StandaloneEntryRedirect } from "./standalone-entry-redirect";
+import { MobileAppBanner } from "./mobile-app-banner";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -58,6 +59,7 @@ export default function RootLayout({
       >
         <PwaRegister />
         <StandaloneEntryRedirect />
+        <MobileAppBanner />
         {children}
       </body>
     </html>
