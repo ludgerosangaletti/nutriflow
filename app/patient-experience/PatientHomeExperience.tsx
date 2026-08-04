@@ -30,21 +30,13 @@ export function PatientHomeExperience({
     : null;
 
   return (
-    <main className="nf-home-screen">
-      <p className="nf-eyebrow">{today}</p>
-      <h2 className="nf-home-title">Olá, {firstName(name)} <span aria-hidden="true">👋</span></h2>
-      <p className="nf-home-intro">
-        {modality === "in_person" ? "Seu acompanhamento presencial, organizado também no ambiente digital." : "Seu acompanhamento nutricional, organizado para o seu dia."}
-      </p>
+    <main className="nf-home-screen nf-home-v2">
+      <header className="nf-home-greeting"><div><p className="nf-eyebrow">{today}</p><h2 className="nf-home-title">Olá, {firstName(name)}.</h2></div><span className={active ? "is-active" : ""}>{active ? "Ativo" : "Pendente"}</span></header>
 
-      {appointment ? (
-        <section className="nf-card nf-card-dark nf-appointment-card">
-          <p className="nf-eyebrow">Próxima consulta</p>
-          <strong>{appointment}</strong>
-          <span>{appointmentLocation || "Guarapuava — PR"}</span>
-          <b>Presencial</b>
-        </section>
-      ) : null}
+      <section className="nf-home-overview">
+        <div><small>{modality === "in_person" ? "Acompanhamento presencial" : "Consultoria online"}</small><strong>{planLabel}</strong></div>
+        {appointment ? <div><small>Próxima consulta</small><strong>{appointment}</strong><span>{appointmentLocation || "Guarapuava — PR"}</span></div> : <div><small>Seu acompanhamento</small><strong>{checkInsCount} {checkInsCount === 1 ? "check-in registrado" : "check-ins registrados"}</strong></div>}
+      </section>
 
       <section className="nf-card nf-card-lime nf-action-card">
         <p className="nf-eyebrow">{action.eyebrow}</p>
@@ -53,27 +45,14 @@ export function PatientHomeExperience({
         {action.href && action.button ? <Link className="nf-btn nf-btn-dark" href={action.href}>{action.button}</Link> : null}
       </section>
 
-      <section className="nf-card nf-card-dark nf-constancy-card">
-        <p className="nf-eyebrow">Seu acompanhamento</p>
-        <div><strong>{checkInsCount}</strong><span> check-in(s) registrado(s)</span></div>
-        <p>{active ? "Você tem mantido seu acompanhamento ativo." : "Aguarde a liberação do seu acompanhamento."}</p>
-        <div className="nf-progress"><i style={{ width: `${Math.min(100, checkInsCount * 20)}%` }} /></div>
-        <small>{planLabel} · {active ? "acesso ativo" : "aguardando liberação"}</small>
+      <div className="nf-home-section-title"><span>Acessos rápidos</span><small>O que você precisa agora?</small></div>
+      <section className="nf-home-links nf-home-links-grid" aria-label="Recursos principais">
+        {structuredPlanEnabled ? <Link className="is-primary" href="/plano-alimentar"><i aria-hidden="true">◐</i><span>Plano alimentar<small>Refeições do dia</small></span><b>→</b></Link> : null}
+        <Link href="/check-in"><i aria-hidden="true">✓</i><span>Check-in<small>{checkInDone ? "Enviado nesta semana" : "Disponível agora"}</small></span><b>→</b></Link>
+        <Link href="/documentos"><i aria-hidden="true">□</i><span>Documentos<small>{documentsCount ? `${documentsCount} disponível(is)` : "Protocolos e avaliações"}</small></span><b>→</b></Link>
+        <Link href="/evolucao"><i aria-hidden="true">↗</i><span>Evolução<small>{photosCount ? `${photosCount} foto(s)` : "Registro opcional"}</small></span><b>→</b></Link>
       </section>
-
-      <section className="nf-card nf-card-paper nf-resource-card">
-        <p className="nf-eyebrow">Ação desta semana</p>
-        <h3>{checkInDone ? "Check-in enviado" : "Seu check-in está disponível"}</h3>
-        <p>{checkInDone ? "Seu registro foi recebido e ficará disponível para acompanhamento." : "Leva cerca de 3 minutos e ajuda a orientar os próximos ajustes."}</p>
-        <Link className="nf-btn nf-btn-plain" href="/check-in">{checkInDone ? "Ver check-in" : "Responder agora"}</Link>
-      </section>
-
-      <section className="nf-home-links" aria-label="Recursos principais">
-        {structuredPlanEnabled ? <Link href="/plano-alimentar"><span>Plano alimentar</span><b>Abrir plano →</b></Link> : null}
-        <Link href="/documentos"><span>Documentos e protocolos</span><b>{documentsCount ? `${documentsCount} arquivo(s)` : "Acessar →"}</b></Link>
-        <Link href="/evolucao"><span>Evolução fotográfica</span><b>{photosCount ? `${photosCount} foto(s)` : "Opcional →"}</b></Link>
-        {currentProtocol ? <Link href="/ajustes"><span>Solicitações de ajustes</span><b>Falar com Ludgero →</b></Link> : null}
-      </section>
+      {currentProtocol ? <Link className="nf-home-adjustments" href="/ajustes">Solicitar ajuste ou falar com Ludgero <span>→</span></Link> : null}
     </main>
   );
 }
