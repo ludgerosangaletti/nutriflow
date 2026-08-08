@@ -1,7 +1,7 @@
 import { asc, eq } from "drizzle-orm";
 import Link from "next/link";
 import { getDb } from "../../db";
-import { clients, progressPhotos } from "../../db/schema";
+import { clients, progressPhotos, nfClinicalAssessments } from "../../db/schema";
 import { hasActiveAccess } from "../access";
 import { requirePatient } from "../supabase/server";
 import PhotoUploadForm from "./photo-upload-form";
@@ -50,6 +50,11 @@ export default async function ProgressPage() {
     .from(progressPhotos)
     .where(eq(progressPhotos.clientEmail, client.email))
     .orderBy(asc(progressPhotos.period));
+  const assessments = await db.select().from(nfClinicalAssessments).where(eq(nfClinicalAssessments.clientId, client.id)).orderBy(asc(nfClinicalAssessments.capturedAt));
+  const latestAssessment = assessments.at(-1);
+  const previousAssessment = assessments.at(-2);
+  const assessmentSnapshot = latestAssessment ? JSON.parse(latestAssessment.snapshotJson) as { result: { bmi:number; bodyFatPct:number; leanMassKg:number; fatMassKg:number }; input: { circumferencesCm: Record<string,number> } } : null;
+  const previousSnapshot = previousAssessment ? JSON.parse(previousAssessment.snapshotJson) as { result: { bmi:number; bodyFatPct:number; leanMassKg:number; fatMassKg:number } } : null;
   const grouped = Map.groupBy(photos, (photo) => photo.period);
   const periods = [...grouped.keys()];
   const firstPeriod = periods[0];
@@ -69,6 +74,14 @@ export default async function ProgressPage() {
         <div><p className="section-kicker">Sua evolução</p><h1>Acompanhe mudanças reais, no seu ritmo.</h1><p>As fotos são opcionais e ficam protegidas no seu acompanhamento.</p></div>
         <div className="nf-progress-count"><strong>{periods.length}</strong><span>{periods.length === 1 ? "registro mensal" : "registros mensais"}</span></div>
       </section>
+
+      <section className="clinical-current-moment">
+        <p className="section-kicker">Meu momento atual</p>
+        <h2>{latestAssessment ? "Você está sendo acompanhado de perto." : "Sua evolução começa aqui."}</h2>
+        {assessmentSnapshot ? <><p>Última avaliação em {new Intl.DateTimeFormat("pt-BR").format(new Date(latestAssessment!.capturedAt))}. O mais importante é observar o conjunto das mudanças ao longo do tempo.</p><div className="clinical-metric-grid"><div><small>Peso</small><strong>{latestAssessment!.weightKg.replace(".", ",")} kg</strong></div><div><small>IMC</small><strong>{Number(assessmentSnapshot.result.bmi).toFixed(1).replace(".", ",")}</strong></div><div><small>Gordura corporal</small><strong>{Number(assessmentSnapshot.result.bodyFatPct).toFixed(1).replace(".", ",")}%</strong></div><div><small>Massa livre de gordura</small><strong>{Number(assessmentSnapshot.result.leanMassKg).toFixed(1).replace(".", ",")} kg</strong></div></div>{previousSnapshot ? <div className="clinical-comparison"><b>Comparação com a avaliação anterior</b><span>Peso: {((Number(latestAssessment!.weightKg)-Number(previousAssessment!.weightKg))>=0?"+":"")}{(Number(latestAssessment!.weightKg)-Number(previousAssessment!.weightKg)).toFixed(1)} kg · Gordura: {((assessmentSnapshot.result.bodyFatPct-previousSnapshot.result.bodyFatPct)>=0?"+":"")}{(assessmentSnapshot.result.bodyFatPct-previousSnapshot.result.bodyFatPct).toFixed(1)} p.p. · Massa livre: {((assessmentSnapshot.result.leanMassKg-previousSnapshot.result.leanMassKg)>=0?"+":"")}{(assessmentSnapshot.result.leanMassKg-previousSnapshot.result.leanMassKg).toFixed(1)} kg</span></div> : null}</> : <p>A primeira avaliação física será adicionada pelo nutricionista. Enquanto isso, suas fotos continuam disponíveis nesta área.</p>}
+      </section>
+
+      {assessmentSnapshot ? <details className="clinical-composition" open><summary>Composição corporal e circunferências <span>⌄</span></summary><div>{Object.entries(assessmentSnapshot.input.circumferencesCm).map(([name,value])=><span key={name}><small>{name}</small><b>{value} cm</b></span>)}</div></details> : null}
 
       <details className="nf-photo-guide">
         <summary><span>Como tirar fotos comparáveis</span><small>4 orientações rápidas</small></summary>

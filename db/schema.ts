@@ -1229,3 +1229,32 @@ export const nfDeliverySettings = sqliteTable(
     ),
   ],
 );
+
+/** Immutable clinical assessment snapshots. Payload preserves the exact inputs and formula version. */
+export const nfClinicalAssessments = sqliteTable(
+  "nf_clinical_assessments",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    publicId: text("public_id").notNull(),
+    organizationId: integer("organization_id").notNull().references(() => nfOrganizations.id, { onDelete: "restrict" }),
+    clientId: integer("client_id").notNull().references(() => clients.id, { onDelete: "restrict" }),
+    protocolCode: text("protocol_code").notNull(),
+    protocolVersion: text("protocol_version").notNull(),
+    capturedAt: text("captured_at").notNull(),
+    weightKg: text("weight_kg").notNull(),
+    heightCm: text("height_cm").notNull(),
+    bmi: text("bmi").notNull(),
+    bodyFatPct: text("body_fat_pct").notNull(),
+    fatMassKg: text("fat_mass_kg").notNull(),
+    leanMassKg: text("lean_mass_kg").notNull(),
+    snapshotJson: text("snapshot_json").notNull(),
+    contentHash: text("content_hash").notNull(),
+    createdByAuthUserId: text("created_by_auth_user_id").notNull(),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("nf_clinical_assessments_public_id_unique").on(table.publicId),
+    index("nf_clinical_assessments_client_date_idx").on(table.clientId, table.capturedAt),
+    uniqueIndex("nf_clinical_assessments_hash_unique").on(table.clientId, table.contentHash),
+  ],
+);

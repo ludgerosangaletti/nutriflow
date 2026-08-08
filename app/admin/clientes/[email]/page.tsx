@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import Link from "next/link";
 import { getDb } from "../../../../db";
-import { adjustmentRequests, anamneses, appointmentChangeRequests, checkIns, clients, goalProgress, goals, patientDocuments, progressPhotos } from "../../../../db/schema";
+import { adjustmentRequests, anamneses, appointmentChangeRequests, checkIns, clients, goalProgress, goals, patientDocuments, progressPhotos, nfClinicalAssessments } from "../../../../db/schema";
 import { requireAdmin } from "../../../supabase/server";
 import { fieldLabels, sections, type Answers } from "../../../anamnese/questions";
 import CheckInReviewButton from "./check-in-review-button";
@@ -16,6 +16,7 @@ import InPersonCareManager from "./in-person-care-manager";
 import AppointmentRequests from "./appointment-requests";
 import { canUseNutriFlowEditor, ensureNutriFlowAdminContext, getControlledHomologationSnapshot } from "../../../nutriflow/server";
 import NutriFlowHomologationPanel from "./nutriflow-homologation-panel";
+import ClinicalAssessmentForm from "./clinical-assessment-form";
 
 export const dynamic = "force-dynamic";
 
@@ -58,6 +59,7 @@ export default async function ClientAnswers({
   const patientGoals = await db.select().from(goals).where(eq(goals.clientEmail, email));
   const patientGoalProgress = await db.select().from(goalProgress).where(eq(goalProgress.clientEmail, email));
   const patientAdjustments = await db.select().from(adjustmentRequests).where(eq(adjustmentRequests.clientEmail, email));
+  const clinicalAssessments = await db.select().from(nfClinicalAssessments).where(eq(nfClinicalAssessments.clientId, row.client.id)).orderBy(asc(nfClinicalAssessments.capturedAt));
   const appointmentRequests = row.client.modality === "in_person"
     ? await db
         .select()
@@ -200,6 +202,11 @@ export default async function ClientAnswers({
             />
           </div>
         ) : null}
+        {isInPerson ? <details className="response-section clinical-assessments-section" id="avaliacoes" open>
+          <summary className="admin-section-summary"><div><p className="section-kicker">Linha do tempo clínica</p><h2>Avaliações físicas</h2></div><strong>{clinicalAssessments.length} registro(s)</strong><i aria-hidden="true">⌄</i></summary>
+          <ClinicalAssessmentForm email={row.client.email} />
+          {clinicalAssessments.length ? <div className="clinical-assessment-history">{clinicalAssessments.toReversed().map((a) => { const s=JSON.parse(a.snapshotJson) as { result:{bodyFatPct:number;leanMassKg:number;bmi:number}; input:{circumferencesCm:Record<string,number>} }; return <article key={a.id}><strong>{new Intl.DateTimeFormat("pt-BR").format(new Date(a.capturedAt))}</strong><span>{a.protocolCode} · IMC {Number(s.result.bmi).toFixed(1)} · {Number(s.result.bodyFatPct).toFixed(1)}% gordura · {Number(s.result.leanMassKg).toFixed(1)} kg massa livre</span><small>{Object.entries(s.input.circumferencesCm).map(([k,v])=>`${k}: ${v} cm`).join(" · ")}</small></article>; })}</div> : <p>Nenhuma avaliação física registrada.</p>}
+        </details> : null}
         {!isInPerson ? <details className="response-section admin-charts-section">
           <summary className="admin-section-summary">
             <div><p className="section-kicker">Evolução em gráficos</p><h2>Visão clínica do período</h2></div>
