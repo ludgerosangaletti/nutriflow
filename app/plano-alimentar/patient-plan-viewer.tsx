@@ -21,6 +21,16 @@ function macroLabel(macros?: { energyKcal?: number | null; protein?: number | nu
   return parts.length ? parts.join(" · ") : null;
 }
 
+function sumMacros(entries: readonly { macros?: { energyKcal?: number | null; protein?: number | null; carbohydrate?: number | null; fat?: number | null; fiber?: number | null } | null }[]) {
+  const keys = ["energyKcal", "protein", "carbohydrate", "fat", "fiber"] as const;
+  return Object.fromEntries(keys.map((key) => [
+    key,
+    entries.some((entry) => entry.macros?.[key] != null)
+      ? entries.reduce((total, entry) => total + Number(entry.macros?.[key] ?? 0), 0)
+      : null,
+  ]));
+}
+
 function shortDate(value: string) {
   return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" }).format(new Date(value));
 }
@@ -44,11 +54,12 @@ function WeightTrend({ values }: { values: PatientPortalV1["weightEvolution"] })
 }
 
 export default function PatientPlanViewer({ portal }: { portal: PatientPortalV1 }) {
-  const [selectedDayId, setSelectedDayId] = useState(portal.plan?.days[0]?.publicId ?? null);
+  const [selectedStrategyId, setSelectedStrategyId] = useState(portal.plan?.days[0]?.publicId ?? null);
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
   const [collapsedMeals, setCollapsedMeals] = useState<Record<string, boolean>>({});
   const [doneMeals, setDoneMeals] = useState<Record<string, boolean>>({});
-  const selectedDay = useMemo(() => portal.plan?.days.find((day) => day.publicId === selectedDayId) ?? portal.plan?.days[0] ?? null, [portal.plan, selectedDayId]);
+  const selectedStrategy = useMemo(() => portal.plan?.days.find((strategy) => strategy.publicId === selectedStrategyId) ?? portal.plan?.days[0] ?? null, [portal.plan, selectedStrategyId]);
+  const strategyMacros = useMemo(() => selectedStrategy ? sumMacros(selectedStrategy.meals) : null, [selectedStrategy]);
 
   useEffect(() => {
     if (!portal.plan?.publicationPublicId) return;
@@ -85,26 +96,28 @@ export default function PatientPlanViewer({ portal }: { portal: PatientPortalV1 
     });
   }
 
-  const completedInDay = selectedDay?.meals.filter((meal) => doneMeals[meal.publicId]).length ?? 0;
-  const nextMealId = selectedDay?.meals.find((meal) => !doneMeals[meal.publicId])?.publicId;
+  const completedInStrategy = selectedStrategy?.meals.filter((meal) => doneMeals[meal.publicId]).length ?? 0;
+  const nextMealId = selectedStrategy?.meals.find((meal) => !doneMeals[meal.publicId])?.publicId;
 
-  return <div className="nf-patient-dashboard nf-plan-v2">
+  return <div className="nf-patient-dashboard nf-plan-v2 nf-plan-v3">
     {portal.plan ? <>
-      <section className="nf-day-context">
-        <div><p className="section-kicker">Seu plano alimentar</p><h1>Escolha o dia que combina com sua rotina.</h1><p>Os dias podem ser consultados de forma simples. Siga a orientação combinada com Ludgero.</p></div>
-        <span>v{portal.plan.versionNumber} · {shortDate(portal.plan.publishedAt)}</span>
+      <section className="nf-strategy-hero">
+        <div><p className="section-kicker">Seu plano alimentar</p><h1>{portal.plan.title}</h1><p>Escolha a estratégia orientada para o seu momento e consulte as refeições com facilidade.</p></div>
+        <span>Atualizado em {shortDate(portal.plan.publishedAt)}</span>
       </section>
 
-      {portal.plan.macros ? <section className="nf-plan-macros" aria-label="Resumo nutricional diário"><span>Resumo diário</span><strong>{macroLabel(portal.plan.macros)}</strong><a className="button button-dark" href="/api/nutriflow/v1/plan-pdf" target="_blank" rel="noreferrer">Imprimir / salvar PDF</a></section> : null}
+      <section className="nf-strategy-picker">
+        <div><span>Estratégias disponíveis</span><small>{portal.plan.days.length === 1 ? "1 estratégia" : `${portal.plan.days.length} estratégias`}</small></div>
+        <nav aria-label="Estratégias do plano alimentar">
+          {portal.plan.days.map((strategy, index) => <button className={strategy.publicId === selectedStrategy?.publicId ? "is-active" : ""} key={strategy.publicId} type="button" aria-pressed={strategy.publicId === selectedStrategy?.publicId} onClick={() => setSelectedStrategyId(strategy.publicId)}><small>{String(index + 1).padStart(2, "0")}</small><strong>{strategy.label}</strong><span>{strategy.meals.length} {strategy.meals.length === 1 ? "refeição" : "refeições"}</span></button>)}
+        </nav>
+      </section>
 
-      <nav className="nf-patient-days" aria-label="Dias do plano">
-        {portal.plan.days.map((day) => <button className={day.publicId === selectedDay?.publicId ? "is-active" : ""} key={day.publicId} type="button" onClick={() => setSelectedDayId(day.publicId)}><strong>{day.label}</strong><span className="nf-day-dots" aria-label={`${day.meals.filter((meal) => doneMeals[meal.publicId]).length} de ${day.meals.length} refeições marcadas`}>{day.meals.map((meal) => <i className={doneMeals[meal.publicId] ? "is-done" : ""} key={meal.publicId} />)}</span></button>)}
-      </nav>
-
-      {selectedDay ? <section className="nf-patient-day">
-        <header className="nf-day-progress"><div><span>{selectedDay.label}</span><h2>{completedInDay === selectedDay.meals.length && selectedDay.meals.length ? "Dia organizado" : "Seu roteiro do dia"}</h2></div><p>{completedInDay} de {selectedDay.meals.length}</p><div className="nf-day-progress-track"><i style={{ width: `${selectedDay.meals.length ? (completedInDay / selectedDay.meals.length) * 100 : 0}%` }} /></div></header>
+      {selectedStrategy ? <section className="nf-patient-day nf-strategy-plan">
+        <header className="nf-strategy-summary"><div><span>Estratégia selecionada</span><h2>{selectedStrategy.label}</h2><p>{completedInStrategy ? `${completedInStrategy} de ${selectedStrategy.meals.length} refeições marcadas neste aparelho` : `${selectedStrategy.meals.length} refeições organizadas para esta estratégia`}</p></div><a href="/api/nutriflow/v1/plan-pdf" target="_blank" rel="noreferrer">PDF <span aria-hidden="true">↗</span></a>{macroLabel(strategyMacros) ? <strong>{macroLabel(strategyMacros)}</strong> : null}</header>
         <div className="nf-patient-meals">
-          {selectedDay.meals.map((meal) => <article className={`nf-patient-meal ${doneMeals[meal.publicId] ? "is-done" : ""} ${meal.publicId === nextMealId ? "is-next" : ""}`} key={meal.publicId}>
+          {selectedStrategy.meals.map((meal, mealIndex) => <article className={`nf-patient-meal ${doneMeals[meal.publicId] ? "is-done" : ""} ${meal.publicId === nextMealId ? "is-next" : ""}`} key={meal.publicId}>
+            <span className="nf-strategy-meal-index" aria-hidden="true">{String(mealIndex + 1).padStart(2, "0")}</span>
             <header className="nf-meal-toggle-header"><button type="button" className="nf-meal-toggle" aria-expanded={!collapsedMeals[meal.publicId]} onClick={() => setCollapsedMeals((current) => ({ ...current, [meal.publicId]: !current[meal.publicId] }))}><span>{meal.publicId === nextMealId ? "Próxima · " : ""}{meal.scheduledTime || "Horário flexível"}</span><h3>{meal.title}</h3></button><button type="button" className={`nf-meal-mark ${doneMeals[meal.publicId] ? "is-done" : ""}`} aria-pressed={Boolean(doneMeals[meal.publicId])} aria-label={`${doneMeals[meal.publicId] ? "Desmarcar" : "Marcar"} ${meal.title} como realizada`} onClick={() => toggleDone(meal.publicId)}>{doneMeals[meal.publicId] ? "✓" : ""}</button><button type="button" className="nf-meal-chevron" aria-label={collapsedMeals[meal.publicId] ? `Expandir ${meal.title}` : `Recolher ${meal.title}`} onClick={() => setCollapsedMeals((current) => ({ ...current, [meal.publicId]: !current[meal.publicId] }))}>{collapsedMeals[meal.publicId] ? "＋" : "−"}</button></header>
             {!collapsedMeals[meal.publicId] ? <>
             {macroLabel(meal.macros) ? <div className="nf-meal-macros" aria-label="Macronutrientes da refeição">{macroLabel(meal.macros)}</div> : null}
@@ -118,7 +131,7 @@ export default function PatientPlanViewer({ portal }: { portal: PatientPortalV1 
             </> : <p className="nf-meal-collapsed-summary">{meal.items.length} {meal.items.length === 1 ? "item" : "itens"} · toque para abrir</p>}
           </article>)}
         </div>
-        <p className="nf-device-progress-note">As marcações servem apenas para organizar seu dia neste aparelho. Não são usadas para avaliar sua adesão.</p>
+        <p className="nf-device-progress-note">As marcações servem apenas para organizar sua rotina neste aparelho. Não são usadas para avaliar sua adesão.</p>
       </section> : null}
 
       {portal.plan.patientNotes.length ? <section className="nf-patient-notes"><span>Orientações importantes</span>{portal.plan.patientNotes.map((note, index) => <p key={`${index}-${note.slice(0, 16)}`}>{note}</p>)}</section> : null}

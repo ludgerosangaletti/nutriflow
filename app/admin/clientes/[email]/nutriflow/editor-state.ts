@@ -50,7 +50,7 @@ export function addDay(draft: FoodPlanDraftV1, publicId = editorId("day")) {
   const index = draft.content.days.length;
   return updateContent(draft, {
     ...draft.content,
-    days: [...draft.content.days, { publicId, label: `Dia ${index + 1}`, dayIndex: index + 1, sortOrder: index }],
+    days: [...draft.content.days, { publicId, label: `Estratégia ${index + 1}`, dayIndex: index + 1, sortOrder: index }],
   });
 }
 
