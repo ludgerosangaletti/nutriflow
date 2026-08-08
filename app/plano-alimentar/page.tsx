@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
 import { requirePatient } from "../supabase/server";
 import {
   canUseNutriFlowPatientPortal,
@@ -14,7 +13,9 @@ export const dynamic = "force-dynamic";
 export default async function StructuredFoodPlanPage() {
   const user = await requirePatient("/plano-alimentar");
   const context = await resolveNutriFlowPatientContext(user.id);
-  if (!context || !(await canUseNutriFlowPatientPortal(context))) notFound();
+  if (!context || !(await canUseNutriFlowPatientPortal(context))) {
+    return <PatientShell><main className="portal-shell nutriflow-patient-page nf-experience-page"><section className="nf-plan-pending"><p className="section-kicker">Plano alimentar</p><h1>Seu plano está em desenvolvimento.</h1><p>Seu nutricionista está organizando sua estratégia alimentar com cuidado. Assim que a versão for publicada, ela aparecerá aqui automaticamente.</p><Link className="button button-dark" href="/area-cliente">Voltar ao início</Link></section></main></PatientShell>;
+  }
   const portal = await createNutriFlowPatientRuntime().getPortal.execute({
     actor: context.actor,
     organizationId: context.organizationId,
