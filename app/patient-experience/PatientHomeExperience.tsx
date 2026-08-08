@@ -12,6 +12,7 @@ type Props = {
   documentsCount: number;
   checkInsCount: number;
   checkInDone: boolean;
+  checkInAvailable?: boolean;
   nextAppointment?: Date | null;
   appointmentLocation?: string | null;
   currentProtocol?: boolean;
@@ -22,7 +23,7 @@ function firstName(name: string) { return name.trim().split(/\s+/)[0] || "Pacien
 
 export function PatientHomeExperience({
   name, modality, planLabel, active, action, structuredPlanEnabled, documentsCount,
-  checkInsCount, checkInDone, nextAppointment, appointmentLocation, currentProtocol, photosCount = 0,
+  checkInsCount, checkInDone, checkInAvailable = false, nextAppointment, appointmentLocation, currentProtocol, photosCount = 0,
 }: Props) {
   const today = new Intl.DateTimeFormat("pt-BR", { weekday: "long", day: "numeric", month: "long" }).format(new Date());
   const appointment = nextAppointment
@@ -48,7 +49,7 @@ export function PatientHomeExperience({
       <div className="nf-home-section-title"><span>Acessos rápidos</span><small>O que você precisa agora?</small></div>
       <section className="nf-home-links nf-home-links-grid" aria-label="Recursos principais">
         {structuredPlanEnabled ? <Link className="is-primary" href="/plano-alimentar"><i aria-hidden="true">◐</i><span>Plano alimentar<small>Refeições do dia</small></span><b>→</b></Link> : null}
-        <Link href="/check-in"><i aria-hidden="true">✓</i><span>Check-in<small>{checkInDone ? "Enviado nesta semana" : "Disponível agora"}</small></span><b>→</b></Link>
+        <Link href="/check-in"><i aria-hidden="true">✓</i><span>Check-in<small>{checkInDone ? "Enviado nesta semana" : checkInAvailable ? "Disponível hoje" : "Abre na segunda-feira"}</small></span><b>→</b></Link>
         <Link href="/documentos"><i aria-hidden="true">□</i><span>Documentos<small>{documentsCount ? `${documentsCount} disponível(is)` : "Protocolos e avaliações"}</small></span><b>→</b></Link>
         <Link href="/evolucao"><i aria-hidden="true">↗</i><span>Evolução<small>{photosCount ? `${photosCount} foto(s)` : "Registro opcional"}</small></span><b>→</b></Link>
       </section>

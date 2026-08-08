@@ -8488,6 +8488,44 @@ button:disabled {
 .nf-evolution-redesign .evolution-photo-comparison-pair .is-placeholder > div { display:grid; place-items:center; color:#7c7870; font-size:1.2rem; }
 .nf-evolution-redesign .evolution-photo-comparison-pair figcaption { margin-top:7px; color:#67645e; font-size:.64rem; text-align:center; text-transform:capitalize; }
 
+/* Check-in semanal — uma pergunta por vez, sem ações ambíguas */
+.nf-checkin-intro > span.is-waiting { background:#eceae3; color:#64615a; }
+.nf-checkin-v2 .checkin-form-section { margin:0; padding:0 !important; border:0 !important; border-radius:0 !important; background:transparent !important; }
+.nf-checkin-v2 .nf-checkin-flow { width:100%; max-width:520px; margin:0 auto; border:1px solid #d8d6ce; border-radius:22px; background:#fff; box-shadow:none; }
+.nf-checkin-v2 .nf-checkin-progress { display:grid; gap:12px; padding:18px 18px 0; background:#fff; color:#111; }
+.nf-checkin-v2 .nf-checkin-progress > div:first-child { display:flex; align-items:center; justify-content:space-between; color:#66625b; font-size:.67rem; font-weight:900; letter-spacing:.09em; text-transform:uppercase; }
+.nf-checkin-v2 .nf-checkin-progress > div:first-child button { border:0; background:transparent; color:#6e6a63; font:inherit; font-size:.72rem; font-weight:700; letter-spacing:0; text-transform:none; cursor:pointer; }
+.nf-checkin-progress-steps { display:grid !important; grid-template-columns:repeat(11,minmax(0,1fr)); gap:4px; }
+.nf-checkin-progress-steps i { height:3px; border-radius:99px; background:#deddd7; }
+.nf-checkin-progress-steps i.is-complete { background:#111; }
+.nf-checkin-v2 .nf-checkin-slide { min-height:240px; padding:20px 18px 14px; align-content:start; }
+.nf-checkin-v2 .nf-checkin-slide label,
+.nf-checkin-v2 .nf-checkin-slide fieldset { gap:12px; }
+.nf-checkin-v2 .nf-checkin-slide label > span,
+.nf-checkin-v2 .nf-checkin-slide legend { font-size:1.28rem; line-height:1.08; }
+.nf-checkin-v2 .nf-checkin-slide label > p,
+.nf-checkin-v2 .nf-checkin-slide fieldset > p { font-size:.78rem; line-height:1.45; }
+.nf-checkin-v2 .field-with-suffix { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:10px; align-items:center; }
+.nf-checkin-v2 .field-with-suffix input { min-width:0; height:55px; padding:0 14px !important; font-size:1.35rem !important; font-weight:850; }
+.nf-checkin-v2 .field-with-suffix b { color:#6b6861; font-size:.75rem; }
+.nf-checkin-v2 .nf-scale-buttons { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:7px; }
+.nf-checkin-v2 .nf-scale-buttons button { min-width:0; height:48px; border:1px solid #d8d6cf; border-radius:12px; background:#fff; color:#111; font-weight:900; cursor:pointer; }
+.nf-checkin-v2 .nf-scale-buttons button.is-selected { border-color:#111; background:#111; color:#fff; }
+.nf-checkin-v2 .nf-scale-labels { display:flex; justify-content:space-between; gap:12px; color:#77736c; font-size:.66rem; }
+.nf-checkin-v2 .nf-scale-labels span:last-child { text-align:right; }
+.nf-checkin-v2 .nf-range-question output { justify-self:start; padding:6px 9px; border-radius:999px; background:#f0efe9; color:#56534d; font-size:.68rem; font-weight:800; }
+.nf-checkin-v2 .nf-checkin-actions { display:block; padding:0 18px 18px; }
+.nf-checkin-v2 .nf-flow-next { width:100%; min-height:48px; border-radius:12px; }
+.nf-checkin-v2 .nf-choice-question button { min-height:44px; }
+.nf-checkin-v2 .checkin-message { margin:0 18px 18px; }
+
+@media (max-width:520px) {
+  .nf-checkin-v2 .nf-checkin-intro { align-items:flex-start; }
+  .nf-checkin-v2 .nf-checkin-intro > span { flex:0 0 auto; }
+  .nf-checkin-v2 .nf-checkin-flow { border-radius:18px; }
+  .nf-checkin-v2 .nf-checkin-slide { min-height:225px; }
+}
+
 @media (max-width:520px) {
   .nf-evolution-redesign .evolution-photo-register,
   .nf-evolution-redesign .evolution-photo-comparison { border-radius:18px; padding:14px; }

@@ -23,6 +23,7 @@ import {
 import AccessCountdown from "./access-countdown";
 import { PatientShell } from "../patient-experience/shell/PatientShell";
 import { PatientHomeExperience } from "../patient-experience/PatientHomeExperience";
+import { isWeeklyCheckInAvailable } from "../check-in/availability";
 
 export const dynamic = "force-dynamic";
 
@@ -100,6 +101,7 @@ export default async function ClientArea() {
     ]);
 
   const active = hasActiveAccess(client);
+  const checkInAvailableToday = isWeeklyCheckInAvailable();
   const currentDocuments = documents.filter((document) => document.isCurrent);
   const nutriFlowContext = await resolveNutriFlowPatientContext(user.id);
   const structuredPlanPublished = Boolean((await db
@@ -169,7 +171,7 @@ export default async function ClientArea() {
           button: "Ver documentos",
         };
       }
-      if (!checkInDoneThisWeek) {
+      if (!checkInDoneThisWeek && checkInAvailableToday) {
         return {
           eyebrow: patientCheckIns.length ? "Ação desta semana" : "Acompanhamento",
           title: patientCheckIns.length
@@ -208,6 +210,7 @@ export default async function ClientArea() {
           documentsCount={currentDocuments.length}
           checkInsCount={patientCheckIns.length}
           checkInDone={checkInDoneThisWeek}
+          checkInAvailable={checkInAvailableToday}
           nextAppointment={nextAppointment}
           appointmentLocation={client.appointmentLocation}
           currentProtocol={Boolean(currentProtocol || structuredPlanPublished)}
@@ -307,11 +310,11 @@ export default async function ClientArea() {
               <b>Ver avaliação →</b>
             </Link>
             <Link
-              className={`patient-feature-card ${!checkInDoneThisWeek ? "is-priority" : ""}`}
+              className={`patient-feature-card ${!checkInDoneThisWeek && checkInAvailableToday ? "is-priority" : ""}`}
               href="/check-in"
             >
               <span>03 · Check-in periódico</span>
-              <strong>{checkInDoneThisWeek ? "Enviado nesta semana" : "Disponível"}</strong>
+              <strong>{checkInDoneThisWeek ? "Enviado nesta semana" : checkInAvailableToday ? "Disponível hoje" : "Abre na segunda-feira"}</strong>
               <p>{patientCheckIns.length} check-in(s) registrado(s).</p>
               <b>Acessar check-in →</b>
             </Link>
@@ -462,7 +465,7 @@ export default async function ClientArea() {
         button: "Ver resposta",
       };
     }
-    if (!checkInDoneThisWeek) {
+    if (!checkInDoneThisWeek && checkInAvailableToday) {
       return {
         eyebrow: patientCheckIns.length ? "Ação desta semana" : "Comece o acompanhamento",
         title: patientCheckIns.length ? "Envie seu check-in semanal" : "Faça seu primeiro check-in",
@@ -501,6 +504,7 @@ export default async function ClientArea() {
         documentsCount={currentDocuments.length}
         checkInsCount={patientCheckIns.length}
         checkInDone={checkInDoneThisWeek}
+        checkInAvailable={checkInAvailableToday}
         currentProtocol={protocolAvailable}
         photosCount={photos.length}
       />
@@ -637,9 +641,9 @@ export default async function ClientArea() {
                 <p>Acesse sua estratégia alimentar e os materiais auxiliares.</p>
                 <b>Abrir documentos →</b>
               </Link>
-              <Link className={`patient-feature-card ${!checkInDoneThisWeek ? "is-priority" : ""}`} href="/check-in">
+              <Link className={`patient-feature-card ${!checkInDoneThisWeek && checkInAvailableToday ? "is-priority" : ""}`} href="/check-in">
                 <span>02 · Check-in semanal</span>
-                <strong>{checkInDoneThisWeek ? "Enviado nesta semana" : "Preenchimento pendente"}</strong>
+                <strong>{checkInDoneThisWeek ? "Enviado nesta semana" : checkInAvailableToday ? "Disponível hoje" : "Abre na segunda-feira"}</strong>
                 <p>{patientCheckIns.length} check-in(s) registrado(s) no acompanhamento.</p>
                 <b>Acessar check-in →</b>
               </Link>
