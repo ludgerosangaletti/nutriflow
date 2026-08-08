@@ -60,6 +60,9 @@ test("Sprint 5 maps the immutable publication into a mobile/app-ready patient co
   assert.equal(portal.apiVersion, "v1");
   assert.equal(portal.plan?.days[0].meals[0].items[0].recipe?.instructions, "Misture e grelhe.");
   assert.equal(portal.plan?.days[0].meals[0].substitutions[0].options[0].displayName, "Pão integral");
+  assert.equal(portal.plan?.days[0].meals[0].substitutions[0].mealItemPublicId, "item_01");
+  assert.equal(portal.plan?.days[0].meals[0].substitutions[0].options[0].unit.label, "fatias");
+  assert.equal(portal.plan?.days[0].meals[0].nutritionComplete, false);
   assert.equal(portal.plan?.patientNotes[0], "Leve água para o treino.");
   assert.equal(portal.physicalAssessment.available, true);
   assert.equal(portal.weightEvolution[0].weightKg, 82.4);

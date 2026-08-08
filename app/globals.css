@@ -8603,3 +8603,78 @@ button:disabled {
   .nf-evolution-redesign .evolution-detail-grid{grid-template-columns:1fr 1fr}
   .nf-evolution-redesign .evolution-care-message,.nf-evolution-redesign .evolution-delta,.nf-evolution-redesign .evolution-photos,.nf-evolution-redesign .evolution-history{padding:14px}
 }
+
+/* Patient plan v4 — content-first, based on the approved clinical UX handoff.
+   It intentionally hides item/meal macro accounting and keeps only a discreet
+   strategy summary. Existing selectors remain untouched for rollback safety. */
+.nf-plan-v4{width:100%;max-width:760px;display:grid;gap:12px;overflow:visible}
+.nf-plan-v4>*{min-width:0;box-sizing:border-box}
+.nf-strategy-picker-compact{padding:0 0 2px}
+.nf-plan-content-v4{display:grid;gap:11px}
+.nf-plan-header-v4{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;padding:22px;border:1px solid #d9d7cf;border-radius:22px;background:linear-gradient(145deg,#fffde3,#f7f2cc)}
+.nf-plan-header-v4>div{min-width:0}
+.nf-plan-header-v4 h1{max-width:520px;margin:6px 0 7px;overflow-wrap:anywhere;font-size:clamp(1.75rem,6vw,3.25rem);line-height:.95;letter-spacing:-.055em}
+.nf-plan-header-v4>div>p:last-child{max-width:500px;margin:0;color:#5e5b54;font-size:.82rem;line-height:1.45}
+.nf-plan-header-v4 aside{flex:0 0 auto;display:grid;justify-items:end;gap:9px;text-align:right}
+.nf-plan-header-v4 aside span{color:#67645e;font-size:.65rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em}
+.nf-plan-header-v4 aside a{padding:9px 11px;border-radius:10px;background:#111;color:#fff;font-size:.7rem;font-weight:850;text-decoration:none}
+.nf-patient-meals-v4{display:grid;gap:10px}
+.nf-meal-card-v4{overflow:hidden;border:1px solid #dcdad2;border-radius:22px;background:#fff}
+.nf-meal-card-v4.is-next{border-color:#d8c900;background:#fffef1}
+.nf-meal-card-v4.is-done{border-style:dashed;background:transparent}
+.nf-meal-card-v4>header{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:16px 17px 10px}
+.nf-meal-card-v4>header>div{min-width:0}
+.nf-meal-card-v4>header span{display:block;color:#6a675f;font-size:.63rem;font-weight:900;letter-spacing:.09em;text-transform:uppercase}
+.nf-meal-card-v4.is-next>header span{color:#8a7600}
+.nf-meal-card-v4>header h2{margin:5px 0 0;overflow-wrap:anywhere;font-size:1.08rem;line-height:1.15;letter-spacing:-.02em}
+.nf-meal-card-v4.is-done>header h2{text-decoration:line-through;opacity:.48}
+.nf-meal-mark-v4{display:grid;place-items:center;min-width:44px;width:44px;height:44px;flex:0 0 44px;border:1.5px solid rgba(10,10,10,.28);border-radius:50%;background:transparent;color:#ffea00;font-size:1rem;font-weight:900;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.nf-meal-mark-v4[aria-pressed=true]{border-color:#111;background:#111}
+.nf-food-list-v4{padding:0 17px 7px}
+.nf-food-row-v4{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 14px;align-items:baseline;border-top:1px solid rgba(10,10,10,.08);padding:11px 0}
+.nf-food-row-v4>div{min-width:0}
+.nf-food-row-v4 strong{display:block;overflow-wrap:anywhere;font-size:.91rem;line-height:1.35}
+.nf-food-row-v4>div>small{display:block;margin-top:3px;color:#6c6961;font-size:.72rem;line-height:1.4}
+.nf-food-row-v4>b{color:#4d4a44;font-size:.75rem;white-space:nowrap}
+.nf-swap-applied{color:#725f00!important;font-weight:750}
+.nf-food-actions-v4{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:6px}
+.nf-food-actions-v4>button,.nf-food-actions-v4 summary{border:0;background:transparent;color:#151515;font:inherit;font-size:.72rem;font-weight:850;text-decoration:underline;text-underline-offset:3px;cursor:pointer;padding:2px 0}
+.nf-food-actions-v4 details{max-width:100%}
+.nf-food-actions-v4 details p{margin:8px 0 0;padding:10px;border-radius:10px;background:#f4f3ec;color:#55524c;font-size:.73rem;line-height:1.45}
+.nf-meal-guidance-v4{margin:2px 17px 15px;padding:11px 12px;border-left:3px solid #ffe600;background:#fffce5}
+.nf-meal-guidance-v4 span{color:#756900;font-size:.61rem;font-weight:900;letter-spacing:.08em;text-transform:uppercase}
+.nf-meal-guidance-v4 p{margin:4px 0 0;color:#504c36;font-size:.78rem;line-height:1.45}
+.nf-plan-footer-v4{display:grid;grid-template-columns:minmax(0,1fr) minmax(180px,.65fr);gap:14px;align-items:end;padding:16px 18px;border-radius:18px;background:#111;color:#fff}
+.nf-plan-footer-v4 span{display:block;color:#ffea00;font-size:.62rem;font-weight:900;letter-spacing:.09em;text-transform:uppercase}
+.nf-plan-footer-v4 strong{display:block;margin-top:6px;color:#e8e5dc;font-size:.72rem;line-height:1.55}
+.nf-plan-footer-v4 p{margin:0;color:#aaa69d;font-size:.68rem;line-height:1.45}
+body.nf-sheet-open{overflow:hidden}
+.nf-swap-backdrop{position:fixed;inset:0;z-index:1000;display:flex;align-items:flex-end;justify-content:center;background:rgba(8,8,7,.58);backdrop-filter:blur(3px);padding:14px}
+.nf-swap-sheet{width:min(620px,100%);max-height:min(82svh,760px);overflow:auto;border-radius:24px 24px 18px 18px;background:#fff;padding:20px;box-shadow:0 -20px 70px rgba(0,0,0,.25);animation:nf-sheet-enter .22s ease-out}
+@keyframes nf-sheet-enter{from{transform:translateY(24px);opacity:.6}to{transform:none;opacity:1}}
+.nf-swap-sheet>header{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}
+.nf-swap-sheet>header span{color:#6a675f;font-size:.62rem;font-weight:900;letter-spacing:.09em;text-transform:uppercase}
+.nf-swap-sheet h3{margin:5px 0 0;font-size:1.35rem;letter-spacing:-.035em}
+.nf-swap-sheet>header button{display:grid;place-items:center;min-width:44px;width:44px;height:44px;border:1px solid #dedbd3;border-radius:50%;background:#f5f4ee;font-size:1.4rem;cursor:pointer}
+.nf-swap-sheet>p{margin:12px 0 17px;color:#64615a;font-size:.82rem;line-height:1.45}
+.nf-swap-group{display:grid;gap:7px;margin-top:13px}
+.nf-swap-group h4{margin:0;font-size:.78rem;text-transform:uppercase;letter-spacing:.06em}
+.nf-swap-group>small{color:#6e6b64;font-size:.72rem}
+.nf-swap-group>button{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;min-height:58px;border:1px solid #dedbd3;border-radius:14px;background:#faf9f4;color:#171715;text-align:left;padding:11px 13px;cursor:pointer}
+.nf-swap-group>button.is-selected{border-color:#111;background:#fffde1;box-shadow:inset 0 0 0 1px #111}
+.nf-swap-group button span{min-width:0}
+.nf-swap-group button strong,.nf-swap-group button small{display:block;overflow-wrap:anywhere}
+.nf-swap-group button strong{font-size:.84rem}
+.nf-swap-group button small{margin-top:3px;color:#6b6861;font-size:.68rem}
+.nf-swap-group button b{flex:0 0 auto;font-size:.72rem;white-space:nowrap}
+.nf-swap-cancel{width:100%;min-height:46px;margin-top:16px;border:0;border-radius:12px;background:#111;color:#fff;font-weight:850;cursor:pointer}
+
+@media(max-width:620px){
+  .nf-plan-v4{gap:8px}
+  .nf-plan-header-v4{display:grid;padding:18px;border-radius:18px}
+  .nf-plan-header-v4 aside{justify-items:start;text-align:left}
+  .nf-plan-header-v4 h1{font-size:2.15rem}
+  .nf-plan-footer-v4{grid-template-columns:1fr}
+  .nf-swap-backdrop{padding:0}
+  .nf-swap-sheet{border-radius:24px 24px 0 0;padding:18px 16px max(20px,env(safe-area-inset-bottom))}
+}

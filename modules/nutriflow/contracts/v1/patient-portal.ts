@@ -31,6 +31,8 @@ export type PatientPortalItemV1 = Readonly<{
 
 export type PatientPortalSubstitutionV1 = Readonly<{
   publicId: string;
+  /** Item da refeição ao qual esta troca pertence. Campo aditivo do contrato v1. */
+  mealItemPublicId: string | null;
   title: string;
   notes: string | null;
   options: readonly Readonly<{
@@ -51,6 +53,8 @@ export type PatientPortalMealV1 = Readonly<{
   substitutions: readonly PatientPortalSubstitutionV1[];
   /** Optional total calculated from the published snapshot. */
   macros?: PatientPortalItemV1["macros"];
+  /** False when the total would represent only part of the prescribed items. */
+  nutritionComplete: boolean;
 }>;
 
 export type PatientPortalDayV1 = Readonly<{

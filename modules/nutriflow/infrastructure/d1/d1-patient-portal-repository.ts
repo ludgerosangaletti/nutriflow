@@ -72,6 +72,7 @@ function portalItem(item: PublishedFoodPlanSnapshotV1["meals"][number]["items"][
 function substitution(group: PublishedFoodPlanSnapshotV1["meals"][number]["substitutions"][number]): PatientPortalSubstitutionV1 {
   return Object.freeze({
     publicId: group.publicId,
+    mealItemPublicId: group.mealItemPublicId,
     title: group.title,
     notes: group.notes,
     options: Object.freeze(group.options.map((option) => Object.freeze({
@@ -107,6 +108,10 @@ function planFrom(row: PublicationRow, snapshot: PublishedFoodPlanSnapshotV1): P
           items: Object.freeze(meal.items.toSorted((left, right) => left.sortOrder - right.sortOrder).map(portalItem)),
           substitutions: Object.freeze(meal.substitutions.toSorted((left, right) => left.sortOrder - right.sortOrder).map(substitution)),
           macros: (meal as typeof meal & { macros?: PatientPortalMealV1["macros"] }).macros ?? null,
+          nutritionComplete: meal.items.length > 0 && meal.items.every((item) => {
+            const macros = (item as typeof item & { macros?: PatientPortalItemV1["macros"] }).macros;
+            return macros?.energyKcal != null;
+          }),
         }))),
     }));
   const planMeals = days.flatMap((day) => day.meals);
