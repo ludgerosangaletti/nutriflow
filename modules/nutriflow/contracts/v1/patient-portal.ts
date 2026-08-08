@@ -20,6 +20,7 @@ export type PatientPortalItemV1 = Readonly<{
     protein?: number | null;
     carbohydrate?: number | null;
     fat?: number | null;
+    fiber?: number | null;
   }> | null;
   recipe: Readonly<{
     publicId: string;
@@ -69,6 +70,7 @@ export type PatientPortalPlanV1 = Readonly<{
   publishedAt: string;
   notes: string | null;
   patientNotes: readonly string[];
+  macros?: Readonly<{ energyKcal?: number | null; protein?: number | null; carbohydrate?: number | null; fat?: number | null; fiber?: number | null }> | null;
   days: readonly PatientPortalDayV1[];
 }>;
 

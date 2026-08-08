@@ -157,6 +157,44 @@ export function updateItem(draft: FoodPlanDraftV1, mealPublicId: string, itemPub
   return updateContent(draft, { ...draft.content, meals: draft.content.meals.map((meal) => meal.publicId === mealPublicId ? { ...meal, items: meal.items.map((item) => item.publicId === itemPublicId ? { ...item, ...patch, publicId: item.publicId } : item) } : meal) });
 }
 
+export function addSubstitutionGroup(draft: FoodPlanDraftV1, mealPublicId: string, itemPublicId: string) {
+  return updateContent(draft, { ...draft.content, meals: draft.content.meals.map((meal) => {
+    if (meal.publicId !== mealPublicId) return meal;
+    const item = meal.items.find((candidate) => candidate.publicId === itemPublicId);
+    if (!item) return meal;
+    const groups = meal.substitutions ?? [];
+    if (groups.some((group) => group.mealItemPublicId === itemPublicId)) return meal;
+    return { ...meal, substitutions: [...groups, { publicId: editorId("item"), mealItemPublicId: itemPublicId, title: `Opções para ${item.displayName}`, ruleCode: "choose_one" as const, notes: null, sortOrder: groups.length, options: [{ ...item, publicId: editorId("item"), notes: "Opção principal" }] }] };
+  }) });
+}
+
+export function addSubstitutionOption(draft: FoodPlanDraftV1, mealPublicId: string, groupPublicId: string) {
+  return updateContent(draft, { ...draft.content, meals: draft.content.meals.map((meal) => {
+    if (meal.publicId !== mealPublicId) return meal;
+    return { ...meal, substitutions: (meal.substitutions ?? []).map((group) => {
+      if (group.publicId !== groupPublicId) return group;
+      return { ...group, options: [...group.options, { publicId: editorId("item"), source: { type: "manual" as const, publicId: null, revisionNumber: null }, displayName: "Nova opção", quantityMilli: 1000, unit: NUTRIFLOW_UNITS[0], preparation: null, notes: null, sortOrder: group.options.length }] };
+    }) };
+  }) });
+}
+
+export function removeSubstitutionOption(draft: FoodPlanDraftV1, mealPublicId: string, groupPublicId: string, optionPublicId: string) {
+  return updateContent(draft, { ...draft.content, meals: draft.content.meals.map((meal) => {
+    if (meal.publicId !== mealPublicId) return meal;
+    return { ...meal, substitutions: (meal.substitutions ?? []).map((group) => group.publicId !== groupPublicId ? group : { ...group, options: group.options.filter((option) => option.publicId !== optionPublicId) }) };
+  }) });
+}
+
+export function updateSubstitutionOption(draft: FoodPlanDraftV1, mealPublicId: string, groupPublicId: string, optionPublicId: string, patch: Partial<FoodPlanMealV1["items"][number]>) {
+  return updateContent(draft, { ...draft.content, meals: draft.content.meals.map((meal) => {
+    if (meal.publicId !== mealPublicId) return meal;
+    return { ...meal, substitutions: (meal.substitutions ?? []).map((group) => {
+      if (group.publicId !== groupPublicId) return group;
+      return { ...group, options: group.options.map((option) => option.publicId === optionPublicId ? { ...option, ...patch } : option) };
+    }) };
+  }) });
+}
+
 export function removeItem(draft: FoodPlanDraftV1, mealPublicId: string, itemPublicId: string) {
   return updateContent(draft, { ...draft.content, meals: draft.content.meals.map((meal) => meal.publicId === mealPublicId ? { ...meal, items: meal.items.filter((item) => item.publicId !== itemPublicId) } : meal) });
 }

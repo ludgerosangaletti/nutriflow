@@ -117,6 +117,10 @@ function source(value: unknown, path: string): FoodPlanItemV1["source"] {
 function item(value: unknown, path: string): FoodPlanItemV1 {
   const input = object(value, path);
   const unit = object(input.unit, `${path}.unit`);
+  const rawMacros = input.macros;
+  const macros = rawMacros && typeof rawMacros === "object" && !Array.isArray(rawMacros)
+    ? Object.freeze(Object.fromEntries(["energyKcal", "protein", "carbohydrate", "fat", "fiber"].map((key) => [key, typeof (rawMacros as Record<string, unknown>)[key] === "number" ? (rawMacros as Record<string, number>)[key] : null])))
+    : null;
   return Object.freeze({
     publicId: textValue(input.publicId, `${path}.publicId`),
     source: source(input.source, `${path}.source`),
@@ -129,6 +133,7 @@ function item(value: unknown, path: string): FoodPlanItemV1 {
     }),
     preparation: nullableText(input.preparation, `${path}.preparation`, 500),
     notes: nullableText(input.notes, `${path}.notes`, 1000),
+    macros,
     sortOrder: integer(input.sortOrder, `${path}.sortOrder`),
   });
 }
@@ -147,6 +152,23 @@ function meal(value: unknown, path: string): FoodPlanMealV1 {
   const input = object(value, path);
   if (!Array.isArray(input.items)) throw new NutriFlowContractError(`${path}.items`);
   const sourceTemplate = input.sourceTemplate === undefined || input.sourceTemplate === null ? null : object(input.sourceTemplate, `${path}.sourceTemplate`);
+  const substitutions = Array.isArray(input.substitutions) ? input.substitutions.map((entry, index) => {
+    const group = object(entry, `${path}.substitutions.${index}`);
+    if (!Array.isArray(group.options)) throw new NutriFlowContractError(`${path}.substitutions.${index}.options`);
+    return Object.freeze({
+      publicId: textValue(group.publicId, `${path}.substitutions.${index}.publicId`),
+      mealItemPublicId: group.mealItemPublicId === null || group.mealItemPublicId === undefined ? null : textValue(group.mealItemPublicId, `${path}.substitutions.${index}.mealItemPublicId`),
+      title: textValue(group.title, `${path}.substitutions.${index}.title`, 160),
+      ruleCode: "choose_one" as const,
+      notes: nullableText(group.notes, `${path}.substitutions.${index}.notes`, 1000),
+      sortOrder: integer(group.sortOrder, `${path}.substitutions.${index}.sortOrder`),
+      options: Object.freeze(group.options.map((option, optionIndex) => item(option, `${path}.substitutions.${index}.options.${optionIndex}`))),
+    });
+  }) : [];
+  const rawMacros = input.macros;
+  const macros = rawMacros && typeof rawMacros === "object" && !Array.isArray(rawMacros)
+    ? Object.freeze(Object.fromEntries(["energyKcal", "protein", "carbohydrate", "fat", "fiber"].map((key) => [key, typeof (rawMacros as Record<string, unknown>)[key] === "number" ? (rawMacros as Record<string, number>)[key] : null])))
+    : null;
   return Object.freeze({
     publicId: textValue(input.publicId, `${path}.publicId`),
     planDayPublicId:
@@ -165,6 +187,8 @@ function meal(value: unknown, path: string): FoodPlanMealV1 {
     }) : null,
     sortOrder: integer(input.sortOrder, `${path}.sortOrder`),
     items: Object.freeze(input.items.map((entry, index) => item(entry, `${path}.items.${index}`))),
+    substitutions: Object.freeze(substitutions),
+    macros,
   });
 }
 

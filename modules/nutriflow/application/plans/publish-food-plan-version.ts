@@ -9,6 +9,11 @@ import { assertNutriFlowAuthorized, NUTRIFLOW_ACTIONS, type NutriFlowActor } fro
 
 type IdentifierKind = "event" | "audit" | "publication";
 
+function totalMacros(items: readonly { macros?: { energyKcal?: number | null; protein?: number | null; carbohydrate?: number | null; fat?: number | null; fiber?: number | null } | null }[]) {
+  const keys = ["energyKcal", "protein", "carbohydrate", "fat", "fiber"] as const;
+  return Object.freeze(Object.fromEntries(keys.map((key) => [key, items.some((item) => item.macros?.[key] != null) ? items.reduce((sum, item) => sum + Number(item.macros?.[key] ?? 0), 0) : null])));
+}
+
 export class PublishFoodPlanVersion {
   private readonly plans: FoodPlanReadRepository;
   private readonly store: FoodPlanPublicationStore;
@@ -77,6 +82,7 @@ export class PublishFoodPlanVersion {
         sortOrder: sortOrder(item.sortOrder),
       }))),
       substitutions: Object.freeze((meal.substitutions ?? []).map((group) => Object.freeze({ ...group, publicId: publicId(group.publicId), mealItemPublicId: group.mealItemPublicId ? publicId(group.mealItemPublicId) : null, options: Object.freeze(group.options.map((option) => Object.freeze({ ...option, publicId: publicId(option.publicId), unitPublicId: publicId(option.unit.publicId), quantityMilli: quantityMilli(option.quantityMilli), sortOrder: sortOrder(option.sortOrder), source: Object.freeze({ ...option.source, publicId: option.source.publicId ? publicId(option.source.publicId) : null, revisionNumber: option.source.revisionNumber ? versionNumber(option.source.revisionNumber) : null }) }))) }))),
+      macros: totalMacros(meal.items),
     }));
     const draft = FoodPlanDraft.rehydrate({
       organizationPublicId: publicId(input.organizationPublicId),

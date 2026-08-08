@@ -43,7 +43,7 @@ export type FoodPlanItemV1 = Readonly<{
   }>;
   preparation: string | null;
   notes: string | null;
-  macros?: Readonly<{ energyKcal?: number | null; protein?: number | null; carbohydrate?: number | null; fat?: number | null }> | null;
+  macros?: Readonly<{ energyKcal?: number | null; protein?: number | null; carbohydrate?: number | null; fat?: number | null; fiber?: number | null }> | null;
   sortOrder: number;
 }>;
 export type FoodPlanSubstitutionGroupV1 = Readonly<{ publicId: string; mealItemPublicId: string | null; title: string; ruleCode: "choose_one"; notes: string | null; sortOrder: number; options: readonly FoodPlanItemV1[] }>;
@@ -61,6 +61,7 @@ export type FoodPlanMealV1 = Readonly<{
   sortOrder: number;
   items: readonly FoodPlanItemV1[];
   substitutions?: readonly FoodPlanSubstitutionGroupV1[];
+  macros?: Readonly<{ energyKcal?: number | null; protein?: number | null; carbohydrate?: number | null; fat?: number | null; fiber?: number | null }> | null;
 }>;
 
 export type FoodPlanDayV1 = Readonly<{

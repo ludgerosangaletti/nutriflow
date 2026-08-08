@@ -84,6 +84,11 @@ function substitution(group: PublishedFoodPlanSnapshotV1["meals"][number]["subst
   });
 }
 
+function sumMacros(meals: readonly { macros?: PatientPortalMealV1["macros"] }[]) {
+  const keys = ["energyKcal", "protein", "carbohydrate", "fat", "fiber"] as const;
+  return Object.freeze(Object.fromEntries(keys.map((key) => [key, meals.some((meal) => meal.macros?.[key] != null) ? meals.reduce((sum, meal) => sum + Number(meal.macros?.[key] ?? 0), 0) : null])));
+}
+
 function planFrom(row: PublicationRow, snapshot: PublishedFoodPlanSnapshotV1): PatientPortalPlanV1 {
   const days: PatientPortalDayV1[] = snapshot.days
     .toSorted((left, right) => left.sortOrder - right.sortOrder)
@@ -104,6 +109,7 @@ function planFrom(row: PublicationRow, snapshot: PublishedFoodPlanSnapshotV1): P
           macros: (meal as typeof meal & { macros?: PatientPortalMealV1["macros"] }).macros ?? null,
         }))),
     }));
+  const planMeals = days.flatMap((day) => day.meals);
   return Object.freeze({
     publicationPublicId: row.publication_public_id,
     planPublicId: row.plan_public_id,
@@ -117,6 +123,7 @@ function planFrom(row: PublicationRow, snapshot: PublishedFoodPlanSnapshotV1): P
       .filter((note) => note.kind === "patient" || note.kind === "general")
       .toSorted((left, right) => left.sortOrder - right.sortOrder)
       .map((note) => note.content)),
+    macros: sumMacros(planMeals),
     days: Object.freeze(days),
   });
 }

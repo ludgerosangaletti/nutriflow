@@ -19,8 +19,8 @@ export class D1FoodPlanDraftStore implements FoodPlanDraftStore {
     const scoped = "SELECT version.id FROM nf_plan_versions AS version INNER JOIN nf_plans AS plan ON plan.id = version.plan_id WHERE version.public_id = ? AND plan.public_id = ? AND plan.organization_id = ? AND plan.client_id = ? AND version.revision = ? AND version.state = 'draft'";
     const scope = [record.planVersionPublicId, record.planPublicId, record.organizationId, record.clientId, record.nextRevision] as const;
     statements.push(this.database.prepare(
-      "UPDATE nf_plan_versions SET revision = ?, title = ?, notes = ?, updated_at = ? WHERE public_id = ? AND revision = ? AND state = 'draft' AND plan_id = (SELECT id FROM nf_plans WHERE public_id = ? AND organization_id = ? AND client_id = ?)",
-    ).bind(record.nextRevision, record.title, record.planNotes, record.updatedAt, record.planVersionPublicId, record.expectedRevision, record.planPublicId, record.organizationId, record.clientId));
+      "UPDATE nf_plan_versions SET revision = ?, title = ?, notes = ?, snapshot_json = ?, updated_at = ? WHERE public_id = ? AND revision = ? AND state = 'draft' AND plan_id = (SELECT id FROM nf_plans WHERE public_id = ? AND organization_id = ? AND client_id = ?)",
+    ).bind(record.nextRevision, record.title, record.planNotes, JSON.stringify({ schemaVersion: 1, content: record.content }), record.updatedAt, record.planVersionPublicId, record.expectedRevision, record.planPublicId, record.organizationId, record.clientId));
     statements.push(this.database.prepare(`UPDATE nf_plans SET title = ?, updated_at = ? WHERE public_id = ? AND organization_id = ? AND client_id = ? AND EXISTS (${scoped})`).bind(record.title, record.updatedAt, record.planPublicId, record.organizationId, record.clientId, ...scope));
     statements.push(this.database.prepare(`DELETE FROM nf_meal_items WHERE meal_id IN (SELECT id FROM nf_meals WHERE plan_version_id = (${scoped}))`).bind(...scope));
     statements.push(this.database.prepare(`DELETE FROM nf_plan_notes WHERE plan_version_id = (${scoped})`).bind(...scope));

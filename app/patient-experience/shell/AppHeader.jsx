@@ -95,6 +95,7 @@ export function AppHeader({ syncState = "idle", onBack }) {
         </h1>
 
         <SyncIndicator state={syncState} />
+        <button type="button" aria-label="Sair da área do paciente" onClick={() => { window.location.href = "/auth/sair"; }} style={{ border: 0, background: "transparent", color: "var(--nf-ink-muted, #6b6b68)", fontSize: 12, fontWeight: 700, cursor: "pointer", padding: "8px 4px" }}>Sair</button>
       </div>
     </header>
   );

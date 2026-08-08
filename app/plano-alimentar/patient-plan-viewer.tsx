@@ -9,13 +9,14 @@ function quantity(quantityMilli: number, unit: string) {
   return `${value.toLocaleString("pt-BR", { maximumFractionDigits: 2 })} ${unit}`;
 }
 
-function macroLabel(macros?: { energyKcal?: number | null; protein?: number | null; carbohydrate?: number | null; fat?: number | null } | null) {
+function macroLabel(macros?: { energyKcal?: number | null; protein?: number | null; carbohydrate?: number | null; fat?: number | null; fiber?: number | null } | null) {
   if (!macros) return null;
   const parts = [
     macros.energyKcal != null ? `${Math.round(macros.energyKcal)} kcal` : null,
     macros.protein != null ? `P ${Number(macros.protein).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} g` : null,
     macros.carbohydrate != null ? `C ${Number(macros.carbohydrate).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} g` : null,
     macros.fat != null ? `G ${Number(macros.fat).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} g` : null,
+    macros.fiber != null ? `F ${Number(macros.fiber).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} g` : null,
   ].filter(Boolean);
   return parts.length ? parts.join(" · ") : null;
 }
@@ -93,6 +94,8 @@ export default function PatientPlanViewer({ portal }: { portal: PatientPortalV1 
         <div><p className="section-kicker">Seu plano alimentar</p><h1>Escolha o dia que combina com sua rotina.</h1><p>Os dias podem ser consultados de forma simples. Siga a orientação combinada com Ludgero.</p></div>
         <span>v{portal.plan.versionNumber} · {shortDate(portal.plan.publishedAt)}</span>
       </section>
+
+      {portal.plan.macros ? <section className="nf-plan-macros" aria-label="Resumo nutricional diário"><span>Resumo diário</span><strong>{macroLabel(portal.plan.macros)}</strong><a className="button button-dark" href="/api/nutriflow/v1/plan-pdf" target="_blank" rel="noreferrer">Imprimir / salvar PDF</a></section> : null}
 
       <nav className="nf-patient-days" aria-label="Dias do plano">
         {portal.plan.days.map((day) => <button className={day.publicId === selectedDay?.publicId ? "is-active" : ""} key={day.publicId} type="button" onClick={() => setSelectedDayId(day.publicId)}><strong>{day.label}</strong><span className="nf-day-dots" aria-label={`${day.meals.filter((meal) => doneMeals[meal.publicId]).length} de ${day.meals.length} refeições marcadas`}>{day.meals.map((meal) => <i className={doneMeals[meal.publicId] ? "is-done" : ""} key={meal.publicId} />)}</span></button>)}

@@ -4,7 +4,6 @@ import { getDb } from "../../../../db";
 import { adjustmentRequests, anamneses, appointmentChangeRequests, checkIns, clients, goalProgress, goals, patientDocuments, progressPhotos } from "../../../../db/schema";
 import { requireAdmin } from "../../../supabase/server";
 import { fieldLabels, sections, type Answers } from "../../../anamnese/questions";
-import DocumentUploadForm from "./document-upload-form";
 import CheckInReviewButton from "./check-in-review-button";
 import GoalManager from "./goal-manager";
 import AdjustmentManager from "./adjustment-manager";
@@ -274,7 +273,7 @@ export default async function ClientAnswers({
               ? "Publique o protocolo alimentar e a avaliação física em PDF. A versão mais recente de cada categoria será destacada para o paciente."
               : "Publique o protocolo e os materiais auxiliares. Uma nova versão do protocolo substitui a anterior como versão atual."}
           </p>
-          <DocumentUploadForm email={row.client.email} inPerson={isInPerson} />
+          <div className="admin-document-source-note"><strong>Novos protocolos são criados no NutriFlow.</strong><p>O PDF agora é gerado automaticamente a partir da versão estruturada publicada. Os arquivos abaixo permanecem disponíveis apenas como histórico e contingência.</p><Link className="admin-response-link" href={`/admin/clientes/${encodeURIComponent(row.client.email)}/nutriflow`}>Abrir Editor NutriFlow</Link></div>
           <div className="admin-document-list">
             {documents
               .toSorted((a, b) => b.publishedAt.localeCompare(a.publishedAt))

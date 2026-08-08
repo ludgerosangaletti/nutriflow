@@ -15,6 +15,10 @@ import {
   addItem,
   addMeal,
   addRecipeItem,
+  addSubstitutionGroup,
+  addSubstitutionOption,
+  removeSubstitutionOption,
+  updateSubstitutionOption,
   applyMealTemplate,
   duplicateDay,
   duplicateItem,
@@ -326,6 +330,7 @@ export default function NutriFlowEditor({ clientId, patientName, tools }: { clie
   const meals = draft.content.meals.filter((meal) => meal.planDayPublicId === activeDayId).sort((left, right) => left.sortOrder - right.sortOrder);
   const activeMealId = selectedMealId && meals.some((meal) => meal.publicId === selectedMealId) ? selectedMealId : meals[0]?.publicId ?? null;
   const activeMeal = meals.find((meal) => meal.publicId === activeMealId) ?? null;
+  const macroLabel = (macros?: { energyKcal?: number | null; protein?: number | null; carbohydrate?: number | null; fat?: number | null; fiber?: number | null } | null) => macros ? [macros.energyKcal != null ? `${Math.round(macros.energyKcal)} kcal` : null, macros.protein != null ? `P ${macros.protein.toFixed(1)}g` : null, macros.carbohydrate != null ? `C ${macros.carbohydrate.toFixed(1)}g` : null, macros.fat != null ? `G ${macros.fat.toFixed(1)}g` : null, macros.fiber != null ? `F ${macros.fiber.toFixed(1)}g` : null].filter(Boolean).join(" · ") : "";
   const syncDetail = syncState === "saved" ? formatSavedAt(lastSavedAt) : syncState === "saving" ? "Gravação atômica em andamento" : syncState === "dirty" ? "Autosave em menos de 1 segundo" : "Autosave protegido por revisão";
 
   return <div className="nutriflow-editor">
@@ -356,6 +361,8 @@ export default function NutriFlowEditor({ clientId, patientName, tools }: { clie
                 </div>)}
                 <button className="nutriflow-add-item" type="button" onClick={() => { mutate((current) => addItem(current, meal.publicId)); trackProductivityAction("food.manual.add"); }}>＋ Adicionar alimento manualmente</button>
               </div>
+              {meal.macros && macroLabel(meal.macros) ? <div className="nutriflow-editor-macros">Macros da refeição · {macroLabel(meal.macros)}</div> : null}
+              {meal.items.length ? <details className="nutriflow-editor-options"><summary>Opções 1, 2 e 3 / substituições</summary>{(meal.substitutions ?? []).map((group) => <section key={group.publicId}><header><strong>{group.title}</strong><button type="button" onClick={() => mutate((current) => addSubstitutionOption(current, meal.publicId, group.publicId))}>+ opção</button></header>{group.options.map((option) => <div className="nutriflow-option-row" key={option.publicId}><input value={option.displayName} onChange={(event) => mutate((current) => updateSubstitutionOption(current, meal.publicId, group.publicId, option.publicId, { displayName: event.target.value }))} /><input aria-label="Quantidade da opção" type="number" value={option.quantityMilli / 1000} onChange={(event) => mutate((current) => updateSubstitutionOption(current, meal.publicId, group.publicId, option.publicId, { quantityMilli: Math.max(1, Math.round(Number(event.target.value || 0) * 1000)) }))} /><button type="button" onClick={() => mutate((current) => removeSubstitutionOption(current, meal.publicId, group.publicId, option.publicId))}>×</button></div>)}</section>)}{meal.items.filter((item) => !(meal.substitutions ?? []).some((group) => group.mealItemPublicId === item.publicId)).map((item) => <button key={item.publicId} type="button" onClick={() => mutate((current) => addSubstitutionGroup(current, meal.publicId, item.publicId))}>＋ Criar opções para {item.displayName}</button>)}</details> : null}
               <label className="nutriflow-instructions"><span>Orientações da refeição</span><textarea maxLength={2000} placeholder="Opcional: substituições, modo de preparo ou contexto clínico." value={meal.instructions ?? ""} onChange={(event) => mutate((current) => updateMeal(current, meal.publicId, { instructions: event.target.value || null }))} /></label></> : <button className="nutriflow-meal-collapsed-summary" type="button" onClick={() => toggleMeal(meal.publicId)}>{meal.items.length} alimento(s) · clique para expandir</button>}
             </article>})}
             <button className="nutriflow-add-meal" type="button" onClick={() => { const id = editorId("meal"); mutate((current) => addMeal(current, activeDay.publicId, id)); setSelectedMealId(id); trackProductivityAction("meal.add"); }}><span>＋</span><strong>Adicionar refeição</strong><small>Inclua horário, alimentos e orientações.</small></button>

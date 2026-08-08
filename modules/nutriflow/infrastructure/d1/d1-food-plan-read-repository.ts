@@ -6,7 +6,7 @@ import type {
 } from "../../application/ports/food-plan-repository.ts";
 import type { D1OperationDatabaseLike } from "./d1-operation-database.ts";
 
-type DraftRow = Readonly<{ public_id: string; plan_public_id: string; client_id: number; version_number: number; revision: number; state: "draft" | "in_review" | "published"; title: string; notes: string | null; updated_at: string }>;
+type DraftRow = Readonly<{ public_id: string; plan_public_id: string; client_id: number; version_number: number; revision: number; state: "draft" | "in_review" | "published"; title: string; notes: string | null; snapshot_json: string | null; updated_at: string }>;
 type DayRow = Readonly<{ public_id: string; label: string; day_index: number | null; sort_order: number }>;
 type MealRow = Readonly<{ public_id: string; plan_day_public_id: string | null; title: string; scheduled_time: string | null; instructions: string | null; source_template_public_id: string | null; source_template_version_number: number | null; sort_order: number }>;
 type ItemRow = Readonly<{ public_id: string; meal_public_id: string; source_type: "manual" | "food" | "recipe"; source_public_id: string | null; source_revision_number: number | null; display_name_snapshot: string; quantity_milli: number; unit_public_id: string; unit_code_snapshot: string; unit_label_snapshot: string; preparation: string | null; notes: string | null; sort_order: number }>;
@@ -34,7 +34,7 @@ export class D1FoodPlanReadRepository implements FoodPlanReadRepository {
     extraBindings: unknown[],
   ): Promise<FoodPlanDraftRecord | PublishedFoodPlanRecord | null> {
     const row = await this.database.prepare(
-      `SELECT version.public_id, plan.public_id AS plan_public_id, plan.client_id, version.version_number, version.revision, version.state, version.title, version.notes, version.updated_at
+      `SELECT version.public_id, plan.public_id AS plan_public_id, plan.client_id, version.version_number, version.revision, version.state, version.title, version.notes, version.snapshot_json, version.updated_at
        FROM nf_plan_versions AS version INNER JOIN nf_plans AS plan ON plan.id = version.plan_id
        WHERE plan.organization_id = ? AND plan.client_id = ?${extraWhere}
        ORDER BY version.version_number DESC, version.updated_at DESC, version.id DESC LIMIT 1`,
@@ -53,12 +53,21 @@ export class D1FoodPlanReadRepository implements FoodPlanReadRepository {
       items.push(Object.freeze({ publicId: item.public_id, source: Object.freeze({ type: item.source_type, publicId: item.source_public_id, revisionNumber: item.source_revision_number }), displayName: item.display_name_snapshot, quantityMilli: item.quantity_milli, unit: Object.freeze({ publicId: item.unit_public_id, code: item.unit_code_snapshot, label: item.unit_label_snapshot }), preparation: item.preparation, notes: item.notes, sortOrder: item.sort_order }));
       itemsByMeal.set(item.meal_public_id, items);
     }
-    const content: FoodPlanContentV1 = Object.freeze({
+    const relationalContent: FoodPlanContentV1 = Object.freeze({
       schemaVersion: 1,
       days: Object.freeze(daysResult.results.map((day) => Object.freeze({ publicId: day.public_id, label: day.label, dayIndex: day.day_index, sortOrder: day.sort_order }))),
       meals: Object.freeze(mealsResult.results.map((meal) => Object.freeze({ publicId: meal.public_id, planDayPublicId: meal.plan_day_public_id, title: meal.title, scheduledTime: meal.scheduled_time, instructions: meal.instructions, sourceTemplate: meal.source_template_public_id && meal.source_template_version_number ? Object.freeze({ publicId: meal.source_template_public_id, versionNumber: meal.source_template_version_number }) : null, sortOrder: meal.sort_order, items: Object.freeze(itemsByMeal.get(meal.public_id) ?? []) }))),
       notes: Object.freeze(notesResult.results.map((note) => Object.freeze({ publicId: note.public_id, mealPublicId: note.meal_public_id, kind: note.kind, content: note.content, sortOrder: note.sort_order }))),
     });
+    let content = relationalContent;
+    // Draft snapshots preserve macros and substitution groups while the normalized
+    // relational tables remain compatible with older migrations. Published plans
+    // already store the immutable snapshot in the same column.
+    try {
+      const parsed = row.snapshot_json ? JSON.parse(row.snapshot_json) as { content?: FoodPlanContentV1; days?: unknown[]; meals?: unknown[]; planNotes?: unknown[] } : null;
+      if (parsed?.content?.schemaVersion === 1) content = parsed.content;
+      else if (parsed?.schemaVersion === 1 && Array.isArray(parsed.days) && Array.isArray(parsed.meals) && Array.isArray(parsed.planNotes)) content = parsed as unknown as FoodPlanContentV1;
+    } catch { /* fall back to normalized rows */ }
     return Object.freeze({ publicId: row.public_id, planPublicId: row.plan_public_id, clientId: row.client_id, versionNumber: row.version_number, revision: row.revision, state: row.state, title: row.title, planNotes: row.notes, content, updatedAt: row.updated_at });
   }
 }
