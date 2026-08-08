@@ -19,6 +19,41 @@ export function editorId(kind: "day" | "meal" | "meal_option" | "item" | "note")
 }
 
 type MealOption = NonNullable<FoodPlanMealV1["options"]>[number];
+type ItemMacros = NonNullable<FoodPlanMealV1["items"][number]["macros"]>;
+
+const MACRO_KEYS = Object.freeze(["energyKcal", "protein", "carbohydrate", "fat"] as const);
+
+function scaleItemMacros(macros: ItemMacros | null | undefined, previousQuantityMilli: number, nextQuantityMilli: number) {
+  if (!macros || previousQuantityMilli <= 0 || nextQuantityMilli <= 0) return macros ?? null;
+  return Object.freeze(Object.fromEntries(Object.entries(macros).map(([key, value]) => [
+    key,
+    value == null ? null : Number(value) * nextQuantityMilli / previousQuantityMilli,
+  ]))) as ItemMacros;
+}
+
+export type EditorMacroSummary = Readonly<{
+  totals: Readonly<Record<(typeof MACRO_KEYS)[number], number | null>>;
+  itemCount: number;
+  completeItemCount: number;
+  complete: boolean;
+}>;
+
+/** Totals the exact meal-option configuration currently selected in the editor. */
+export function calculateEditorMacroSummary(meals: readonly FoodPlanMealV1[], selectedOptionIds: Readonly<Record<string, string>>): EditorMacroSummary {
+  const items = meals.flatMap((meal) => {
+    const options = mealOptions(meal);
+    const selected = options.find((option) => option.publicId === selectedOptionIds[meal.publicId]) ?? options[0];
+    return selected?.items ?? [];
+  });
+  const completeItemCount = items.filter((item) => MACRO_KEYS.every((key) => item.macros?.[key] != null)).length;
+  const totals = Object.freeze(Object.fromEntries(MACRO_KEYS.map((key) => [
+    key,
+    items.some((item) => item.macros?.[key] != null)
+      ? items.reduce((sum, item) => sum + Number(item.macros?.[key] ?? 0), 0)
+      : null,
+  ]))) as EditorMacroSummary["totals"];
+  return Object.freeze({ totals, itemCount: items.length, completeItemCount, complete: items.length > 0 && completeItemCount === items.length });
+}
 
 export function mealOptions(meal: FoodPlanMealV1): readonly MealOption[] {
   if (meal.options?.length) return meal.options.toSorted((left, right) => left.sortOrder - right.sortOrder);
@@ -219,7 +254,16 @@ export function applyMealTemplate(
 }
 
 export function updateItem(draft: FoodPlanDraftV1, mealPublicId: string, itemPublicId: string, patch: Partial<FoodPlanMealV1["items"][number]>, optionPublicId?: string) {
-  return updateContent(draft, { ...draft.content, meals: draft.content.meals.map((meal) => meal.publicId === mealPublicId ? updateMealOption(meal, optionPublicId, (option) => ({ ...option, items: option.items.map((item) => item.publicId === itemPublicId ? { ...item, ...patch, publicId: item.publicId } : item) })) : meal) });
+  return updateContent(draft, { ...draft.content, meals: draft.content.meals.map((meal) => meal.publicId === mealPublicId ? updateMealOption(meal, optionPublicId, (option) => ({ ...option, items: option.items.map((item) => {
+    if (item.publicId !== itemPublicId) return item;
+    const becomesFreeQuantity = patch.unit?.publicId === "unit_as_desired";
+    const macros = becomesFreeQuantity
+      ? null
+      : patch.quantityMilli != null && patch.quantityMilli !== item.quantityMilli
+        ? scaleItemMacros(item.macros, item.quantityMilli, patch.quantityMilli)
+        : item.macros;
+    return { ...item, ...patch, macros, publicId: item.publicId };
+  }) })) : meal) });
 }
 
 export function addSubstitutionGroup(draft: FoodPlanDraftV1, mealPublicId: string, itemPublicId: string, optionPublicId?: string) {

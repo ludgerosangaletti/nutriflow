@@ -7715,6 +7715,15 @@ button:disabled {
 .nutriflow-sidebar > div:first-child strong { font-size: 1.08rem; }
 .nutriflow-sidebar > div:first-child small { color: #77776f; }
 .nutriflow-sidebar section { display: grid; gap: 10px; }
+.nutriflow-sidebar .nutriflow-admin-macros { gap: 12px; border-radius: 15px; background: #11110f; color: #fff; padding: 15px; }
+.nutriflow-admin-macros > header { display: grid; gap: 3px; }
+.nutriflow-sidebar .nutriflow-admin-macros > header span { color: #ffe600; font-size: .64rem; font-weight: 900; letter-spacing: .1em; text-transform: uppercase; }
+.nutriflow-admin-macros > header strong { font-size: .98rem; }
+.nutriflow-admin-macro-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+.nutriflow-admin-macro-grid article { display: grid; gap: 4px; min-width: 0; border: 1px solid #3b3b35; border-radius: 11px; background: #20201d; padding: 10px; }
+.nutriflow-admin-macro-grid small { color: #aaa9a1; font-size: .64rem; font-weight: 750; }
+.nutriflow-admin-macro-grid strong { color: #fff; font-size: .94rem; white-space: nowrap; }
+.nutriflow-admin-macros > p { margin: 0; color: #bdbdb5; font-size: .68rem; line-height: 1.45; }
 .nutriflow-sidebar dl { display: grid; gap: 8px; margin: 0; }
 .nutriflow-sidebar dl div { display: flex; justify-content: space-between; border-bottom: 1px solid #e0e0d8; padding-bottom: 7px; }
 .nutriflow-sidebar dt { color: #6d6d65; }

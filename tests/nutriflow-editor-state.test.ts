@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { FoodPlanDraftV1 } from "../modules/nutriflow/contracts/v1/plans.ts";
-import { addCatalogItem, addDay, addItem, addMeal, addMealOption, addRecipeItem, addSubstitutionGroup, addSubstitutionOption, applyMealTemplate, duplicateDay, duplicateItem, duplicateMeal, mealOptions, moveDay, moveItem, moveMeal, moveMealToDay, removeDay, removeItem, removeMeal, removeMealOption, updateItem, updateMeal } from "../app/admin/clientes/[email]/nutriflow/editor-state.ts";
+import { addCatalogItem, addDay, addItem, addMeal, addMealOption, addRecipeItem, addSubstitutionGroup, addSubstitutionOption, applyMealTemplate, calculateEditorMacroSummary, duplicateDay, duplicateItem, duplicateMeal, mealOptions, moveDay, moveItem, moveMeal, moveMealToDay, removeDay, removeItem, removeMeal, removeMealOption, updateItem, updateMeal } from "../app/admin/clientes/[email]/nutriflow/editor-state.ts";
 
 function emptyDraft(): FoodPlanDraftV1 {
   return { apiVersion: "v1", publicId: "version_editor_01", planPublicId: "plan_editor_01", clientId: 1, versionNumber: 1, revision: 1, state: "draft", title: "Plano", planNotes: null, content: { schemaVersion: 1, days: [], meals: [], notes: [] }, updatedAt: "2026-08-01T10:00:00.000Z" };
@@ -58,6 +58,21 @@ test("editor state inserts a versioned catalog snapshot and keeps every property
   assert.equal(item.quantityMilli, 120000);
   assert.equal(item.preparation, "madura");
   assert.equal(item.notes, "Consumir antes do treino");
+});
+
+test("editor recalculates catalog macros proportionally and totals the selected meal options", () => {
+  let draft = addMeal(addDay(emptyDraft(), "day_macro_01"), "day_macro_01", "meal_macro_01");
+  draft = addCatalogItem(draft, "meal_macro_01", {
+    apiVersion: "v1", publicId: "food_macro_01", revisionPublicId: "foodrev_macro_01", revisionNumber: 1, name: "Arroz", categoryCode: "cereals", aliases: [], referenceQuantityMilli: 100000, referenceUnit: { publicId: "unit_gram", code: "g", label: "grama" }, scope: "global",
+    nutrients: { energyKcal: 128, protein: 2.5, carbohydrate: 28.1, fat: 0.2, fiber: 1.6 },
+  }, "item_macro_01");
+  draft = updateItem(draft, "meal_macro_01", "item_macro_01", { quantityMilli: 150000 });
+  const item = draft.content.meals[0].items[0];
+  assert.equal(item.macros?.energyKcal, 192);
+  assert.equal(item.macros?.protein, 3.75);
+  const summary = calculateEditorMacroSummary(draft.content.meals, {});
+  assert.deepEqual(summary.totals, { energyKcal: 192, protein: 3.75, carbohydrate: 42.15, fat: 0.3 });
+  assert.equal(summary.complete, true);
 });
 
 test("editor state duplicates and reorders items and meals without identifier collisions", () => {
