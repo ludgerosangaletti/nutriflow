@@ -1,4 +1,4 @@
-import { desc, isNull } from "drizzle-orm";
+import { desc, eq, isNull } from "drizzle-orm";
 import Link from "next/link";
 import { getDb } from "../../../db";
 import {
@@ -6,6 +6,7 @@ import {
   anamneses,
   checkIns,
   clients,
+  nfPublications,
   patientDocuments,
 } from "../../../db/schema";
 import { daysRemaining, hasActiveAccess } from "../../access";
@@ -50,6 +51,10 @@ export default async function AdminClients() {
   const currentProtocols = (await getDb().select().from(patientDocuments)).filter(
     (document) => document.documentType === "protocol" && document.isCurrent,
   );
+  const publishedNutriFlowPlans = await getDb()
+    .select({ clientId: nfPublications.clientId })
+    .from(nfPublications)
+    .where(eq(nfPublications.status, "active"));
   const newCheckIns = (await getDb().select().from(checkIns)).filter(
     (checkIn) => checkIn.adminStatus === "new",
   );
@@ -62,10 +67,14 @@ export default async function AdminClients() {
   const protocolPatientEmails = new Set(
     currentProtocols.map((document) => document.clientEmail),
   );
+  const publishedPlanClientIds = new Set(
+    publishedNutriFlowPlans.map((publication) => publication.clientId),
+  );
   const anamnesesAwaitingProtocol = submittedAnamneses.filter(
     (anamnesis) =>
       clientByEmail.has(anamnesis.clientEmail) &&
-      !protocolPatientEmails.has(anamnesis.clientEmail),
+      !protocolPatientEmails.has(anamnesis.clientEmail) &&
+      !publishedPlanClientIds.has(clientByEmail.get(anamnesis.clientEmail)!.id),
   );
   const checkInsAwaitingReview = newCheckIns.filter((checkIn) =>
     clientByEmail.has(checkIn.clientEmail),

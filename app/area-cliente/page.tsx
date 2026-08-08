@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { CSSProperties } from "react";
@@ -9,6 +9,7 @@ import {
   checkIns,
   clients,
   goals,
+  nfPublications,
   patientDocuments,
   progressPhotos,
 } from "../../db/schema";
@@ -101,6 +102,12 @@ export default async function ClientArea() {
   const active = hasActiveAccess(client);
   const currentDocuments = documents.filter((document) => document.isCurrent);
   const nutriFlowContext = await resolveNutriFlowPatientContext(user.id);
+  const structuredPlanPublished = Boolean((await db
+    .select({ id: nfPublications.id })
+    .from(nfPublications)
+    .where(and(eq(nfPublications.clientId, client.id), eq(nfPublications.status, "active")))
+    .limit(1))[0]);
+  const protocolAvailable = currentDocuments.length > 0 || structuredPlanPublished;
   const structuredPlanEnabled = Boolean(
     nutriFlowContext && (await canUseNutriFlowPatientPortal(nutriFlowContext)),
   );
@@ -152,7 +159,7 @@ export default async function ClientArea() {
           button: "Ver resposta",
         };
       }
-      if (!currentProtocol) {
+      if (!currentProtocol && !structuredPlanPublished) {
         return {
           eyebrow: "Após o atendimento",
           title: "Seu protocolo está sendo preparado",
@@ -203,7 +210,7 @@ export default async function ClientArea() {
           checkInDone={checkInDoneThisWeek}
           nextAppointment={nextAppointment}
           appointmentLocation={client.appointmentLocation}
-          currentProtocol={Boolean(currentProtocol)}
+          currentProtocol={Boolean(currentProtocol || structuredPlanPublished)}
           photosCount={photos.length}
         />
       </PatientShell>
@@ -348,7 +355,7 @@ export default async function ClientArea() {
   const milestones = [
     { label: "Pagamento", done: client.paymentStatus === "approved" },
     { label: "Anamnese", done: client.formStatus === "submitted" },
-    { label: "Protocolo", done: currentDocuments.length > 0 },
+    { label: "Protocolo", done: protocolAvailable },
     { label: "Acompanhamento", done: patientCheckIns.length > 0 },
   ];
   const milestonesDone = milestones.filter((item) => item.done).length;
@@ -437,7 +444,7 @@ export default async function ClientArea() {
         button: client.formStatus === "draft" ? "Continuar preenchimento" : "Começar agora",
       };
     }
-    if (!currentDocuments.length) {
+    if (!protocolAvailable) {
       return {
         eyebrow: "Em análise profissional",
         title: "Seu protocolo está sendo elaborado",
@@ -494,7 +501,7 @@ export default async function ClientArea() {
         documentsCount={currentDocuments.length}
         checkInsCount={patientCheckIns.length}
         checkInDone={checkInDoneThisWeek}
-        currentProtocol={Boolean(currentDocuments.length)}
+        currentProtocol={protocolAvailable}
         photosCount={photos.length}
       />
     </PatientShell>
