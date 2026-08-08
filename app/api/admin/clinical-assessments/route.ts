@@ -24,12 +24,18 @@ export async function POST(request: Request) {
   const admin = await requireAdmin("/admin/clientes");
   const context = await resolveNutriFlowAdminContext(admin.id);
   if (!context) return Response.json({ error: "Sem permissão." }, { status: 403 });
-  const body = await request.json() as { email?: string; capturedAt?: string; input?: Parameters<typeof calculatePollock7>[0] };
+  const body = await request.json() as { email?: string; capturedAt?: string; mode?: "preview" | "save"; input?: Parameters<typeof calculatePollock7>[0] };
   if (!body.email || !body.input) return Response.json({ error: "Dados incompletos." }, { status: 400 });
   const db = getDb();
   const [client] = await db.select().from(clients).where(eq(clients.email, body.email)).limit(1);
   if (!client || client.modality !== "in_person") return Response.json({ error: "Avaliações estruturadas estão disponíveis para pacientes presenciais." }, { status: 400 });
-  const result = calculatePollock7(body.input);
+  let result;
+  try {
+    result = calculatePollock7(body.input);
+  } catch (error) {
+    return Response.json({ error: error instanceof Error ? error.message : "Não foi possível calcular a avaliação." }, { status: 400 });
+  }
+  if (body.mode === "preview") return Response.json({ ok: true, calculation: result });
   const capturedAt = body.capturedAt || new Date().toISOString();
   const snapshot = { protocol: "pollock_7", version: "1.0.0", capturedAt, input: body.input, result };
   const contentHash = await sha256Json(snapshot);

@@ -4,13 +4,13 @@ export type Pollock7Input = {
   weightKg: number;
   heightCm: number;
   skinfoldsMm: { triceps: number; subscapular: number; suprailiac: number; abdominal: number; midaxillary: number; pectoral: number; thigh: number };
-  circumferencesCm: { arm: number; waist: number; abdomen: number; hip: number; thigh: number };
+  circumferencesCm: Partial<Record<"arm" | "waist" | "abdomen" | "hip" | "thigh", number>>;
   measurementSide: "left" | "right";
 };
 
 export function calculatePollock7(input: Pollock7Input) {
   const values = Object.values(input.skinfoldsMm);
-  if (input.age < 18 || input.age > 100 || input.weightKg <= 0 || input.heightCm <= 0 || values.some((v) => v <= 0)) throw new Error("Dados antropométricos inválidos.");
+  if (input.age < 18 || input.age > 100 || input.weightKg <= 0 || input.heightCm <= 0 || values.length !== 7 || values.some((v) => !Number.isFinite(v) || v <= 0)) throw new Error("Para calcular Pollock 7, preencha idade, peso, altura e todas as sete dobras cutâneas.");
   const sum = values.reduce((a, b) => a + b, 0);
   const density = input.sex === "male"
     ? 1.112 - 0.00043499 * sum + 0.00000055 * sum ** 2 - 0.00028826 * input.age
