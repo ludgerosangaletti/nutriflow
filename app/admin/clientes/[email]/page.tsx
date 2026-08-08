@@ -265,6 +265,7 @@ export default async function ClientAnswers({
             }))}
           />
         </details> : null}
+        {/* Histórico clínico e resultados exibidos com rótulos em português. */}
         <details className="response-section admin-checkin-section" id="check-ins" open={newCheckInCount > 0}>
           <summary className="admin-section-summary"><div><p className="section-kicker">Acompanhamento periódico</p><h2>Check-ins semanais</h2></div><strong>{newCheckInCount} novo(s)</strong><i aria-hidden="true">⌄</i></summary>
           {!patientCheckIns.length ? <p>Nenhum check-in enviado até o momento.</p> : (
