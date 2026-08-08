@@ -1,7 +1,7 @@
-import { and, eq } from "drizzle-orm";
+import { and, asc, desc, eq } from "drizzle-orm";
 import Link from "next/link";
 import { getDb } from "../../../../db";
-import { adjustmentRequests, anamneses, appointmentChangeRequests, checkIns, clients, goalProgress, goals, patientDocuments, progressPhotos, nfClinicalAssessments } from "../../../../db/schema";
+import { adjustmentRequests, anamneses, appointmentChangeRequests, checkIns, clients, goalProgress, goals, patientDocuments, progressPhotos, nfClinicalAssessments, nfEnergyExpenditureCalculations } from "../../../../db/schema";
 import { requireAdmin } from "../../../supabase/server";
 import { fieldLabels, sections, type Answers } from "../../../anamnese/questions";
 import CheckInReviewButton from "./check-in-review-button";
@@ -17,6 +17,7 @@ import AppointmentRequests from "./appointment-requests";
 import { canUseNutriFlowEditor, ensureNutriFlowAdminContext, getControlledHomologationSnapshot } from "../../../nutriflow/server";
 import NutriFlowHomologationPanel from "./nutriflow-homologation-panel";
 import ClinicalAssessmentForm from "./clinical-assessment-form";
+import EnergyExpenditureForm from "./energy-expenditure-form";
 
 export const dynamic = "force-dynamic";
 
@@ -60,6 +61,7 @@ export default async function ClientAnswers({
   const patientGoalProgress = await db.select().from(goalProgress).where(eq(goalProgress.clientEmail, email));
   const patientAdjustments = await db.select().from(adjustmentRequests).where(eq(adjustmentRequests.clientEmail, email));
   const clinicalAssessments = await db.select().from(nfClinicalAssessments).where(eq(nfClinicalAssessments.clientId, row.client.id)).orderBy(asc(nfClinicalAssessments.capturedAt));
+  const energyCalculations = await db.select().from(nfEnergyExpenditureCalculations).where(eq(nfEnergyExpenditureCalculations.clientId, row.client.id)).orderBy(desc(nfEnergyExpenditureCalculations.createdAt));
   const appointmentRequests = row.client.modality === "in_person"
     ? await db
         .select()
@@ -166,6 +168,7 @@ export default async function ClientAnswers({
           {isInPerson ? <><a href="#dados-presenciais">Atendimento</a><Link href={`/admin/clientes/${encodeURIComponent(row.client.email)}/anamnese`}>{row.anamnesis ? "Editar anamnese" : "Preencher anamnese"}</Link></> : null}
           <a href="#documentos">{isInPerson ? "Protocolo e avaliação" : "Documentos"}</a>
           <a href="#check-ins">Check-ins</a>
+          <a href="#energia">Energia</a>
           <a href="#ajustes">Ajustes</a>
           <a href="#evolucao">{isInPerson ? "Fotos" : "Evolução"}</a>
           {!isInPerson ? <a href="#metas">Metas</a> : null}
@@ -207,6 +210,18 @@ export default async function ClientAnswers({
           <ClinicalAssessmentForm email={row.client.email} />
           {clinicalAssessments.length ? <div className="clinical-assessment-history">{clinicalAssessments.toReversed().map((a) => { const s=JSON.parse(a.snapshotJson) as { result:{bodyFatPct:number;leanMassKg:number;bmi:number}; input:{circumferencesCm:Record<string,number>} }; return <article key={a.id}><strong>{new Intl.DateTimeFormat("pt-BR").format(new Date(a.capturedAt))}</strong><span>{a.protocolCode} · IMC {Number(s.result.bmi).toFixed(1)} · {Number(s.result.bodyFatPct).toFixed(1)}% gordura · {Number(s.result.leanMassKg).toFixed(1)} kg massa livre</span><small>{Object.entries(s.input.circumferencesCm).map(([k,v])=>`${k}: ${v} cm`).join(" · ")}</small></article>; })}</div> : <p>Nenhuma avaliação física registrada.</p>}
         </details> : null}
+        <details className="response-section energy-expenditure-section" id="energia" open>
+          <summary className="admin-section-summary"><div><p className="section-kicker">Planejamento energético</p><h2>Valor energético total</h2></div><strong>{energyCalculations.length} cálculo(s)</strong><i aria-hidden="true">⌄</i></summary>
+          <EnergyExpenditureForm
+            email={row.client.email}
+            defaults={{
+              weightKg: isInPerson ? clinicalAssessments.at(-1)?.weightKg : patientCheckIns.toSorted((a, b) => a.weekStart.localeCompare(b.weekStart)).at(-1)?.weightKg,
+              heightCm: isInPerson ? clinicalAssessments.at(-1)?.heightCm : undefined,
+              leanMassKg: isInPerson && clinicalAssessments.at(-1) ? String((JSON.parse(clinicalAssessments.at(-1)!.snapshotJson) as { result: { leanMassKg: number } }).result.leanMassKg) : undefined,
+            }}
+          />
+          {energyCalculations.length ? <div className="energy-expenditure-history">{energyCalculations.map((calculation) => { const snapshot = JSON.parse(calculation.snapshotJson) as { result: { totalKcal: number }; protocol: string }; return <article key={calculation.id}><div><strong>{Math.round(snapshot.result.totalKcal)} kcal/dia</strong><span>{({ mifflin_st_jeor: "Mifflin–St Jeor", harris_benedict_revised: "Harris–Benedict revisada", schofield_who: "Schofield (OMS/FAO)", iom_eer: "IOM – EER", katch_mcardle: "Katch–McArdle" } as Record<string, string>)[snapshot.protocol] || snapshot.protocol}</span></div><small>{new Intl.DateTimeFormat("pt-BR", { dateStyle: "medium", timeStyle: "short" }).format(new Date(calculation.createdAt))}</small></article>; })}</div> : <p className="energy-empty">Nenhum cálculo registrado. Escolha o protocolo mais adequado e registre a referência clínica.</p>}
+        </details>
         {!isInPerson ? <details className="response-section admin-charts-section">
           <summary className="admin-section-summary">
             <div><p className="section-kicker">Evolução em gráficos</p><h2>Visão clínica do período</h2></div>

@@ -1258,3 +1258,22 @@ export const nfClinicalAssessments = sqliteTable(
     uniqueIndex("nf_clinical_assessments_hash_unique").on(table.clientId, table.contentHash),
   ],
 );
+
+/** Immutable energy-expenditure calculations; each record stores formula inputs and version. */
+export const nfEnergyExpenditureCalculations = sqliteTable(
+  "nf_energy_expenditure_calculations",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    publicId: text("public_id").notNull(),
+    organizationId: integer("organization_id").notNull().references(() => nfOrganizations.id, { onDelete: "restrict" }),
+    clientId: integer("client_id").notNull().references(() => clients.id, { onDelete: "restrict" }),
+    protocolCode: text("protocol_code").notNull(),
+    calculationVersion: text("calculation_version").notNull(),
+    totalKcal: integer("total_kcal").notNull(),
+    snapshotJson: text("snapshot_json").notNull(),
+    contentHash: text("content_hash").notNull(),
+    createdByAuthUserId: text("created_by_auth_user_id").notNull(),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [uniqueIndex("nf_energy_expenditure_calculations_public_id_unique").on(table.publicId), index("nf_energy_expenditure_calculations_client_created_idx").on(table.clientId, table.createdAt)],
+);
