@@ -1,0 +1,24 @@
+import type { nfClinicalAssessments } from "../../../../db/schema";
+
+type Assessment = typeof nfClinicalAssessments.$inferSelect;
+const labels: Record<string, string> = { arm: "Braço", waist: "Cintura", abdomen: "Abdômen", hip: "Quadril", thigh: "Coxa" };
+const number = (value: number) => value.toFixed(1).replace(".", ",");
+
+function parse(item: Assessment) {
+  const snapshot = JSON.parse(item.snapshotJson) as { input?: { circumferencesCm?: Record<string, number> }; result: { bmi: number; bodyFatPct: number; leanMassKg: number } };
+  return { item, snapshot, circumferences: Object.entries(snapshot.input?.circumferencesCm ?? {}).filter(([, value]) => Number(value) > 0) };
+}
+
+export default function ClinicalAssessmentHistory({ assessments }: { assessments: Assessment[] }) {
+  const ordered = assessments.toSorted((a, b) => a.capturedAt.localeCompare(b.capturedAt));
+  const latest = ordered.at(-1);
+  if (!latest) return <p>Nenhuma avaliação física registrada.</p>;
+  const current = parse(latest);
+  const previous = ordered.length > 1 ? parse(ordered.at(-2)!) : null;
+  return <div className="clinical-assessment-history-v2">
+    <header><div><p className="section-kicker">Medidas registradas</p><h3>{previous ? "Comparativo mais recente" : "Medidas da avaliação"}</h3></div><span>{ordered.length} {ordered.length === 1 ? "avaliação" : "avaliações"}</span></header>
+    <p className="clinical-history-note">{previous ? `Variação em relação à avaliação de ${new Intl.DateTimeFormat("pt-BR").format(new Date(previous.item.capturedAt))}.` : "Este registro será a base para a próxima reavaliação e comparação."}</p>
+    <div className="clinical-assessment-meta-v2"><strong>{new Intl.DateTimeFormat("pt-BR").format(new Date(current.item.capturedAt))}</strong><span>Pollock 7 dobras · IMC {number(Number(current.snapshot.result.bmi))} · {number(Number(current.snapshot.result.bodyFatPct))}% gordura · {number(Number(current.snapshot.result.leanMassKg))} kg massa livre de gordura</span></div>
+    {current.circumferences.length ? <div className="clinical-circumference-grid">{current.circumferences.map(([key, value]) => { const oldValue = previous?.circumferences.find(([oldKey]) => oldKey === key)?.[1]; const difference = oldValue === undefined ? null : Number(value) - Number(oldValue); return <article key={key}><small>{labels[key] ?? key}</small><strong>{number(Number(value))} <i>cm</i></strong>{oldValue !== undefined ? <span>{difference === 0 ? "Sem alteração" : `${difference > 0 ? "+" : "−"}${number(Math.abs(difference))} cm desde a anterior`}</span> : <span>Primeiro registro</span>}</article>; })}</div> : <p className="clinical-history-note">Nenhuma circunferência foi informada nesta avaliação.</p>}
+  </div>;
+}

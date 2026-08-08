@@ -102,8 +102,7 @@ export default async function ProgressPage() {
   const circumference = snapshot ? Object.entries(snapshot.input.circumferencesCm ?? {}).filter(([, value]) => Number(value) > 0) : [];
   const chartPoints = assessments.map((item) => {
     const itemSnapshot = JSON.parse(item.snapshotJson) as any;
-    const values = Object.values(itemSnapshot.input.circumferencesCm ?? {}).filter((value) => Number(value) > 0).map(Number);
-    return { label: date(item.capturedAt), weight: Number(item.weightKg), bodyFat: Number(itemSnapshot.result.bodyFatPct), leanMass: Number(itemSnapshot.result.leanMassKg), circumference: values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null };
+    return { label: date(item.capturedAt), weight: Number(item.weightKg), bodyFat: Number(itemSnapshot.result.bodyFatPct), leanMass: Number(itemSnapshot.result.leanMassKg), circumferences: Object.fromEntries(Object.entries(itemSnapshot.input.circumferencesCm ?? {}).filter(([, value]) => Number(value) > 0).map(([key, value]) => [key, Number(value)])) };
   });
   const firstPhotos = firstPeriod ? grouped.get(firstPeriod) ?? [] : [];
   const latestPhotos = latestPeriod ? grouped.get(latestPeriod) ?? [] : [];
@@ -119,7 +118,7 @@ export default async function ProgressPage() {
       <details className="evolution-disclosure" open><summary>Composição corporal <span>⌄</span></summary><div className="evolution-detail-grid"><article><small>Percentual de gordura</small><strong>{number(snapshot.result.bodyFatPct)}%</strong></article><article><small>Massa gorda</small><strong>{number(snapshot.result.fatMassKg)} kg</strong></article><article><small>Massa muscular estimada</small><strong>{number(snapshot.result.leanMassKg)} kg</strong><span>massa livre de gordura</span></article></div></details>
       {circumference.length ? <details className="evolution-disclosure"><summary>Circunferências <span>⌄</span></summary><div className="evolution-detail-grid">{circumference.map(([key, value]) => { const prior = previousSnapshot?.input.circumferencesCm?.[key]; return <article key={key}><small>{circumferenceLabels[key] ?? key}</small><strong>{number(Number(value))} cm</strong>{typeof prior === "number" ? <span>{delta(Number(value) - prior, "cm")}</span> : null}</article>; })}</div></details> : null}
       {photoExperience}
-      <EvolutionHistoryChart points={chartPoints} />
+      {assessments.length >= 2 ? <EvolutionHistoryChart points={chartPoints} /> : <section className="evolution-history evolution-single-measurements" aria-label="Medidas atuais"><div className="evolution-section-heading"><div><p className="section-kicker">Medidas atuais</p><h2>Seu ponto de partida</h2><p className="evolution-history-note">As medidas ficam registradas aqui e serão comparadas automaticamente na próxima avaliação.</p></div></div><div className="evolution-measurement-grid">{circumference.map(([key, value]) => <article key={key}><small>{circumferenceLabels[key] ?? key}</small><strong>{number(Number(value))} <i>cm</i></strong></article>)}</div></section>}
     </>}
   </main></PatientShell>;
 }

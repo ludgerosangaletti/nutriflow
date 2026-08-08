@@ -17,6 +17,7 @@ import AppointmentRequests from "./appointment-requests";
 import { canUseNutriFlowEditor, ensureNutriFlowAdminContext, getControlledHomologationSnapshot } from "../../../nutriflow/server";
 import NutriFlowHomologationPanel from "./nutriflow-homologation-panel";
 import ClinicalAssessmentForm from "./clinical-assessment-form";
+import ClinicalAssessmentHistory from "./clinical-assessment-history";
 import EnergyExpenditureForm from "./energy-expenditure-form";
 
 export const dynamic = "force-dynamic";
@@ -208,7 +209,7 @@ export default async function ClientAnswers({
         {isInPerson ? <details className="response-section clinical-assessments-section" id="avaliacoes" open>
           <summary className="admin-section-summary"><div><p className="section-kicker">Linha do tempo clínica</p><h2>Avaliações físicas</h2></div><strong>{clinicalAssessments.length} registro(s)</strong><i aria-hidden="true">⌄</i></summary>
           <ClinicalAssessmentForm email={row.client.email} />
-          {clinicalAssessments.length ? <div className="clinical-assessment-history">{clinicalAssessments.toReversed().map((a) => { const s=JSON.parse(a.snapshotJson) as { result:{bodyFatPct:number;leanMassKg:number;bmi:number}; input:{circumferencesCm:Record<string,number>} }; const protocolLabels: Record<string,string> = { pollock_7: "Pollock 7 dobras" }; const circumferenceLabels: Record<string,string> = { arm: "Braço", waist: "Cintura", abdomen: "Abdômen", hip: "Quadril", thigh: "Coxa" }; return <article key={a.id}><strong>{new Intl.DateTimeFormat("pt-BR").format(new Date(a.capturedAt))}</strong><span>{protocolLabels[a.protocolCode] ?? a.protocolCode} · IMC {Number(s.result.bmi).toFixed(1)} · {Number(s.result.bodyFatPct).toFixed(1)}% gordura corporal · {Number(s.result.leanMassKg).toFixed(1)} kg massa livre de gordura</span><small>{Object.entries(s.input.circumferencesCm ?? {}).map(([k,v])=>`${circumferenceLabels[k] ?? k}: ${v} cm`).join(" · ")}</small></article>; })}</div> : <p>Nenhuma avaliação física registrada.</p>}
+          <ClinicalAssessmentHistory assessments={clinicalAssessments} />
         </details> : null}
         <details className="response-section energy-expenditure-section" id="energia" open>
           <summary className="admin-section-summary"><div><p className="section-kicker">Planejamento energético</p><h2>Valor energético total</h2></div><strong>{energyCalculations.length} cálculo(s)</strong><i aria-hidden="true">⌄</i></summary>

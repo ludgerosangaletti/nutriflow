@@ -8787,6 +8787,24 @@ body.nf-sheet-open{overflow:hidden}
 .nf-swap-group button b{flex:0 0 auto;font-size:.72rem;white-space:nowrap}
 .nf-swap-cancel{width:100%;min-height:46px;margin-top:16px;border:0;border-radius:12px;background:#111;color:#fff;font-weight:850;cursor:pointer}
 
+/* Evolução clínica: medidas identificadas e comparativo sem média artificial */
+.evolution-history-note{margin:4px 0 0;color:#726f68;font-size:.76rem;line-height:1.45}
+.evolution-measurement-grid,.clinical-circumference-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin-top:15px}
+.evolution-measurement-grid article,.clinical-circumference-grid article{min-width:0;padding:13px;border:1px solid #e3e0d7;border-radius:12px;background:#f7f6ef}
+.evolution-measurement-grid small,.clinical-circumference-grid small{display:block;color:#726f68;font-size:.63rem;font-weight:900;letter-spacing:.06em;text-transform:uppercase}
+.evolution-measurement-grid strong,.clinical-circumference-grid strong{display:block;margin-top:7px;font-size:1rem}
+.evolution-measurement-grid i,.clinical-circumference-grid i{font-style:normal;font-size:.68em;color:#6c6962}
+.clinical-assessment-history-v2{margin-top:22px;padding-top:18px;border-top:1px solid #e5e2da}
+.clinical-assessment-history-v2>header{display:flex;align-items:flex-end;justify-content:space-between;gap:14px}
+.clinical-assessment-history-v2>header .section-kicker{margin:0 0 4px}
+.clinical-assessment-history-v2>header h3{margin:0;font-size:1.15rem}
+.clinical-assessment-history-v2>header>span{padding:7px 10px;border-radius:999px;background:#f0efe9;color:#5c5952;font-size:.68rem;font-weight:850}
+.clinical-history-note{margin:8px 0 0;color:#77736b;font-size:.76rem;line-height:1.45}
+.clinical-assessment-meta-v2{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:14px;padding:11px 13px;border-radius:12px;background:#f7f6ef}
+.clinical-assessment-meta-v2 strong{font-size:.8rem}.clinical-assessment-meta-v2 span{color:#66625b;font-size:.73rem}
+.clinical-circumference-grid article span{display:block;margin-top:5px;color:#77736b;font-size:.65rem;line-height:1.3}
+@media(max-width:760px){.evolution-measurement-grid,.clinical-circumference-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.clinical-assessment-meta-v2{display:grid;gap:4px}}
+
 @media(max-width:620px){
   .nf-plan-v4{gap:8px}
   .nf-plan-header-v4{display:grid;padding:18px;border-radius:18px}
