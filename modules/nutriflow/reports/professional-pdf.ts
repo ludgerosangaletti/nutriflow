@@ -188,6 +188,13 @@ class ProfessionalPdf {
 
   static async create(input: { reportName: string; versionLabel: string; issuedAt: string; logoBytes?: Uint8Array | null }) {
     const doc = await PDFDocument.create();
+    const immutableDate = new Date(input.issuedAt);
+    doc.setTitle(`${input.reportName} - ${input.versionLabel}`);
+    doc.setAuthor("Ludgero Sangaletti - NutriFlow");
+    doc.setCreator("NutriFlow");
+    doc.setProducer("NutriFlow Professional Reports");
+    doc.setCreationDate(immutableDate);
+    doc.setModificationDate(immutableDate);
     const fonts = {
       regular: await doc.embedFont(StandardFonts.Helvetica),
       bold: await doc.embedFont(StandardFonts.HelveticaBold),

@@ -13,11 +13,13 @@ const plan: PatientPortalPlanV1 = Object.freeze({
 const assessment = (id: string, capturedAt: string, weightKg: number, bodyFatPct: number, leanMassKg: number) => Object.freeze({ publicId: id, capturedAt, protocolCode: "pollock_7", protocolVersion: "1.0.0", weightKg, heightCm: 172, bmi: weightKg / (1.72 ** 2), bodyFatPct, fatMassKg: weightKg * bodyFatPct / 100, leanMassKg, circumferencesCm: Object.freeze({ arm: 36, waist: id === "a1" ? 92 : 87, abdomen: id === "a1" ? 96 : 90, hip: 101, thigh: 59 }) });
 
 test("plano profissional gera um PDF A4 válido a partir do snapshot publicado", async () => {
-  const bytes = await buildPlanReportPdf({ patientName: "Paciente Exemplo", nutritionistName: "Ludgero Sangaletti", nutritionistRegistration: "CRN-8 11719", validFrom: "2026-08-08", validUntil: "2026-09-08", plan });
+  const input = { patientName: "Paciente Exemplo", nutritionistName: "Ludgero Sangaletti", nutritionistRegistration: "CRN-8 11719", validFrom: "2026-08-08", validUntil: "2026-09-08", plan };
+  const bytes = await buildPlanReportPdf(input);
   assert.equal(new TextDecoder().decode(bytes.slice(0, 4)), "%PDF");
   const document = await PDFDocument.load(bytes);
   assert.ok(document.getPageCount() >= 1);
   assert.equal(reportFormatting.objectiveFrom(plan), "redução de gordura corporal");
+  assert.deepEqual(bytes, await buildPlanReportPdf(input), "o mesmo snapshot deve reproduzir o mesmo documento oficial");
 });
 
 test("comparativo clínico gera um PDF válido sem recalcular snapshots", async () => {
