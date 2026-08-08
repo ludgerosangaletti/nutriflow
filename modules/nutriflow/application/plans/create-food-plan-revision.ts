@@ -22,16 +22,28 @@ export class CreateFoodPlanRevision {
     const versionPublicId = this.dependencies.generatePublicId("version");
     const dayIds = new Map(published.content.days.map((day) => [day.publicId, this.dependencies.generatePublicId("day")]));
     const mealIds = new Map(published.content.meals.map((meal) => [meal.publicId, this.dependencies.generatePublicId("meal")]));
+    const itemIds = new Map(published.content.meals.flatMap((meal) => meal.items.map((item) => [item.publicId, this.dependencies.generatePublicId("item")] as const)));
     const content = Object.freeze({
       schemaVersion: 1 as const,
       days: Object.freeze(published.content.days.map((day) => Object.freeze({ ...day, publicId: dayIds.get(day.publicId)! }))),
-      meals: Object.freeze(published.content.meals.map((meal) => Object.freeze({ ...meal, publicId: mealIds.get(meal.publicId)!, planDayPublicId: meal.planDayPublicId ? dayIds.get(meal.planDayPublicId) ?? null : null, items: Object.freeze(meal.items.map((item) => Object.freeze({ ...item, publicId: this.dependencies.generatePublicId("item") }))) }))),
+      meals: Object.freeze(published.content.meals.map((meal) => Object.freeze({
+        ...meal,
+        publicId: mealIds.get(meal.publicId)!,
+        planDayPublicId: meal.planDayPublicId ? dayIds.get(meal.planDayPublicId) ?? null : null,
+        items: Object.freeze(meal.items.map((item) => Object.freeze({ ...item, publicId: itemIds.get(item.publicId)! }))),
+        substitutions: Object.freeze((meal.substitutions ?? []).map((group) => Object.freeze({
+          ...group,
+          publicId: this.dependencies.generatePublicId("substitution_group"),
+          mealItemPublicId: group.mealItemPublicId ? itemIds.get(group.mealItemPublicId) ?? null : null,
+          options: Object.freeze(group.options.map((option) => Object.freeze({ ...option, publicId: this.dependencies.generatePublicId("substitution_option") }))),
+        }))),
+      }))),
       notes: Object.freeze(published.content.notes.map((note) => Object.freeze({ ...note, publicId: this.dependencies.generatePublicId("note"), mealPublicId: note.mealPublicId ? mealIds.get(note.mealPublicId) ?? null : null }))),
     });
     const nextVersion = published.versionNumber + 1;
     const event = createDomainEvent({ eventId: this.dependencies.generatePublicId("event"), eventType: "nutriflow.food-plan.revision-created", eventVersion: 1, aggregateType: "food-plan", aggregatePublicId: published.planPublicId, aggregateVersion: nextVersion, occurredAt, actor: { authUserId: input.actor.authUserId, role: input.actor.role }, correlationId: input.correlationId, payload: { clientId: input.clientId, sourceVersionNumber: published.versionNumber, planVersionPublicId: versionPublicId }, metadata: { organizationPublicId: input.organizationPublicId, environment: this.dependencies.environment, source: "nutriflow-admin" } });
     await this.dependencies.unitOfWork.run(async (transaction) => {
-      transaction.plans.insertPlanVersion({ publicId: versionPublicId, planPublicId: published.planPublicId, versionNumber: nextVersion, revision: 1, schemaVersion: 1, state: "draft", title: published.title, notes: published.planNotes, snapshotJson: null, contentHash: null, createdByAuthUserId: input.actor.authUserId, publishedByAuthUserId: null, publishedAt: null, createdAt: occurredAt });
+      transaction.plans.insertPlanVersion({ publicId: versionPublicId, planPublicId: published.planPublicId, versionNumber: nextVersion, revision: 1, schemaVersion: 1, state: "draft", title: published.title, notes: published.planNotes, snapshotJson: JSON.stringify({ content }), contentHash: null, createdByAuthUserId: input.actor.authUserId, publishedByAuthUserId: null, publishedAt: null, createdAt: occurredAt });
       for (const day of content.days) transaction.plans.insertPlanDay({ publicId: day.publicId, planVersionPublicId: versionPublicId, label: day.label, dayIndex: day.dayIndex, sortOrder: day.sortOrder, createdAt: occurredAt });
       for (const meal of content.meals) {
         transaction.plans.insertMeal({ publicId: meal.publicId, planVersionPublicId: versionPublicId, planDayPublicId: meal.planDayPublicId, title: meal.title, scheduledTime: meal.scheduledTime, instructions: meal.instructions, sourceTemplatePublicId: meal.sourceTemplate?.publicId ?? null, sourceTemplateVersionNumber: meal.sourceTemplate?.versionNumber ?? null, sortOrder: meal.sortOrder, createdAt: occurredAt });

@@ -1,4 +1,5 @@
 import type { FoodPlanContentV1 } from "../../contracts/v1/plans.ts";
+import type { PublishedFoodPlanSnapshotV1 } from "../../domain/plans/food-plan-content.ts";
 import type {
   FoodPlanDraftRecord,
   FoodPlanReadRepository,
@@ -11,6 +12,56 @@ type DayRow = Readonly<{ public_id: string; label: string; day_index: number | n
 type MealRow = Readonly<{ public_id: string; plan_day_public_id: string | null; title: string; scheduled_time: string | null; instructions: string | null; source_template_public_id: string | null; source_template_version_number: number | null; sort_order: number }>;
 type ItemRow = Readonly<{ public_id: string; meal_public_id: string; source_type: "manual" | "food" | "recipe"; source_public_id: string | null; source_revision_number: number | null; display_name_snapshot: string; quantity_milli: number; unit_public_id: string; unit_code_snapshot: string; unit_label_snapshot: string; preparation: string | null; notes: string | null; sort_order: number }>;
 type NoteRow = Readonly<{ public_id: string; meal_public_id: string | null; kind: "general" | "preparation" | "clinical" | "patient"; content: string; sort_order: number }>;
+
+function contentFromPublishedSnapshot(snapshot: PublishedFoodPlanSnapshotV1): FoodPlanContentV1 {
+  return Object.freeze({
+    schemaVersion: 1,
+    days: Object.freeze(snapshot.days.map((day) => Object.freeze({ ...day }))),
+    meals: Object.freeze(snapshot.meals.map((meal) => Object.freeze({
+      publicId: meal.publicId,
+      planDayPublicId: meal.planDayPublicId,
+      title: meal.title,
+      scheduledTime: meal.scheduledTime,
+      instructions: meal.instructions,
+      sourceTemplate: meal.sourceTemplatePublicId && meal.sourceTemplateVersionNumber
+        ? Object.freeze({ publicId: meal.sourceTemplatePublicId, versionNumber: meal.sourceTemplateVersionNumber })
+        : null,
+      sortOrder: meal.sortOrder,
+      items: Object.freeze(meal.items.map((item) => Object.freeze({
+        publicId: item.publicId,
+        source: Object.freeze({ ...item.source }),
+        displayName: item.displayName,
+        quantityMilli: item.quantityMilli,
+        unit: Object.freeze({ publicId: item.unitPublicId, code: item.unitCode, label: item.unitLabel }),
+        preparation: item.preparation,
+        notes: item.notes,
+        macros: item.macros ?? null,
+        sortOrder: item.sortOrder,
+      }))),
+      substitutions: Object.freeze(meal.substitutions.map((group) => Object.freeze({
+        publicId: group.publicId,
+        mealItemPublicId: group.mealItemPublicId,
+        title: group.title,
+        ruleCode: group.ruleCode,
+        notes: group.notes,
+        sortOrder: group.sortOrder,
+        options: Object.freeze(group.options.map((option) => Object.freeze({
+          publicId: option.publicId,
+          source: Object.freeze({ ...option.source }),
+          displayName: option.displayName,
+          quantityMilli: option.quantityMilli,
+          unit: Object.freeze({ publicId: option.unitPublicId, code: option.unitCode, label: option.unitLabel }),
+          preparation: null,
+          notes: option.notes,
+          macros: option.macros ?? null,
+          sortOrder: option.sortOrder,
+        }))),
+      }))),
+      macros: (meal as typeof meal & { macros?: FoodPlanContentV1["meals"][number]["macros"] }).macros ?? null,
+    }))),
+    notes: Object.freeze(snapshot.planNotes.map((note) => Object.freeze({ ...note }))),
+  });
+}
 
 export class D1FoodPlanReadRepository implements FoodPlanReadRepository {
   private readonly database: D1OperationDatabaseLike;
@@ -66,7 +117,7 @@ export class D1FoodPlanReadRepository implements FoodPlanReadRepository {
     try {
       const parsed = row.snapshot_json ? JSON.parse(row.snapshot_json) as { content?: FoodPlanContentV1; days?: unknown[]; meals?: unknown[]; planNotes?: unknown[] } : null;
       if (parsed?.content?.schemaVersion === 1) content = parsed.content;
-      else if (parsed?.schemaVersion === 1 && Array.isArray(parsed.days) && Array.isArray(parsed.meals) && Array.isArray(parsed.planNotes)) content = parsed as unknown as FoodPlanContentV1;
+      else if (parsed?.schemaVersion === 1 && Array.isArray(parsed.days) && Array.isArray(parsed.meals) && Array.isArray(parsed.planNotes)) content = contentFromPublishedSnapshot(parsed as unknown as PublishedFoodPlanSnapshotV1);
     } catch { /* fall back to normalized rows */ }
     return Object.freeze({ publicId: row.public_id, planPublicId: row.plan_public_id, clientId: row.client_id, versionNumber: row.version_number, revision: row.revision, state: row.state, title: row.title, planNotes: row.notes, content, updatedAt: row.updated_at });
   }
