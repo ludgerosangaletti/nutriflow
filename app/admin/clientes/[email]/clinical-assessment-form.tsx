@@ -2,10 +2,26 @@
 import { useState } from "react";
 const skin = ["triceps","subscapular","suprailiac","abdominal","midaxillary","pectoral","thigh"] as const;
 const circ = ["arm","waist","abdomen","hip","thigh"] as const;
+const skinLabels: Record<(typeof skin)[number], string> = {
+  triceps: "Tríceps",
+  subscapular: "Subescapular",
+  suprailiac: "Supra-ilíaca",
+  abdominal: "Abdominal",
+  midaxillary: "Axilar média",
+  pectoral: "Peitoral",
+  thigh: "Coxa",
+};
+const circumferenceLabels: Record<(typeof circ)[number], string> = {
+  arm: "Braço",
+  waist: "Cintura",
+  abdomen: "Abdômen",
+  hip: "Quadril",
+  thigh: "Coxa",
+};
 export default function ClinicalAssessmentForm({ email }: { email: string }) {
   const [message, setMessage] = useState(""); const [saving, setSaving] = useState(false);
   async function submit(e: React.FormEvent<HTMLFormElement>) { e.preventDefault(); setSaving(true); setMessage(""); const f = new FormData(e.currentTarget); const n=(k:string)=>Number(f.get(k));
     const input = { sex: String(f.get("sex")) as "male"|"female", age:n("age"), weightKg:n("weightKg"), heightCm:n("heightCm"), measurementSide:String(f.get("measurementSide")) as "left"|"right", skinfoldsMm:Object.fromEntries(skin.map(k=>[k,n(k)])) as Record<typeof skin[number],number>, circumferencesCm:Object.fromEntries(circ.map(k=>[k,n(k)])) as Record<typeof circ[number],number> };
     const r=await fetch("/api/admin/clinical-assessments",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({email,input})}); const data=await r.json(); setMessage(r.ok?"Avaliação registrada como snapshot imutável.":data.error||"Não foi possível registrar."); setSaving(false); if(r.ok) window.location.reload(); }
-  return <form className="clinical-assessment-form" onSubmit={submit}><p className="section-kicker">Avaliação física · Pollock 7</p><h3>Novo registro presencial</h3><div className="form-grid"><label>Sexo<select name="sex" defaultValue="male"><option value="male">Masculino</option><option value="female">Feminino</option></select></label><label>Idade<input name="age" type="number" min="18" max="100" required /></label><label>Peso (kg)<input name="weightKg" type="number" step="0.1" required /></label><label>Altura (cm)<input name="heightCm" type="number" step="0.1" required /></label><label>Lado das circunferências<select name="measurementSide"><option value="right">Direito</option><option value="left">Esquerdo</option></select></label></div><h4>Dobras cutâneas (mm)</h4><div className="form-grid">{skin.map(k=><label key={k}>{k}<input name={k} type="number" step="0.1" min="0.1" required /></label>)}</div><h4>Circunferências (cm)</h4><div className="form-grid">{circ.map(k=><label key={k}>{k}<input name={k} type="number" step="0.1" min="1" required /></label>)}</div><button className="button button-dark" disabled={saving}>{saving?"Calculando…":"Salvar avaliação"}</button>{message&&<p role="status">{message}</p>}</form>;
+  return <form className="clinical-assessment-form" onSubmit={submit}><p className="section-kicker">Avaliação física · Pollock 7</p><h3>Novo registro presencial</h3><div className="form-grid"><label>Sexo<select name="sex" defaultValue="male"><option value="male">Masculino</option><option value="female">Feminino</option></select></label><label>Idade<input name="age" type="number" min="18" max="100" required /></label><label>Peso (kg)<input name="weightKg" type="number" step="0.1" required /></label><label>Altura (cm)<input name="heightCm" type="number" step="0.1" required /></label><label>Lado das circunferências<select name="measurementSide"><option value="right">Direito</option><option value="left">Esquerdo</option></select></label></div><h4>Dobras cutâneas (mm)</h4><div className="form-grid">{skin.map(k=><label key={k}>{skinLabels[k]}<input name={k} type="number" step="0.1" min="0.1" required /></label>)}</div><h4>Circunferências (cm)</h4><div className="form-grid">{circ.map(k=><label key={k}>{circumferenceLabels[k]}<input name={k} type="number" step="0.1" min="1" required /></label>)}</div><button className="button button-dark" disabled={saving}>{saving?"Calculando…":"Salvar avaliação"}</button>{message&&<p role="status">{message}</p>}</form>;
 }
