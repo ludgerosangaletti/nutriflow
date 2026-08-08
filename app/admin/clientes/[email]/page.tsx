@@ -1,7 +1,7 @@
 import { and, asc, desc, eq } from "drizzle-orm";
 import Link from "next/link";
 import { getDb } from "../../../../db";
-import { adjustmentRequests, anamneses, appointmentChangeRequests, checkIns, clients, goalProgress, goals, patientDocuments, progressPhotos, nfClinicalAssessments, nfEnergyExpenditureCalculations } from "../../../../db/schema";
+import { adjustmentRequests, anamneses, appointmentChangeRequests, checkIns, clients, goalProgress, goals, patientDocuments, progressPhotos, nfClinicalAssessments, nfEnergyExpenditureCalculations, nfPublications } from "../../../../db/schema";
 import { requireAdmin } from "../../../supabase/server";
 import { fieldLabels, sections, type Answers } from "../../../anamnese/questions";
 import CheckInReviewButton from "./check-in-review-button";
@@ -63,6 +63,7 @@ export default async function ClientAnswers({
   const patientAdjustments = await db.select().from(adjustmentRequests).where(eq(adjustmentRequests.clientEmail, email));
   const clinicalAssessments = await db.select().from(nfClinicalAssessments).where(eq(nfClinicalAssessments.clientId, row.client.id)).orderBy(asc(nfClinicalAssessments.capturedAt));
   const energyCalculations = await db.select().from(nfEnergyExpenditureCalculations).where(eq(nfEnergyExpenditureCalculations.clientId, row.client.id)).orderBy(desc(nfEnergyExpenditureCalculations.createdAt));
+  const [activePublication] = await db.select({ id: nfPublications.id }).from(nfPublications).where(and(eq(nfPublications.clientId, row.client.id), eq(nfPublications.status, "active"))).limit(1);
   const appointmentRequests = row.client.modality === "in_person"
     ? await db
         .select()
@@ -209,7 +210,7 @@ export default async function ClientAnswers({
         {isInPerson ? <details className="response-section clinical-assessments-section" id="avaliacoes" open>
           <summary className="admin-section-summary"><div><p className="section-kicker">Linha do tempo clínica</p><h2>Avaliações físicas</h2></div><strong>{clinicalAssessments.length} registro(s)</strong><i aria-hidden="true">⌄</i></summary>
           <ClinicalAssessmentForm email={row.client.email} />
-          <ClinicalAssessmentHistory assessments={clinicalAssessments} />
+          <ClinicalAssessmentHistory assessments={clinicalAssessments} email={row.client.email} />
         </details> : null}
         <details className="response-section energy-expenditure-section" id="energia" open>
           <summary className="admin-section-summary"><div><p className="section-kicker">Planejamento energético</p><h2>Valor energético total</h2></div><strong>{energyCalculations.length} cálculo(s)</strong><i aria-hidden="true">⌄</i></summary>
@@ -297,7 +298,7 @@ export default async function ClientAnswers({
               ? "Publique o protocolo alimentar e a avaliação física em PDF. A versão mais recente de cada categoria será destacada para o paciente."
               : "Publique o protocolo e os materiais auxiliares. Uma nova versão do protocolo substitui a anterior como versão atual."}
           </p>
-          <div className="admin-document-source-note"><strong>Novos protocolos são criados no NutriFlow.</strong><p>O PDF agora é gerado automaticamente a partir da versão estruturada publicada. Os arquivos abaixo permanecem disponíveis apenas como histórico e contingência.</p><Link className="admin-response-link" href={`/admin/clientes/${encodeURIComponent(row.client.email)}/nutriflow`}>Abrir Editor NutriFlow</Link></div>
+          <div className="admin-document-source-note"><strong>Novos protocolos são criados no NutriFlow.</strong><p>O PDF profissional é gerado a partir da versão estruturada publicada. Os arquivos abaixo permanecem disponíveis apenas como histórico e contingência.</p><div className="admin-document-source-actions"><Link className="admin-response-link" href={`/admin/clientes/${encodeURIComponent(row.client.email)}/nutriflow`}>Abrir Editor NutriFlow</Link>{activePublication ? <a className="admin-response-link" href={`/api/admin/nutriflow/plan-report?email=${encodeURIComponent(row.client.email)}`} rel="noreferrer" target="_blank">Gerar PDF profissional</a> : null}</div></div>
           <div className="admin-document-list">
             {documents
               .toSorted((a, b) => b.publishedAt.localeCompare(a.publishedAt))

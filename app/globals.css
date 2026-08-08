@@ -8871,3 +8871,28 @@ body.nf-sheet-open{overflow:hidden}
   .admin-checkin-list article>header{gap:16px}
   .checkin-review-box{width:100%}
 }
+.clinical-report-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: end;
+  margin-top: 22px;
+  padding: 18px;
+  border: 1px solid var(--line, #deddd7);
+  border-radius: 18px;
+  background: #f7f6f1;
+}
+.clinical-report-form > div { display: grid; gap: 7px; }
+.clinical-report-form label { color: #66645d; font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.clinical-report-form select { min-height: 46px; padding: 0 13px; border: 1px solid #d8d6ce; border-radius: 12px; background: #fff; color: #111; font: inherit; }
+.clinical-report-form .button { min-height: 46px; white-space: nowrap; }
+.admin-document-source-actions { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; }
+.evolution-report-action { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 24px; align-items: center; margin-top: 18px; padding: 22px; border: 1px solid #dddcd6; border-radius: 22px; background: #fff; }
+.evolution-report-action h2 { margin: 4px 0 7px; }
+.evolution-report-action p { margin: 0; color: #605e58; }
+@media (max-width: 760px) {
+  .clinical-report-form { grid-template-columns: 1fr; }
+  .clinical-report-form .button { width: 100%; }
+  .evolution-report-action { grid-template-columns: 1fr; }
+  .evolution-report-action .button { width: 100%; text-align: center; }
+}
