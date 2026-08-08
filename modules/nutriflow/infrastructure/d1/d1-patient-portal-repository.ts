@@ -100,19 +100,34 @@ function planFrom(row: PublicationRow, snapshot: PublishedFoodPlanSnapshotV1): P
       meals: Object.freeze(snapshot.meals
         .filter((meal) => meal.planDayPublicId === day.publicId)
         .toSorted((left, right) => left.sortOrder - right.sortOrder)
-        .map((meal) => Object.freeze({
+        .map((meal) => {
+          const options = meal.options?.length ? meal.options.toSorted((left, right) => left.sortOrder - right.sortOrder).map((option) => Object.freeze({
+            publicId: option.publicId,
+            label: option.label,
+            sortOrder: option.sortOrder,
+            items: Object.freeze(option.items.toSorted((left, right) => left.sortOrder - right.sortOrder).map(portalItem)),
+            substitutions: Object.freeze(option.substitutions.toSorted((left, right) => left.sortOrder - right.sortOrder).map(substitution)),
+          })) : [Object.freeze({
+            publicId: `${meal.publicId}_option_1`,
+            label: "Opção 1",
+            sortOrder: 0,
+            items: Object.freeze(meal.items.toSorted((left, right) => left.sortOrder - right.sortOrder).map(portalItem)),
+            substitutions: Object.freeze(meal.substitutions.toSorted((left, right) => left.sortOrder - right.sortOrder).map(substitution)),
+          })];
+          return Object.freeze({
           publicId: meal.publicId,
           title: meal.title,
           scheduledTime: meal.scheduledTime,
           instructions: meal.instructions,
           items: Object.freeze(meal.items.toSorted((left, right) => left.sortOrder - right.sortOrder).map(portalItem)),
           substitutions: Object.freeze(meal.substitutions.toSorted((left, right) => left.sortOrder - right.sortOrder).map(substitution)),
+          options: Object.freeze(options),
           macros: (meal as typeof meal & { macros?: PatientPortalMealV1["macros"] }).macros ?? null,
           nutritionComplete: meal.items.length > 0 && meal.items.every((item) => {
             const macros = (item as typeof item & { macros?: PatientPortalItemV1["macros"] }).macros;
             return macros?.energyKcal != null;
           }),
-        }))),
+        });})),
     }));
   const planMeals = days.flatMap((day) => day.meals);
   return Object.freeze({

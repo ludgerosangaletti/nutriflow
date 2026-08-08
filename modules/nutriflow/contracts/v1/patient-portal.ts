@@ -51,6 +51,14 @@ export type PatientPortalMealV1 = Readonly<{
   instructions: string | null;
   items: readonly PatientPortalItemV1[];
   substitutions: readonly PatientPortalSubstitutionV1[];
+  /** Uma única opção é retornada para publicações legadas. */
+  options: readonly Readonly<{
+    publicId: string;
+    label: string;
+    sortOrder: number;
+    items: readonly PatientPortalItemV1[];
+    substitutions: readonly PatientPortalSubstitutionV1[];
+  }>[];
   /** Optional total calculated from the published snapshot. */
   macros?: PatientPortalItemV1["macros"];
   /** False when the total would represent only part of the prescribed items. */

@@ -65,6 +65,14 @@ export type SubstitutionGroup = Readonly<{
   options: readonly SubstitutionOption[];
 }>;
 
+export type MealOption = Readonly<{
+  publicId: PublicId;
+  label: string;
+  sortOrder: SortOrder;
+  items: readonly MealItem[];
+  substitutions: readonly SubstitutionGroup[];
+}>;
+
 export type Meal = Readonly<{
   publicId: PublicId;
   planDayPublicId: PublicId | null;
@@ -76,6 +84,7 @@ export type Meal = Readonly<{
   sortOrder: SortOrder;
   items: readonly MealItem[];
   substitutions: readonly SubstitutionGroup[];
+  options?: readonly MealOption[];
 }>;
 
 export type PlanNote = Readonly<{

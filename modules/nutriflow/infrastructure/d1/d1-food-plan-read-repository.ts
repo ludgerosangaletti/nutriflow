@@ -57,6 +57,41 @@ function contentFromPublishedSnapshot(snapshot: PublishedFoodPlanSnapshotV1): Fo
           sortOrder: option.sortOrder,
         }))),
       }))),
+      ...(meal.options ? { options: Object.freeze(meal.options.map((mealOption) => Object.freeze({
+        publicId: mealOption.publicId,
+        label: mealOption.label,
+        sortOrder: mealOption.sortOrder,
+        items: Object.freeze(mealOption.items.map((item) => Object.freeze({
+          publicId: item.publicId,
+          source: Object.freeze({ ...item.source }),
+          displayName: item.displayName,
+          quantityMilli: item.quantityMilli,
+          unit: Object.freeze({ publicId: item.unitPublicId, code: item.unitCode, label: item.unitLabel }),
+          preparation: item.preparation,
+          notes: item.notes,
+          macros: item.macros ?? null,
+          sortOrder: item.sortOrder,
+        }))),
+        substitutions: Object.freeze(mealOption.substitutions.map((group) => Object.freeze({
+          publicId: group.publicId,
+          mealItemPublicId: group.mealItemPublicId,
+          title: group.title,
+          ruleCode: group.ruleCode,
+          notes: group.notes,
+          sortOrder: group.sortOrder,
+          options: Object.freeze(group.options.map((option) => Object.freeze({
+            publicId: option.publicId,
+            source: Object.freeze({ ...option.source }),
+            displayName: option.displayName,
+            quantityMilli: option.quantityMilli,
+            unit: Object.freeze({ publicId: option.unitPublicId, code: option.unitCode, label: option.unitLabel }),
+            preparation: null,
+            notes: option.notes,
+            macros: option.macros ?? null,
+            sortOrder: option.sortOrder,
+          }))),
+        }))),
+      }))) } : {}),
       macros: (meal as typeof meal & { macros?: FoodPlanContentV1["meals"][number]["macros"] }).macros ?? null,
     }))),
     notes: Object.freeze(snapshot.planNotes.map((note) => Object.freeze({ ...note }))),
@@ -115,7 +150,7 @@ export class D1FoodPlanReadRepository implements FoodPlanReadRepository {
     // relational tables remain compatible with older migrations. Published plans
     // already store the immutable snapshot in the same column.
     try {
-      const parsed = row.snapshot_json ? JSON.parse(row.snapshot_json) as { content?: FoodPlanContentV1; days?: unknown[]; meals?: unknown[]; planNotes?: unknown[] } : null;
+      const parsed = row.snapshot_json ? JSON.parse(row.snapshot_json) as { schemaVersion?: number; content?: FoodPlanContentV1; days?: unknown[]; meals?: unknown[]; planNotes?: unknown[] } : null;
       if (parsed?.content?.schemaVersion === 1) content = parsed.content;
       else if (parsed?.schemaVersion === 1 && Array.isArray(parsed.days) && Array.isArray(parsed.meals) && Array.isArray(parsed.planNotes)) content = contentFromPublishedSnapshot(parsed as unknown as PublishedFoodPlanSnapshotV1);
     } catch { /* fall back to normalized rows */ }

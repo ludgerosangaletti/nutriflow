@@ -14,8 +14,73 @@ export const NUTRIFLOW_UNITS = Object.freeze([
   { publicId: "unit_as_desired", code: "as_desired", label: "à vontade" },
 ]);
 
-export function editorId(kind: "day" | "meal" | "item" | "note") {
+export function editorId(kind: "day" | "meal" | "meal_option" | "item" | "note") {
   return `${kind}_${crypto.randomUUID()}`;
+}
+
+type MealOption = NonNullable<FoodPlanMealV1["options"]>[number];
+
+export function mealOptions(meal: FoodPlanMealV1): readonly MealOption[] {
+  if (meal.options?.length) return meal.options.toSorted((left, right) => left.sortOrder - right.sortOrder);
+  return [{ publicId: `${meal.publicId}_option_1`, label: "Opção 1", sortOrder: 0, items: meal.items, substitutions: meal.substitutions ?? [] }];
+}
+
+function replaceMealOptions(meal: FoodPlanMealV1, options: readonly MealOption[]): FoodPlanMealV1 {
+  const normalized = options.map((option, index) => ({
+    ...option,
+    label: option.label.trim() || `Opção ${index + 1}`,
+    sortOrder: index,
+    items: option.items.map((item, itemIndex) => ({ ...item, sortOrder: itemIndex })),
+    substitutions: (option.substitutions ?? []).map((group, groupIndex) => ({ ...group, sortOrder: groupIndex })),
+  }));
+  const primary = normalized[0];
+  return { ...meal, options: normalized, items: primary?.items ?? [], substitutions: primary?.substitutions ?? [] };
+}
+
+function updateMealOption(meal: FoodPlanMealV1, optionPublicId: string | undefined, updater: (option: MealOption) => MealOption): FoodPlanMealV1 {
+  if (!optionPublicId && !meal.options?.length) {
+    const updated = updater({ publicId: `${meal.publicId}_option_1`, label: "Opção 1", sortOrder: 0, items: meal.items, substitutions: meal.substitutions ?? [] });
+    return { ...meal, items: updated.items, substitutions: updated.substitutions ?? [] };
+  }
+  const options = mealOptions(meal).map((option) => option.publicId === (optionPublicId ?? mealOptions(meal)[0]?.publicId) ? updater(option) : option);
+  return replaceMealOptions(meal, options);
+}
+
+function cloneOption(option: MealOption, suppliedItemIds: readonly string[] = []): MealOption {
+  const itemIds = new Map(option.items.map((item, index) => [item.publicId, suppliedItemIds[index] ?? editorId("item")]));
+  return {
+    ...option,
+    publicId: editorId("meal_option"),
+    items: option.items.map((item) => ({ ...item, publicId: itemIds.get(item.publicId)! })),
+    substitutions: (option.substitutions ?? []).map((group) => ({
+      ...group,
+      publicId: editorId("item"),
+      mealItemPublicId: group.mealItemPublicId ? itemIds.get(group.mealItemPublicId) ?? null : null,
+      options: group.options.map((candidate) => ({ ...candidate, publicId: editorId("item") })),
+    })),
+  };
+}
+
+export function addMealOption(draft: FoodPlanDraftV1, mealPublicId: string, optionPublicId = editorId("meal_option")) {
+  return updateContent(draft, { ...draft.content, meals: draft.content.meals.map((meal) => {
+    if (meal.publicId !== mealPublicId) return meal;
+    const options = mealOptions(meal);
+    if (options.length >= 3) return meal;
+    const newOption: MealOption = { publicId: optionPublicId, label: `Opção ${options.length + 1}`, sortOrder: options.length, items: [], substitutions: [] };
+    const materialized = meal.options?.length ? options : [{ ...options[0], publicId: editorId("meal_option") }];
+    return replaceMealOptions(meal, [...materialized, newOption]);
+  }) });
+}
+
+export function updateMealOptionLabel(draft: FoodPlanDraftV1, mealPublicId: string, optionPublicId: string, label: string) {
+  return updateContent(draft, { ...draft.content, meals: draft.content.meals.map((meal) => meal.publicId === mealPublicId ? updateMealOption(meal, optionPublicId, (option) => ({ ...option, label })) : meal) });
+}
+
+export function removeMealOption(draft: FoodPlanDraftV1, mealPublicId: string, optionPublicId: string) {
+  return updateContent(draft, { ...draft.content, meals: draft.content.meals.map((meal) => {
+    if (meal.publicId !== mealPublicId || !meal.options?.length || meal.options.length <= 1) return meal;
+    return replaceMealOptions(meal, meal.options.filter((option) => option.publicId !== optionPublicId));
+  }) });
 }
 
 function normalizeContent(content: FoodPlanContentV1): FoodPlanContentV1 {
@@ -28,11 +93,10 @@ function normalizeContent(content: FoodPlanContentV1): FoodPlanContentV1 {
       .forEach((meal, index) => mealPositions.set(meal.publicId, index));
   }
   const meals = content.meals
-    .map((meal) => ({
-      ...meal,
-      sortOrder: mealPositions.get(meal.publicId) ?? meal.sortOrder,
-      items: meal.items.map((item, index) => ({ ...item, sortOrder: index })),
-    }))
+    .map((meal) => {
+      const normalized = replaceMealOptions(meal, mealOptions(meal));
+      return { ...normalized, sortOrder: mealPositions.get(meal.publicId) ?? meal.sortOrder };
+    })
     .sort((left, right) => {
       const leftDay = days.findIndex((day) => day.publicId === left.planDayPublicId);
       const rightDay = days.findIndex((day) => day.publicId === right.planDayPublicId);
@@ -89,7 +153,8 @@ export function duplicateDay(
     const generated = ids.meals[mealIndex];
     const mealPublicId = generated?.meal ?? editorId("meal");
     mealIdMap.set(meal.publicId, mealPublicId);
-    return { ...meal, publicId: mealPublicId, planDayPublicId: ids.day, items: meal.items.map((item, itemIndex) => ({ ...item, publicId: generated?.items[itemIndex] ?? editorId("item") })) };
+    const options = mealOptions(meal).map((option, optionIndex) => cloneOption(option, optionIndex === 0 ? generated?.items ?? [] : []));
+    return replaceMealOptions({ ...meal, publicId: mealPublicId, planDayPublicId: ids.day }, options);
   });
   const notes = [...draft.content.notes, ...draft.content.notes.filter((note) => note.mealPublicId && mealIdMap.has(note.mealPublicId)).map((note) => ({ ...note, publicId: editorId("note"), mealPublicId: mealIdMap.get(note.mealPublicId!) ?? null }))];
   return updateContent(draft, { ...draft.content, days, meals: [...draft.content.meals, ...copies], notes });
@@ -128,17 +193,17 @@ export function updateMeal(draft: FoodPlanDraftV1, mealPublicId: string, patch: 
   return updateContent(draft, { ...draft.content, meals: draft.content.meals.map((meal) => meal.publicId === mealPublicId ? { ...meal, ...patch, publicId: meal.publicId, items: meal.items } : meal) });
 }
 
-export function addItem(draft: FoodPlanDraftV1, mealPublicId: string, publicId = editorId("item")) {
+export function addItem(draft: FoodPlanDraftV1, mealPublicId: string, publicId = editorId("item"), optionPublicId?: string) {
   const unit = NUTRIFLOW_UNITS[2];
-  return updateContent(draft, { ...draft.content, meals: draft.content.meals.map((meal) => meal.publicId === mealPublicId ? { ...meal, items: [...meal.items, { publicId, source: { type: "manual", publicId: null, revisionNumber: null }, displayName: "Novo alimento", quantityMilli: 1000, unit, preparation: null, notes: null, sortOrder: meal.items.length }] } : meal) });
+  return updateContent(draft, { ...draft.content, meals: draft.content.meals.map((meal) => meal.publicId === mealPublicId ? updateMealOption(meal, optionPublicId, (option) => ({ ...option, items: [...option.items, { publicId, source: { type: "manual", publicId: null, revisionNumber: null }, displayName: "Novo alimento", quantityMilli: 1000, unit, preparation: null, notes: null, sortOrder: option.items.length }] })) : meal) });
 }
 
-export function addCatalogItem(draft: FoodPlanDraftV1, mealPublicId: string, food: FoodCatalogItemV1, publicId = editorId("item")) {
-  return updateContent(draft, { ...draft.content, meals: draft.content.meals.map((meal) => meal.publicId === mealPublicId ? { ...meal, items: [...meal.items, { publicId, source: { type: "food", publicId: food.publicId, revisionNumber: food.revisionNumber }, displayName: food.name, quantityMilli: food.referenceQuantityMilli, unit: food.referenceUnit, preparation: null, notes: null, macros: food.nutrients ?? null, sortOrder: meal.items.length }] } : meal) });
+export function addCatalogItem(draft: FoodPlanDraftV1, mealPublicId: string, food: FoodCatalogItemV1, publicId = editorId("item"), optionPublicId?: string) {
+  return updateContent(draft, { ...draft.content, meals: draft.content.meals.map((meal) => meal.publicId === mealPublicId ? updateMealOption(meal, optionPublicId, (option) => ({ ...option, items: [...option.items, { publicId, source: { type: "food", publicId: food.publicId, revisionNumber: food.revisionNumber }, displayName: food.name, quantityMilli: food.referenceQuantityMilli, unit: food.referenceUnit, preparation: null, notes: null, macros: food.nutrients ?? null, sortOrder: option.items.length }] })) : meal) });
 }
 
-export function addRecipeItem(draft: FoodPlanDraftV1, mealPublicId: string, recipe: RecipeVersionV1, publicId = editorId("item")) {
-  return updateContent(draft, { ...draft.content, meals: draft.content.meals.map((meal) => meal.publicId === mealPublicId ? { ...meal, items: [...meal.items, { publicId, source: { type: "recipe", publicId: recipe.recipePublicId, revisionNumber: recipe.versionNumber }, displayName: recipe.name, quantityMilli: recipe.yieldQuantityMilli, unit: recipe.yieldUnit, preparation: recipe.instructions, notes: `${recipe.ingredients.length} ingrediente(s)`, sortOrder: meal.items.length }] } : meal) });
+export function addRecipeItem(draft: FoodPlanDraftV1, mealPublicId: string, recipe: RecipeVersionV1, publicId = editorId("item"), optionPublicId?: string) {
+  return updateContent(draft, { ...draft.content, meals: draft.content.meals.map((meal) => meal.publicId === mealPublicId ? updateMealOption(meal, optionPublicId, (option) => ({ ...option, items: [...option.items, { publicId, source: { type: "recipe", publicId: recipe.recipePublicId, revisionNumber: recipe.versionNumber }, displayName: recipe.name, quantityMilli: recipe.yieldQuantityMilli, unit: recipe.yieldUnit, preparation: recipe.instructions, notes: `${recipe.ingredients.length} ingrediente(s)`, sortOrder: option.items.length }] })) : meal) });
 }
 
 export function applyMealTemplate(
@@ -153,72 +218,85 @@ export function applyMealTemplate(
   return updateContent(draft, { ...draft.content, meals: [...draft.content.meals, meal] });
 }
 
-export function updateItem(draft: FoodPlanDraftV1, mealPublicId: string, itemPublicId: string, patch: Partial<FoodPlanMealV1["items"][number]>) {
-  return updateContent(draft, { ...draft.content, meals: draft.content.meals.map((meal) => meal.publicId === mealPublicId ? { ...meal, items: meal.items.map((item) => item.publicId === itemPublicId ? { ...item, ...patch, publicId: item.publicId } : item) } : meal) });
+export function updateItem(draft: FoodPlanDraftV1, mealPublicId: string, itemPublicId: string, patch: Partial<FoodPlanMealV1["items"][number]>, optionPublicId?: string) {
+  return updateContent(draft, { ...draft.content, meals: draft.content.meals.map((meal) => meal.publicId === mealPublicId ? updateMealOption(meal, optionPublicId, (option) => ({ ...option, items: option.items.map((item) => item.publicId === itemPublicId ? { ...item, ...patch, publicId: item.publicId } : item) })) : meal) });
 }
 
-export function addSubstitutionGroup(draft: FoodPlanDraftV1, mealPublicId: string, itemPublicId: string) {
+export function addSubstitutionGroup(draft: FoodPlanDraftV1, mealPublicId: string, itemPublicId: string, optionPublicId?: string) {
   return updateContent(draft, { ...draft.content, meals: draft.content.meals.map((meal) => {
     if (meal.publicId !== mealPublicId) return meal;
-    const item = meal.items.find((candidate) => candidate.publicId === itemPublicId);
-    if (!item) return meal;
-    const groups = meal.substitutions ?? [];
-    if (groups.some((group) => group.mealItemPublicId === itemPublicId)) return meal;
-    return { ...meal, substitutions: [...groups, { publicId: editorId("item"), mealItemPublicId: itemPublicId, title: `Opções para ${item.displayName}`, ruleCode: "choose_one" as const, notes: null, sortOrder: groups.length, options: [{ ...item, publicId: editorId("item"), notes: "Opção principal" }] }] };
+    return updateMealOption(meal, optionPublicId, (option) => {
+      const item = option.items.find((candidate) => candidate.publicId === itemPublicId);
+      if (!item) return option;
+      const groups = option.substitutions ?? [];
+      if (groups.some((group) => group.mealItemPublicId === itemPublicId)) return option;
+      return { ...option, substitutions: [...groups, { publicId: editorId("item"), mealItemPublicId: itemPublicId, title: `Trocar ${item.displayName}`, ruleCode: "choose_one" as const, notes: null, sortOrder: groups.length, options: [] }] };
+    });
   }) });
 }
 
-export function addSubstitutionOption(draft: FoodPlanDraftV1, mealPublicId: string, groupPublicId: string) {
+export function addSubstitutionOption(draft: FoodPlanDraftV1, mealPublicId: string, groupPublicId: string, optionPublicId?: string) {
   return updateContent(draft, { ...draft.content, meals: draft.content.meals.map((meal) => {
     if (meal.publicId !== mealPublicId) return meal;
-    return { ...meal, substitutions: (meal.substitutions ?? []).map((group) => {
+    return updateMealOption(meal, optionPublicId, (mealOption) => ({ ...mealOption, substitutions: (mealOption.substitutions ?? []).map((group) => {
       if (group.publicId !== groupPublicId) return group;
       return { ...group, options: [...group.options, { publicId: editorId("item"), source: { type: "manual" as const, publicId: null, revisionNumber: null }, displayName: "Nova opção", quantityMilli: 1000, unit: NUTRIFLOW_UNITS[0], preparation: null, notes: null, sortOrder: group.options.length }] };
-    }) };
+    }) }));
   }) });
 }
 
-export function removeSubstitutionOption(draft: FoodPlanDraftV1, mealPublicId: string, groupPublicId: string, optionPublicId: string) {
+export function removeSubstitutionOption(draft: FoodPlanDraftV1, mealPublicId: string, groupPublicId: string, substitutionOptionPublicId: string, mealOptionPublicId?: string) {
   return updateContent(draft, { ...draft.content, meals: draft.content.meals.map((meal) => {
     if (meal.publicId !== mealPublicId) return meal;
-    return { ...meal, substitutions: (meal.substitutions ?? []).map((group) => group.publicId !== groupPublicId ? group : { ...group, options: group.options.filter((option) => option.publicId !== optionPublicId) }) };
+    return updateMealOption(meal, mealOptionPublicId, (option) => ({ ...option, substitutions: (option.substitutions ?? []).map((group) => group.publicId !== groupPublicId ? group : { ...group, options: group.options.filter((candidate) => candidate.publicId !== substitutionOptionPublicId) }) }));
   }) });
 }
 
-export function updateSubstitutionOption(draft: FoodPlanDraftV1, mealPublicId: string, groupPublicId: string, optionPublicId: string, patch: Partial<FoodPlanMealV1["items"][number]>) {
+export function updateSubstitutionOption(draft: FoodPlanDraftV1, mealPublicId: string, groupPublicId: string, substitutionOptionPublicId: string, patch: Partial<FoodPlanMealV1["items"][number]>, mealOptionPublicId?: string) {
   return updateContent(draft, { ...draft.content, meals: draft.content.meals.map((meal) => {
     if (meal.publicId !== mealPublicId) return meal;
-    return { ...meal, substitutions: (meal.substitutions ?? []).map((group) => {
+    return updateMealOption(meal, mealOptionPublicId, (option) => ({ ...option, substitutions: (option.substitutions ?? []).map((group) => {
       if (group.publicId !== groupPublicId) return group;
-      return { ...group, options: group.options.map((option) => option.publicId === optionPublicId ? { ...option, ...patch } : option) };
-    }) };
+      return { ...group, options: group.options.map((candidate) => candidate.publicId === substitutionOptionPublicId ? { ...candidate, ...patch } : candidate) };
+    }) }));
   }) });
 }
 
-export function removeItem(draft: FoodPlanDraftV1, mealPublicId: string, itemPublicId: string) {
-  return updateContent(draft, { ...draft.content, meals: draft.content.meals.map((meal) => meal.publicId === mealPublicId ? { ...meal, items: meal.items.filter((item) => item.publicId !== itemPublicId) } : meal) });
+export function updateSubstitutionGroup(draft: FoodPlanDraftV1, mealPublicId: string, groupPublicId: string, patch: Readonly<{ title?: string; notes?: string | null }>, optionPublicId?: string) {
+  return updateContent(draft, { ...draft.content, meals: draft.content.meals.map((meal) => meal.publicId === mealPublicId ? updateMealOption(meal, optionPublicId, (option) => ({ ...option, substitutions: (option.substitutions ?? []).map((group) => group.publicId === groupPublicId ? { ...group, ...patch } : group) })) : meal) });
 }
 
-export function moveItem(draft: FoodPlanDraftV1, mealPublicId: string, itemPublicId: string, direction: -1 | 1) {
+export function removeSubstitutionGroup(draft: FoodPlanDraftV1, mealPublicId: string, groupPublicId: string, optionPublicId?: string) {
+  return updateContent(draft, { ...draft.content, meals: draft.content.meals.map((meal) => meal.publicId === mealPublicId ? updateMealOption(meal, optionPublicId, (option) => ({ ...option, substitutions: (option.substitutions ?? []).filter((group) => group.publicId !== groupPublicId) })) : meal) });
+}
+
+export function removeItem(draft: FoodPlanDraftV1, mealPublicId: string, itemPublicId: string, optionPublicId?: string) {
+  return updateContent(draft, { ...draft.content, meals: draft.content.meals.map((meal) => meal.publicId === mealPublicId ? updateMealOption(meal, optionPublicId, (option) => ({ ...option, items: option.items.filter((item) => item.publicId !== itemPublicId), substitutions: (option.substitutions ?? []).filter((group) => group.mealItemPublicId !== itemPublicId) })) : meal) });
+}
+
+export function moveItem(draft: FoodPlanDraftV1, mealPublicId: string, itemPublicId: string, direction: -1 | 1, optionPublicId?: string) {
   return updateContent(draft, { ...draft.content, meals: draft.content.meals.map((meal) => {
     if (meal.publicId !== mealPublicId) return meal;
-    const items = [...meal.items];
-    const index = items.findIndex((item) => item.publicId === itemPublicId);
-    const target = index + direction;
-    if (index < 0 || target < 0 || target >= items.length) return meal;
-    [items[index], items[target]] = [items[target], items[index]];
-    return { ...meal, items };
+    return updateMealOption(meal, optionPublicId, (option) => {
+      const items = [...option.items];
+      const index = items.findIndex((item) => item.publicId === itemPublicId);
+      const target = index + direction;
+      if (index < 0 || target < 0 || target >= items.length) return option;
+      [items[index], items[target]] = [items[target], items[index]];
+      return { ...option, items };
+    });
   }) });
 }
 
-export function duplicateItem(draft: FoodPlanDraftV1, mealPublicId: string, itemPublicId: string, publicId = editorId("item")) {
+export function duplicateItem(draft: FoodPlanDraftV1, mealPublicId: string, itemPublicId: string, publicId = editorId("item"), optionPublicId?: string) {
   return updateContent(draft, { ...draft.content, meals: draft.content.meals.map((meal) => {
     if (meal.publicId !== mealPublicId) return meal;
-    const index = meal.items.findIndex((item) => item.publicId === itemPublicId);
-    if (index < 0) return meal;
-    const copy = { ...meal.items[index], publicId };
-    const items = [...meal.items.slice(0, index + 1), copy, ...meal.items.slice(index + 1)];
-    return { ...meal, items };
+    return updateMealOption(meal, optionPublicId, (option) => {
+      const index = option.items.findIndex((item) => item.publicId === itemPublicId);
+      if (index < 0) return option;
+      const copy = { ...option.items[index], publicId };
+      return { ...option, items: [...option.items.slice(0, index + 1), copy, ...option.items.slice(index + 1)] };
+    });
   }) });
 }
 
@@ -233,10 +311,11 @@ export function duplicateMeal(draft: FoodPlanDraftV1, mealPublicId: string, ids:
     planDayPublicId: ids.targetDayPublicId ?? source.planDayPublicId,
     title: `${source.title} — cópia`,
     sortOrder: targetOrder,
-    items: source.items.map((item, index) => ({ ...item, publicId: ids.items[index] ?? editorId("item") })),
+    items: [],
   };
+  const copied = replaceMealOptions(copy, mealOptions(source).map((option, optionIndex) => cloneOption(option, optionIndex === 0 ? ids.items : [])));
   const meals = draft.content.meals.map((meal) => !ids.targetDayPublicId && meal.planDayPublicId === source.planDayPublicId && meal.sortOrder > source.sortOrder ? { ...meal, sortOrder: meal.sortOrder + 1 } : meal);
   const sourcePosition = meals.findIndex((meal) => meal.publicId === source.publicId);
-  meals.splice(ids.targetDayPublicId ? meals.length : sourcePosition + 1, 0, copy);
+  meals.splice(ids.targetDayPublicId ? meals.length : sourcePosition + 1, 0, copied);
   return updateContent(draft, { ...draft.content, meals });
 }

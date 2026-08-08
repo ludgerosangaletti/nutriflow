@@ -64,6 +64,12 @@ function assertUniquePublicIds(values: readonly { publicId: PublicId }[], field:
 }
 
 function freezeMeal(meal: Meal): Meal {
+  const freezeSubstitutions = (groups: Meal["substitutions"]) => Object.freeze(
+    groups.map((group) => Object.freeze({
+      ...group,
+      options: Object.freeze(group.options.map((option) => Object.freeze({ ...option, source: Object.freeze({ ...option.source }) }))),
+    })),
+  );
   return Object.freeze({
     ...meal,
     items: Object.freeze(
@@ -71,21 +77,12 @@ function freezeMeal(meal: Meal): Meal {
         Object.freeze({ ...item, source: Object.freeze({ ...item.source }) }),
       ),
     ),
-    substitutions: Object.freeze(
-      meal.substitutions.map((group) =>
-        Object.freeze({
-          ...group,
-          options: Object.freeze(
-            group.options.map((option) =>
-              Object.freeze({
-                ...option,
-                source: Object.freeze({ ...option.source }),
-              }),
-            ),
-          ),
-        }),
-      ),
-    ),
+    substitutions: freezeSubstitutions(meal.substitutions),
+    ...(meal.options ? { options: Object.freeze(meal.options.map((option) => Object.freeze({
+      ...option,
+      items: Object.freeze(option.items.map((item) => Object.freeze({ ...item, source: Object.freeze({ ...item.source }) }))),
+      substitutions: freezeSubstitutions(option.substitutions),
+    }))) } : {}),
   });
 }
 
@@ -203,6 +200,10 @@ export class FoodPlanDraft extends AggregateRoot {
       throw new Error("NUTRIFLOW_INVALID_PLAN:meal.planDayPublicId");
     }
     assertUniquePublicIds(meal.items, "meal.items");
+    if (meal.options?.length) {
+      assertUniquePublicIds(meal.options, "meal.options");
+      for (const option of meal.options) assertUniquePublicIds(option.items, "meal.options.items");
+    }
     this.#meals.push(freezeMeal(meal));
     this.advanceRevision();
   }
@@ -251,6 +252,14 @@ export class FoodPlanDraft extends AggregateRoot {
       for (const item of meal.items) {
         requiredText(item.displayName, "mealItem.displayName");
       }
+      if (meal.options?.length) {
+        assertUniquePublicIds(meal.options, "meal.options");
+        for (const option of meal.options) {
+          requiredText(option.label, "mealOption.label");
+          assertUniquePublicIds(option.items, "mealOption.items");
+          for (const item of option.items) requiredText(item.displayName, "mealOption.item.displayName");
+        }
+      }
     }
     for (const note of input.planNotes) {
       requiredText(note.content, "planNote.content");
@@ -281,7 +290,7 @@ export class FoodPlanDraft extends AggregateRoot {
 
   requestReview(expectedRevision: RevisionToken) {
     this.assertEditable(expectedRevision);
-    if (this.#meals.length === 0 || this.#meals.some((meal) => meal.items.length === 0)) {
+    if (this.#meals.length === 0 || this.#meals.some((meal) => meal.items.length === 0 || meal.options?.some((option) => option.items.length === 0))) {
       throw new Error("NUTRIFLOW_PLAN_REVIEW_BLOCKED:emptyMeal");
     }
     this.#state = "in_review";

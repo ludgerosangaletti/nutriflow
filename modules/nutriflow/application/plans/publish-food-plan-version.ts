@@ -6,12 +6,23 @@ import { NutriFlowApplicationError } from "../errors/nutriflow-application-error
 import type { FoodPlanReadRepository } from "../ports/food-plan-repository.ts";
 import type { FoodPlanPublicationStore } from "../ports/food-plan-publication-store.ts";
 import { assertNutriFlowAuthorized, NUTRIFLOW_ACTIONS, type NutriFlowActor } from "../security/authorization.ts";
+import type { MealItem, SubstitutionGroup } from "../../domain/plans/food-plan-content.ts";
 
 type IdentifierKind = "event" | "audit" | "publication";
 
 function totalMacros(items: readonly { macros?: { energyKcal?: number | null; protein?: number | null; carbohydrate?: number | null; fat?: number | null; fiber?: number | null } | null }[]) {
   const keys = ["energyKcal", "protein", "carbohydrate", "fat", "fiber"] as const;
   return Object.freeze(Object.fromEntries(keys.map((key) => [key, items.some((item) => item.macros?.[key] != null) ? items.reduce((sum, item) => sum + Number(item.macros?.[key] ?? 0), 0) : null])));
+}
+
+type ContractMeal = NonNullable<Awaited<ReturnType<FoodPlanReadRepository["findDraftByVersion"]>>>["content"]["meals"][number];
+
+function domainItem(item: ContractMeal["items"][number]): MealItem {
+  return Object.freeze({ publicId: publicId(item.publicId), source: Object.freeze({ type: item.source.type, publicId: item.source.publicId ? publicId(item.source.publicId) : null, revisionNumber: item.source.revisionNumber ? versionNumber(item.source.revisionNumber) : null }), displayName: item.displayName, quantityMilli: quantityMilli(item.quantityMilli), unitPublicId: publicId(item.unit.publicId), unitCode: unitCode(item.unit.code), unitLabel: item.unit.label, preparation: item.preparation, notes: item.notes, macros: item.macros ?? null, sortOrder: sortOrder(item.sortOrder) });
+}
+
+function domainGroup(group: NonNullable<ContractMeal["substitutions"]>[number]): SubstitutionGroup {
+  return Object.freeze({ publicId: publicId(group.publicId), mealItemPublicId: group.mealItemPublicId ? publicId(group.mealItemPublicId) : null, title: group.title, ruleCode: group.ruleCode, notes: group.notes, sortOrder: sortOrder(group.sortOrder), options: Object.freeze(group.options.map((candidate) => Object.freeze({ publicId: publicId(candidate.publicId), source: Object.freeze({ type: candidate.source.type, publicId: candidate.source.publicId ? publicId(candidate.source.publicId) : null, revisionNumber: candidate.source.revisionNumber ? versionNumber(candidate.source.revisionNumber) : null }), displayName: candidate.displayName, quantityMilli: quantityMilli(candidate.quantityMilli), unitPublicId: publicId(candidate.unit.publicId), unitCode: unitCode(candidate.unit.code), unitLabel: candidate.unit.label, notes: candidate.notes, macros: candidate.macros ?? null, sortOrder: sortOrder(candidate.sortOrder) }))) });
 }
 
 export class PublishFoodPlanVersion {
@@ -55,7 +66,10 @@ export class PublishFoodPlanVersion {
       !existing.title.trim() ? "título do plano" : null,
       existing.content.days.length === 0 ? "ao menos uma estratégia" : null,
       existing.content.meals.length === 0 ? "ao menos uma refeição" : null,
-      ...existing.content.meals.filter((meal) => meal.items.length === 0).map((meal) => `alimentos em ${meal.title || "refeição sem nome"}`),
+      ...existing.content.meals.flatMap((meal) => {
+        const options = meal.options?.length ? meal.options : [{ label: "Opção 1", items: meal.items }];
+        return options.filter((option) => option.items.length === 0).map((option) => `alimentos em ${meal.title || "refeição sem nome"} — ${option.label}`);
+      }),
     ].filter((item): item is string => Boolean(item));
     if (checklist.length) throw new NutriFlowApplicationError(NUTRIFLOW_ERROR_CODES.INVALID_INPUT, `Checklist de publicação incompleto: ${checklist.join(", ")}.`, 400);
 
@@ -68,20 +82,13 @@ export class PublishFoodPlanVersion {
       sourceTemplatePublicId: meal.sourceTemplate ? publicId(meal.sourceTemplate.publicId) : null,
       sourceTemplateVersionNumber: meal.sourceTemplate ? versionNumber(meal.sourceTemplate.versionNumber) : null,
       sortOrder: sortOrder(meal.sortOrder),
-      items: Object.freeze(meal.items.map((item) => Object.freeze({
-        publicId: publicId(item.publicId),
-        source: Object.freeze({ type: item.source.type, publicId: item.source.publicId ? publicId(item.source.publicId) : null, revisionNumber: item.source.revisionNumber ? versionNumber(item.source.revisionNumber) : null }),
-        displayName: item.displayName,
-        quantityMilli: quantityMilli(item.quantityMilli),
-        unitPublicId: publicId(item.unit.publicId),
-        unitCode: unitCode(item.unit.code),
-        unitLabel: item.unit.label,
-        preparation: item.preparation,
-        notes: item.notes,
-        macros: item.macros ?? null,
-        sortOrder: sortOrder(item.sortOrder),
-      }))),
-      substitutions: Object.freeze((meal.substitutions ?? []).map((group) => Object.freeze({ ...group, publicId: publicId(group.publicId), mealItemPublicId: group.mealItemPublicId ? publicId(group.mealItemPublicId) : null, options: Object.freeze(group.options.map((option) => Object.freeze({ ...option, publicId: publicId(option.publicId), unitPublicId: publicId(option.unit.publicId), quantityMilli: quantityMilli(option.quantityMilli), sortOrder: sortOrder(option.sortOrder), source: Object.freeze({ ...option.source, publicId: option.source.publicId ? publicId(option.source.publicId) : null, revisionNumber: option.source.revisionNumber ? versionNumber(option.source.revisionNumber) : null }) }))) }))),
+      items: Object.freeze(meal.items.map(domainItem)),
+      substitutions: Object.freeze((meal.substitutions ?? []).map(domainGroup)),
+      ...(meal.options ? { options: Object.freeze(meal.options.map((mealOption) => Object.freeze({
+        publicId: publicId(mealOption.publicId), label: mealOption.label, sortOrder: sortOrder(mealOption.sortOrder),
+        items: Object.freeze(mealOption.items.map(domainItem)),
+        substitutions: Object.freeze((mealOption.substitutions ?? []).map(domainGroup)),
+      }))) } : {}),
       macros: totalMacros(meal.items),
     }));
     const draft = FoodPlanDraft.rehydrate({

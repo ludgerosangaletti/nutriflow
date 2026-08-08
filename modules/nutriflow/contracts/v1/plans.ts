@@ -48,6 +48,14 @@ export type FoodPlanItemV1 = Readonly<{
 }>;
 export type FoodPlanSubstitutionGroupV1 = Readonly<{ publicId: string; mealItemPublicId: string | null; title: string; ruleCode: "choose_one"; notes: string | null; sortOrder: number; options: readonly FoodPlanItemV1[] }>;
 
+export type FoodPlanMealOptionV1 = Readonly<{
+  publicId: string;
+  label: string;
+  sortOrder: number;
+  items: readonly FoodPlanItemV1[];
+  substitutions?: readonly FoodPlanSubstitutionGroupV1[];
+}>;
+
 export type FoodPlanMealV1 = Readonly<{
   publicId: string;
   planDayPublicId: string | null;
@@ -61,6 +69,12 @@ export type FoodPlanMealV1 = Readonly<{
   sortOrder: number;
   items: readonly FoodPlanItemV1[];
   substitutions?: readonly FoodPlanSubstitutionGroupV1[];
+  /**
+   * Variantes completas da refeição. Quando ausente, `items` representa a
+   * única Opção 1. Quando presente, `items` e `substitutions` espelham a
+   * primeira opção para manter consumidores v1 anteriores compatíveis.
+   */
+  options?: readonly FoodPlanMealOptionV1[];
   macros?: Readonly<{ energyKcal?: number | null; protein?: number | null; carbohydrate?: number | null; fat?: number | null; fiber?: number | null }> | null;
 }>;
 

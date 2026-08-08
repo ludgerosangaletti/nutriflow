@@ -14,15 +14,19 @@ export class CreateFoodPlanRevision {
     const now = (this.dependencies.clock ?? (() => new Date()))();
     assertNutriFlowAuthorized(input.actor, NUTRIFLOW_ACTIONS.CREATE_PLAN, { organizationPublicId: input.organizationPublicId, clientId: input.clientId }, now);
     if (input.actor.kind !== "staff") throw new NutriFlowApplicationError(NUTRIFLOW_ERROR_CODES.FORBIDDEN, "Acesso não autorizado.", 403);
+    const actor = input.actor;
     const existingDraft = await this.dependencies.plans.findLatestDraft({ organizationId: input.organizationId, clientId: input.clientId });
-    if (existingDraft) return existingDraft;
+    if (existingDraft) return Object.freeze({ apiVersion: NUTRIFLOW_API_VERSION, ...existingDraft });
     const published = await this.dependencies.plans.findLatestPublished({ organizationId: input.organizationId, clientId: input.clientId });
     if (!published) throw new NutriFlowApplicationError(NUTRIFLOW_ERROR_CODES.NOT_FOUND, "Não há versão publicada para revisar.", 404);
     const occurredAt = now.toISOString();
     const versionPublicId = this.dependencies.generatePublicId("version");
     const dayIds = new Map(published.content.days.map((day) => [day.publicId, this.dependencies.generatePublicId("day")]));
     const mealIds = new Map(published.content.meals.map((meal) => [meal.publicId, this.dependencies.generatePublicId("meal")]));
-    const itemIds = new Map(published.content.meals.flatMap((meal) => meal.items.map((item) => [item.publicId, this.dependencies.generatePublicId("item")] as const)));
+    const itemIds = new Map(published.content.meals.flatMap((meal) => [
+      ...meal.items,
+      ...(meal.options ?? []).flatMap((option) => option.items),
+    ].map((item) => [item.publicId, this.dependencies.generatePublicId("item")] as const)));
     const content = Object.freeze({
       schemaVersion: 1 as const,
       days: Object.freeze(published.content.days.map((day) => Object.freeze({ ...day, publicId: dayIds.get(day.publicId)! }))),
@@ -37,20 +41,31 @@ export class CreateFoodPlanRevision {
           mealItemPublicId: group.mealItemPublicId ? itemIds.get(group.mealItemPublicId) ?? null : null,
           options: Object.freeze(group.options.map((option) => Object.freeze({ ...option, publicId: this.dependencies.generatePublicId("substitution_option") }))),
         }))),
+        ...(meal.options ? { options: Object.freeze(meal.options.map((mealOption) => Object.freeze({
+          ...mealOption,
+          publicId: this.dependencies.generatePublicId("meal_option"),
+          items: Object.freeze(mealOption.items.map((item) => Object.freeze({ ...item, publicId: itemIds.get(item.publicId)! }))),
+          substitutions: Object.freeze((mealOption.substitutions ?? []).map((group) => Object.freeze({
+            ...group,
+            publicId: this.dependencies.generatePublicId("substitution_group"),
+            mealItemPublicId: group.mealItemPublicId ? itemIds.get(group.mealItemPublicId) ?? null : null,
+            options: Object.freeze(group.options.map((option) => Object.freeze({ ...option, publicId: this.dependencies.generatePublicId("substitution_option") }))),
+          }))),
+        }))) } : {}),
       }))),
       notes: Object.freeze(published.content.notes.map((note) => Object.freeze({ ...note, publicId: this.dependencies.generatePublicId("note"), mealPublicId: note.mealPublicId ? mealIds.get(note.mealPublicId) ?? null : null }))),
     });
     const nextVersion = published.versionNumber + 1;
-    const event = createDomainEvent({ eventId: this.dependencies.generatePublicId("event"), eventType: "nutriflow.food-plan.revision-created", eventVersion: 1, aggregateType: "food-plan", aggregatePublicId: published.planPublicId, aggregateVersion: nextVersion, occurredAt, actor: { authUserId: input.actor.authUserId, role: input.actor.role }, correlationId: input.correlationId, payload: { clientId: input.clientId, sourceVersionNumber: published.versionNumber, planVersionPublicId: versionPublicId }, metadata: { organizationPublicId: input.organizationPublicId, environment: this.dependencies.environment, source: "nutriflow-admin" } });
+    const event = createDomainEvent({ eventId: this.dependencies.generatePublicId("event"), eventType: "nutriflow.food-plan.revision-created", eventVersion: 1, aggregateType: "food-plan", aggregatePublicId: published.planPublicId, aggregateVersion: nextVersion, occurredAt, actor: { authUserId: actor.authUserId, role: actor.role }, correlationId: input.correlationId, payload: { clientId: input.clientId, sourceVersionNumber: published.versionNumber, planVersionPublicId: versionPublicId }, metadata: { organizationPublicId: input.organizationPublicId, environment: this.dependencies.environment, source: "nutriflow-admin" } });
     await this.dependencies.unitOfWork.run(async (transaction) => {
-      transaction.plans.insertPlanVersion({ publicId: versionPublicId, planPublicId: published.planPublicId, versionNumber: nextVersion, revision: 1, schemaVersion: 1, state: "draft", title: published.title, notes: published.planNotes, snapshotJson: JSON.stringify({ content }), contentHash: null, createdByAuthUserId: input.actor.authUserId, publishedByAuthUserId: null, publishedAt: null, createdAt: occurredAt });
+      transaction.plans.insertPlanVersion({ publicId: versionPublicId, planPublicId: published.planPublicId, versionNumber: nextVersion, revision: 1, schemaVersion: 1, state: "draft", title: published.title, notes: published.planNotes, snapshotJson: JSON.stringify({ content }), contentHash: null, createdByAuthUserId: actor.authUserId, publishedByAuthUserId: null, publishedAt: null, createdAt: occurredAt });
       for (const day of content.days) transaction.plans.insertPlanDay({ publicId: day.publicId, planVersionPublicId: versionPublicId, label: day.label, dayIndex: day.dayIndex, sortOrder: day.sortOrder, createdAt: occurredAt });
       for (const meal of content.meals) {
         transaction.plans.insertMeal({ publicId: meal.publicId, planVersionPublicId: versionPublicId, planDayPublicId: meal.planDayPublicId, title: meal.title, scheduledTime: meal.scheduledTime, instructions: meal.instructions, sourceTemplatePublicId: meal.sourceTemplate?.publicId ?? null, sourceTemplateVersionNumber: meal.sourceTemplate?.versionNumber ?? null, sortOrder: meal.sortOrder, createdAt: occurredAt });
         for (const item of meal.items) transaction.plans.insertMealItem({ publicId: item.publicId, mealPublicId: meal.publicId, sourceType: item.source.type, sourcePublicId: item.source.publicId, sourceRevisionNumber: item.source.revisionNumber, displayNameSnapshot: item.displayName, quantityMilli: item.quantityMilli, unitPublicId: item.unit.publicId, unitCodeSnapshot: item.unit.code, unitLabelSnapshot: item.unit.label, preparation: item.preparation, notes: item.notes, sortOrder: item.sortOrder, createdAt: occurredAt });
       }
       for (const note of content.notes) transaction.plans.insertPlanNote({ publicId: note.publicId, planVersionPublicId: versionPublicId, mealPublicId: note.mealPublicId, kind: note.kind, content: note.content, sortOrder: note.sortOrder, createdAt: occurredAt });
-      transaction.audit.append({ publicId: this.dependencies.generatePublicId("audit"), actorAuthUserId: input.actor.authUserId, actorRole: input.actor.role, action: "plan.revision.created", entityType: "food-plan", entityPublicId: published.planPublicId, correlationId: input.correlationId, beforeJson: JSON.stringify({ publishedVersion: published.versionNumber }), afterJson: JSON.stringify({ draftVersion: nextVersion }), occurredAt });
+      transaction.audit.append({ publicId: this.dependencies.generatePublicId("audit"), actorAuthUserId: actor.authUserId, actorRole: actor.role, action: "plan.revision.created", entityType: "food-plan", entityPublicId: published.planPublicId, correlationId: input.correlationId, beforeJson: JSON.stringify({ publishedVersion: published.versionNumber }), afterJson: JSON.stringify({ draftVersion: nextVersion }), occurredAt });
       transaction.enqueueDomainEvents([event]);
     });
     return Object.freeze({ apiVersion: NUTRIFLOW_API_VERSION, publicId: versionPublicId, planPublicId: published.planPublicId, clientId: input.clientId, versionNumber: nextVersion, revision: 1, state: "draft", title: published.title, planNotes: published.planNotes, content, updatedAt: occurredAt });

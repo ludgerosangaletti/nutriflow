@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { FoodPlanDraftV1 } from "../modules/nutriflow/contracts/v1/plans.ts";
-import { addCatalogItem, addDay, addItem, addMeal, addRecipeItem, applyMealTemplate, duplicateDay, duplicateItem, duplicateMeal, moveDay, moveItem, moveMeal, moveMealToDay, removeDay, removeItem, removeMeal, updateItem, updateMeal } from "../app/admin/clientes/[email]/nutriflow/editor-state.ts";
+import { addCatalogItem, addDay, addItem, addMeal, addMealOption, addRecipeItem, addSubstitutionGroup, addSubstitutionOption, applyMealTemplate, duplicateDay, duplicateItem, duplicateMeal, mealOptions, moveDay, moveItem, moveMeal, moveMealToDay, removeDay, removeItem, removeMeal, removeMealOption, updateItem, updateMeal } from "../app/admin/clientes/[email]/nutriflow/editor-state.ts";
 
 function emptyDraft(): FoodPlanDraftV1 {
   return { apiVersion: "v1", publicId: "version_editor_01", planPublicId: "plan_editor_01", clientId: 1, versionNumber: 1, revision: 1, state: "draft", title: "Plano", planNotes: null, content: { schemaVersion: 1, days: [], meals: [], notes: [] }, updatedAt: "2026-08-01T10:00:00.000Z" };
@@ -99,4 +99,32 @@ test("editor applies a versioned meal template and a recipe with provenance", ()
   }, "item_recipe_01");
   const recipeItem = draft.content.meals.find((meal) => meal.publicId === "meal_editor_01")!.items[0];
   assert.deepEqual(recipeItem.source, { type: "recipe", publicId: "recipe_01", revisionNumber: 2 });
+});
+
+test("editor keeps up to three independent meal options and exposes swaps only after clinical registration", () => {
+  let draft = addMeal(addDay(emptyDraft(), "day_options_01"), "day_options_01", "meal_options_01");
+  draft = addItem(draft, "meal_options_01", "item_option_01");
+  draft = addMealOption(draft, "meal_options_01", "meal_option_02");
+  draft = addMealOption(draft, "meal_options_01", "meal_option_03");
+  draft = addMealOption(draft, "meal_options_01", "meal_option_ignored");
+  draft = addItem(draft, "meal_options_01", "item_option_02", "meal_option_02");
+  draft = updateItem(draft, "meal_options_01", "item_option_02", { displayName: "Iogurte natural" }, "meal_option_02");
+
+  let options = mealOptions(draft.content.meals[0]);
+  assert.equal(options.length, 3);
+  assert.equal(options[0].items[0].publicId, "item_option_01");
+  assert.equal(options[1].items[0].displayName, "Iogurte natural");
+  assert.equal(options[1].substitutions.length, 0);
+
+  draft = addSubstitutionGroup(draft, "meal_options_01", "item_option_02", "meal_option_02");
+  const groupId = mealOptions(draft.content.meals[0])[1].substitutions[0].publicId;
+  draft = addSubstitutionOption(draft, "meal_options_01", groupId, "meal_option_02");
+  options = mealOptions(draft.content.meals[0]);
+  assert.equal(options[1].substitutions[0].mealItemPublicId, "item_option_02");
+  assert.equal(options[1].substitutions[0].options.length, 1);
+  assert.equal(options[0].substitutions.length, 0);
+
+  draft = removeMealOption(draft, "meal_options_01", "meal_option_03");
+  assert.equal(mealOptions(draft.content.meals[0]).length, 2);
+  assert.deepEqual(draft.content.meals[0].items, mealOptions(draft.content.meals[0])[0].items);
 });

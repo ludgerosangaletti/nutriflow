@@ -5,8 +5,17 @@ import { publicId, quantityMilli, revisionToken, sortOrder, unitCode, versionNum
 import { NutriFlowApplicationError } from "../errors/nutriflow-application-error.ts";
 import type { FoodPlanDraftStore, FoodPlanReadRepository } from "../ports/food-plan-repository.ts";
 import { assertNutriFlowAuthorized, NUTRIFLOW_ACTIONS, type NutriFlowActor } from "../security/authorization.ts";
+import type { MealItem, SubstitutionGroup } from "../../domain/plans/food-plan-content.ts";
 
 type IdentifierKind = "event" | "audit";
+
+function domainItem(item: SaveFoodPlanDraftCommandV1["content"]["meals"][number]["items"][number]): MealItem {
+  return Object.freeze({ publicId: publicId(item.publicId), source: Object.freeze({ type: item.source.type, publicId: item.source.publicId ? publicId(item.source.publicId) : null, revisionNumber: item.source.revisionNumber ? versionNumber(item.source.revisionNumber) : null }), displayName: item.displayName, quantityMilli: quantityMilli(item.quantityMilli), unitPublicId: publicId(item.unit.publicId), unitCode: unitCode(item.unit.code), unitLabel: item.unit.label, preparation: item.preparation, notes: item.notes, macros: item.macros ?? null, sortOrder: sortOrder(item.sortOrder) });
+}
+
+function domainGroup(group: NonNullable<SaveFoodPlanDraftCommandV1["content"]["meals"][number]["substitutions"]>[number]): SubstitutionGroup {
+  return Object.freeze({ publicId: publicId(group.publicId), mealItemPublicId: group.mealItemPublicId ? publicId(group.mealItemPublicId) : null, title: group.title, ruleCode: group.ruleCode, notes: group.notes, sortOrder: sortOrder(group.sortOrder), options: Object.freeze(group.options.map((candidate) => Object.freeze({ publicId: publicId(candidate.publicId), source: Object.freeze({ type: candidate.source.type, publicId: candidate.source.publicId ? publicId(candidate.source.publicId) : null, revisionNumber: candidate.source.revisionNumber ? versionNumber(candidate.source.revisionNumber) : null }), displayName: candidate.displayName, quantityMilli: quantityMilli(candidate.quantityMilli), unitPublicId: publicId(candidate.unit.publicId), unitCode: unitCode(candidate.unit.code), unitLabel: candidate.unit.label, notes: candidate.notes, macros: candidate.macros ?? null, sortOrder: sortOrder(candidate.sortOrder) }))) });
+}
 
 export class SaveFoodPlanDraft {
   private readonly dependencies: Readonly<{
@@ -40,7 +49,12 @@ export class SaveFoodPlanDraft {
     const days = input.command.content.days.map((day) => Object.freeze({ publicId: publicId(day.publicId), label: day.label, dayIndex: day.dayIndex, sortOrder: sortOrder(day.sortOrder) }));
     const meals = input.command.content.meals.map((meal) => Object.freeze({
       publicId: publicId(meal.publicId), planDayPublicId: meal.planDayPublicId ? publicId(meal.planDayPublicId) : null, title: meal.title, scheduledTime: meal.scheduledTime, instructions: meal.instructions, sourceTemplatePublicId: meal.sourceTemplate ? publicId(meal.sourceTemplate.publicId) : null, sourceTemplateVersionNumber: meal.sourceTemplate ? versionNumber(meal.sourceTemplate.versionNumber) : null, sortOrder: sortOrder(meal.sortOrder),
-      items: Object.freeze(meal.items.map((item) => Object.freeze({ publicId: publicId(item.publicId), source: Object.freeze({ type: item.source.type, publicId: item.source.publicId ? publicId(item.source.publicId) : null, revisionNumber: item.source.revisionNumber ? versionNumber(item.source.revisionNumber) : null }), displayName: item.displayName, quantityMilli: quantityMilli(item.quantityMilli), unitPublicId: publicId(item.unit.publicId), unitCode: unitCode(item.unit.code), unitLabel: item.unit.label, preparation: item.preparation, notes: item.notes, macros: item.macros ?? null, sortOrder: sortOrder(item.sortOrder) }))), substitutions: Object.freeze(meal.substitutions ?? []), macros: meal.macros ?? null,
+      items: Object.freeze(meal.items.map(domainItem)), substitutions: Object.freeze((meal.substitutions ?? []).map(domainGroup)), macros: meal.macros ?? null,
+      ...(meal.options ? { options: Object.freeze(meal.options.map((option) => Object.freeze({
+        publicId: publicId(option.publicId), label: option.label, sortOrder: sortOrder(option.sortOrder),
+        items: Object.freeze(option.items.map(domainItem)),
+        substitutions: Object.freeze((option.substitutions ?? []).map(domainGroup)),
+      }))) } : {}),
     }));
     const notes = input.command.content.notes.map((note) => Object.freeze({ publicId: publicId(note.publicId), mealPublicId: note.mealPublicId ? publicId(note.mealPublicId) : null, kind: note.kind, content: note.content, sortOrder: sortOrder(note.sortOrder) }));
     const draft = FoodPlanDraft.rehydrate({ organizationPublicId: publicId(input.organizationPublicId), clientId: input.clientId, planPublicId: publicId(existing.planPublicId), planVersionPublicId: publicId(existing.publicId), versionNumber: versionNumber(existing.versionNumber), revision: revisionToken(existing.revision), state: existing.state, title: existing.title, notes: existing.planNotes, days: existing.content.days.map((day) => ({ ...day, publicId: publicId(day.publicId), sortOrder: sortOrder(day.sortOrder) })), meals: [], planNotes: [] });
