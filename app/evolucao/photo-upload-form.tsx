@@ -10,8 +10,10 @@ const angles = [
 
 export default function PhotoUploadForm({
   defaultPeriod,
+  existingAngles = [],
 }: {
   defaultPeriod: string;
+  existingAngles?: readonly string[];
 }) {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
@@ -39,8 +41,13 @@ export default function PhotoUploadForm({
 
   return (
     <form className="photo-upload-form" onSubmit={submit}>
-      <label className="photo-period">
-        Mês do acompanhamento
+      <div className="photo-register-heading">
+        <div>
+          <strong>Registro fotográfico</strong>
+          <p>Opcional. Suas fotos são privadas e visíveis apenas para você e seu nutricionista.</p>
+        </div>
+        <label className="photo-period">
+        <span>Mês</span>
         <input
           defaultValue={defaultPeriod}
           max={defaultPeriod}
@@ -48,22 +55,25 @@ export default function PhotoUploadForm({
           required
           type="month"
         />
-      </label>
+        </label>
+      </div>
       <div className="photo-input-grid">
-        {angles.map((angle) => (
-          <label className={`photo-input ${selected[angle.id] ? "has-file" : ""}`} key={angle.id}>
-            <i aria-hidden="true">{selected[angle.id] ? "✓" : "+"}</i>
+        {angles.map((angle) => {
+          const alreadySaved = existingAngles.includes(angle.id);
+          const ready = Boolean(selected[angle.id]) || alreadySaved;
+          return (
+          <label className={`photo-input ${ready ? "has-file" : ""}`} key={angle.id}>
+            <i aria-hidden="true">{ready ? "✓" : "+"}</i>
             <span>{angle.label}</span>
-            <small>{selected[angle.id] || "Toque para escolher"}</small>
+            <small>{selected[angle.id] ? "Nova foto escolhida" : alreadySaved ? "Enviada" : "Adicionar"}</small>
             <input
               accept="image/jpeg,image/png,image/webp"
               name={angle.id}
-              required
               type="file"
               onChange={(event) => setSelected((current) => ({ ...current, [angle.id]: event.target.files?.[0]?.name || "" }))}
             />
           </label>
-        ))}
+        )})}
       </div>
       <label className="photo-consent">
         <input name="photoConsent" required type="checkbox" value="accepted" />
@@ -76,7 +86,7 @@ export default function PhotoUploadForm({
         </span>
       </label>
       <button className="button button-dark" disabled={saving} type="submit">
-        {saving ? "Enviando com segurança..." : "Salvar registro mensal"}
+        {saving ? "Enviando com segurança..." : "Salvar fotos selecionadas"}
       </button>
       {message ? (
         <p className={message.includes("segurança") ? "form-success" : "form-error"} role="status">

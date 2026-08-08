@@ -38,18 +38,20 @@ export async function POST(request: Request) {
     return Response.json({ error: "Selecione um mês válido." }, { status: 400 });
   }
 
-  const files = angles.map((angle) => ({ angle, file: form.get(angle) }));
+  const files = angles
+    .map((angle) => ({ angle, file: form.get(angle) }))
+    .filter((entry): entry is { angle: typeof angles[number]; file: File } => entry.file instanceof File && entry.file.size > 0);
+  if (!files.length) {
+    return Response.json({ error: "Escolha ao menos uma foto para enviar ou atualizar." }, { status: 400 });
+  }
   for (const { file } of files) {
-    if (!(file instanceof File) || file.size === 0) {
-      return Response.json({ error: "Envie as três fotos: frente, lado e costas." }, { status: 400 });
-    }
     if (!allowedTypes.has(file.type) || file.size > maxFileSize) {
       return Response.json({ error: "Use imagens JPG, PNG ou WEBP com até 8 MB cada." }, { status: 400 });
     }
   }
 
   const now = new Date().toISOString();
-  for (const { angle, file } of files as { angle: typeof angles[number]; file: File }[]) {
+  for (const { angle, file } of files) {
     const extension = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
     const objectKey = `progress/${user.id}/${period}/${angle}.${extension}`;
     await env.BUCKET.put(objectKey, await file.arrayBuffer(), {
