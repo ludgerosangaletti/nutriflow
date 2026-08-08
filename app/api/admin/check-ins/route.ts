@@ -8,6 +8,7 @@ export async function PATCH(request: Request) {
   if (!admin) return Response.json({ error: "Não autorizado." }, { status: 403 });
   const body = await request.json() as { id?: number; reviewed?: boolean; feedback?: string };
   if (!Number.isInteger(body.id) || typeof body.reviewed !== "boolean") return Response.json({ error: "Dados inválidos." }, { status: 400 });
-  await getDb().update(checkIns).set({ adminStatus: body.reviewed ? "reviewed" : "new", reviewedAt: body.reviewed ? new Date().toISOString() : null, feedback: typeof body.feedback === "string" ? body.feedback.slice(0, 500) : undefined, updatedAt: new Date().toISOString() }).where(eq(checkIns.id, body.id!));
+  const feedback = typeof body.feedback === "string" ? body.feedback.trim().slice(0, 500) : undefined;
+  await getDb().update(checkIns).set({ adminStatus: body.reviewed ? "reviewed" : "new", reviewedAt: body.reviewed ? new Date().toISOString() : null, feedback, updatedAt: new Date().toISOString() }).where(eq(checkIns.id, body.id!));
   return Response.json({ ok: true });
 }
