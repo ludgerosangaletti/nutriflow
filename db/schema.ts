@@ -377,6 +377,29 @@ export const whatsappLeads = sqliteTable(
   ],
 );
 
+export const whatsappWebhookEvents = sqliteTable(
+  "whatsapp_webhook_events",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    providerEventId: text("provider_event_id").notNull(),
+    receivedAt: text("received_at").notNull(),
+  },
+  (table) => [uniqueIndex("whatsapp_webhook_events_provider_id_unique").on(table.providerEventId)],
+);
+
+export const resendWebhookEvents = sqliteTable(
+  "resend_webhook_events",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    providerEventId: text("provider_event_id").notNull(),
+    eventType: text("event_type").notNull(),
+    providerEmailId: text("provider_email_id"),
+    occurredAt: text("occurred_at"),
+    receivedAt: text("received_at").notNull(),
+  },
+  (table) => [uniqueIndex("resend_webhook_events_provider_id_unique").on(table.providerEventId)],
+);
+
 // NutriFlow tables are intentionally additive. The existing PDF workflow keeps
 // using patient_documents while structured plans are protected by feature flags.
 export const nfOrganizations = sqliteTable(

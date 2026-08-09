@@ -9,6 +9,8 @@ import { getDb } from "../../../../db";
 import {
   appointmentChangeRequests,
   clients,
+  patientActivationMessages,
+  whatsappWebhookEvents,
 } from "../../../../db/schema";
 import {
   availableAppointmentSlots,
@@ -364,11 +366,13 @@ type WhatsAppWebhook = {
   entry?: Array<{
     changes?: Array<{
       value?: {
+        statuses?: Array<{ id?: string; status?: string }>;
         contacts?: Array<{
           wa_id?: string;
           profile?: { name?: string };
         }>;
         messages?: Array<{
+          id?: string;
           from?: string;
           type?: string;
           text?: { body?: string };
@@ -2152,6 +2156,12 @@ export async function POST(request: Request) {
     return new Response("Conteúdo inválido.", { status: 400 });
   }
 
+  const statuses = payload.entry?.flatMap((entry) => entry.changes?.flatMap((change) => change.value?.statuses || []) || []) || [];
+  for (const status of statuses) {
+    if (!status.id || !["sent", "delivered", "read", "failed"].includes(status.status || "")) continue;
+    await getDb().update(patientActivationMessages).set({ status: status.status, updatedAt: new Date().toISOString() }).where(eq(patientActivationMessages.providerId, status.id));
+  }
+
   const messages =
     payload.entry?.flatMap(
       (entry) =>
@@ -2168,6 +2178,15 @@ export async function POST(request: Request) {
 
   for (const message of messages) {
     if (!message.from) continue;
+
+    if (message.id) {
+      const eventInsert = await getDb()
+        .insert(whatsappWebhookEvents)
+        .values({ providerEventId: message.id, receivedAt: new Date().toISOString() })
+        .onConflictDoNothing({ target: whatsappWebhookEvents.providerEventId })
+        .run();
+      if ((eventInsert.meta?.changes ?? 0) !== 1) continue;
+    }
 
     const messageBody =
       message.text?.body ||

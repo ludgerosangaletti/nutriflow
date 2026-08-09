@@ -1,3 +1,4 @@
+import { claimEmailDelivery, markEmailFailed, markEmailSent, resendHeaders } from "../_shared/communication-delivery.ts";
 const headers = { "content-type": "application/json; charset=utf-8" };
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers });
@@ -37,6 +38,7 @@ Deno.serve(async (request) => {
     email?: string;
     name?: string;
     modality?: string;
+    weekStart?: string;
   } | null;
   if (!body?.email || !body.email.includes("@") || !body.name) {
     return json({ error: "Dados do paciente inválidos." }, 400);
@@ -45,6 +47,9 @@ Deno.serve(async (request) => {
   const apiKey = Deno.env.get("RESEND_API_KEY");
   const fromEmail = Deno.env.get("RESEND_FROM_EMAIL");
   if (!apiKey || !fromEmail) return json({ error: "E-mail não configurado." }, 500);
+  const deliveryKey = `check-in-reminder:${body.email.toLowerCase()}:${body.weekStart || new Date().toISOString().slice(0, 10)}`;
+  const claim = await claimEmailDelivery({ key: deliveryKey, type: "check-in-reminder", recipient: body.email.toLowerCase() });
+  if (!claim.claimed) return json({ ok: true, duplicate: true });
 
   const firstName = escapeHtml(body.name.trim().split(/\s+/)[0] || "paciente");
   const context =
@@ -54,8 +59,7 @@ Deno.serve(async (request) => {
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
-      authorization: `Bearer ${apiKey}`,
-      "content-type": "application/json",
+      ...resendHeaders(apiKey, deliveryKey),
     },
     body: JSON.stringify({
       from: `Ludgero Sangaletti <${fromEmail}>`,
@@ -86,6 +90,7 @@ Deno.serve(async (request) => {
     id?: string;
     message?: string;
   };
-  if (!response.ok) return json({ error: result.message || "Falha no envio." }, 502);
+  if (!response.ok) { await markEmailFailed(deliveryKey, `RESEND_${response.status}`); return json({ error: result.message || "Falha no envio." }, 502); }
+  await markEmailSent(deliveryKey, result.id || null);
   return json({ ok: true, id: result.id });
 });

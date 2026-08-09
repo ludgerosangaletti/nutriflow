@@ -1,3 +1,4 @@
+import { claimEmailDelivery, markEmailFailed, markEmailSent, resendHeaders } from "../_shared/communication-delivery.ts";
 const headers = { "content-type": "application/json; charset=utf-8" };
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers });
@@ -69,6 +70,9 @@ Deno.serve(async (request) => {
   if (!apiKey || !fromEmail || !adminEmail) {
     return json({ error: "Configuração de e-mail incompleta." }, 500);
   }
+  const deliveryKey = `appointment-change:${body.email.toLowerCase()}:${body.appointmentAt}:${body.requestedAppointmentAt || "none"}:${body.action}`;
+  const claim = await claimEmailDelivery({ key: deliveryKey, type: "appointment-change", recipient: adminEmail.toLowerCase() });
+  if (!claim.claimed) return json({ ok: true, duplicate: true });
 
   const rawName =
     body.name?.trim() || body.email.split("@")[0]?.trim() || "Paciente";
@@ -115,8 +119,7 @@ ${patientPhone ? `<a href="https://wa.me/${patientPhone}" style="display:inline-
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
-      authorization: `Bearer ${apiKey}`,
-      "content-type": "application/json",
+      ...resendHeaders(apiKey, deliveryKey),
     },
     body: JSON.stringify({
       from: `Ludgero Sangaletti <${fromEmail}>`,
@@ -130,7 +133,9 @@ ${patientPhone ? `<a href="https://wa.me/${patientPhone}" style="display:inline-
     message?: string;
   };
   if (!response.ok) {
+    await markEmailFailed(deliveryKey, `RESEND_${response.status}`);
     return json({ error: result.message || "Falha no envio." }, 502);
   }
+  await markEmailSent(deliveryKey, result.id || null);
   return json({ ok: true, emailId: result.id || null, template: "appointment-change-v1" });
 });

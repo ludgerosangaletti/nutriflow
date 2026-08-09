@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { claimEmailDelivery, markEmailFailed, markEmailSent, resendHeaders } from "../_shared/communication-delivery.ts";
 
 const responseHeaders = { "content-type": "application/json; charset=utf-8" };
 const json = (body: unknown, status = 200) =>
@@ -54,6 +55,9 @@ Deno.serve(async (request) => {
   if (!apiKey || !fromEmail || !adminEmail) {
     return json({ error: "Configuração de e-mail incompleta." }, 500);
   }
+  const deliveryKey = `purchase-started-admin:${body.email.toLowerCase()}:${body.plan.toLowerCase()}:${body.price || "default"}`;
+  const claim = await claimEmailDelivery({ key: deliveryKey, type: "purchase-started-admin", recipient: adminEmail.toLowerCase() });
+  if (!claim.claimed) return json({ ok: true, duplicate: true });
 
   const name = escapeHtml(body.name);
   const email = escapeHtml(body.email);
@@ -63,8 +67,7 @@ Deno.serve(async (request) => {
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
-      authorization: `Bearer ${apiKey}`,
-      "content-type": "application/json",
+      ...resendHeaders(apiKey, deliveryKey),
     },
     body: JSON.stringify({
       from: `Consultoria Ludgero Sangaletti <${fromEmail}>`,
@@ -91,6 +94,7 @@ Deno.serve(async (request) => {
     id?: string;
     message?: string;
   };
-  if (!response.ok) return json({ error: result.message || "Falha no envio." }, 502);
+  if (!response.ok) { await markEmailFailed(deliveryKey, `RESEND_${response.status}`); return json({ error: result.message || "Falha no envio." }, 502); }
+  await markEmailSent(deliveryKey, result.id || null);
   return json({ ok: true, id: result.id });
 });

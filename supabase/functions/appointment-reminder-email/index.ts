@@ -1,3 +1,4 @@
+import { claimEmailDelivery, markEmailFailed, markEmailSent, resendHeaders } from "../_shared/communication-delivery.ts";
 const headers = { "content-type": "application/json; charset=utf-8" };
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers });
@@ -38,12 +39,14 @@ async function sendEmail(
   to: string,
   subject: string,
   html: string,
+  deliveryKey: string,
 ) {
+  const claim = await claimEmailDelivery({ key: deliveryKey, type: "appointment-reminder", recipient: to.toLowerCase() });
+  if (!claim.claimed) return null;
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
-      authorization: `Bearer ${apiKey}`,
-      "content-type": "application/json",
+      ...resendHeaders(apiKey, deliveryKey),
     },
     body: JSON.stringify({
       from: `Ludgero Sangaletti <${fromEmail}>`,
@@ -56,7 +59,8 @@ async function sendEmail(
     id?: string;
     message?: string;
   };
-  if (!response.ok) throw new Error(result.message || "Falha no envio.");
+  if (!response.ok) { await markEmailFailed(deliveryKey, `RESEND_${response.status}`); throw new Error(result.message || "Falha no envio."); }
+  await markEmailSent(deliveryKey, result.id || null);
   return result.id || null;
 }
 
@@ -154,6 +158,7 @@ ${patientPhone ? `<a href="https://wa.me/${patientPhone}" style="display:inline-
           ? `Confirmação pendente — ${rawName}`
           : `${body.action || "Resposta do paciente"} — ${rawName}`,
         adminOnlyHtml,
+        `appointment-reminder:admin:${body.email.toLowerCase()}:${body.appointmentAt}:${body.kind || "reminder"}`,
       );
       return json({ ok: true, adminId });
     } catch (error) {
@@ -200,6 +205,7 @@ ${patientPhone ? `<a href="https://wa.me/${patientPhone}?text=${encodeURICompone
       body.email,
       "Confirme seu próximo retorno com Ludgero Sangaletti",
       patientHtml,
+      `appointment-reminder:patient:${body.email.toLowerCase()}:${body.appointmentAt}`,
     );
     const adminId = await sendEmail(
       apiKey,
@@ -207,6 +213,7 @@ ${patientPhone ? `<a href="https://wa.me/${patientPhone}?text=${encodeURICompone
       adminEmail,
       `Retorno a confirmar — ${rawName}`,
       adminHtml,
+      `appointment-reminder:admin:${body.email.toLowerCase()}:${body.appointmentAt}:reminder`,
     );
     return json({ ok: true, patientId, adminId });
   } catch (error) {

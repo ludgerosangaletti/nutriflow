@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { claimEmailDelivery, markEmailFailed, markEmailSent, resendHeaders } from "../_shared/communication-delivery.ts";
 
 const jsonHeaders = { "content-type": "application/json; charset=utf-8" };
 function json(body: unknown, status = 200) {
@@ -113,6 +114,9 @@ Deno.serve(async (request) => {
   if (!apiKey || !fromEmail) {
     return json({ error: "Configuração de e-mail incompleta." }, 500);
   }
+  const deliveryKey = `patient-invite:${email}:${body?.resend ? "manual" : "initial"}`;
+  const claim = await claimEmailDelivery({ key: deliveryKey, type: "patient-invite", recipient: email });
+  if (!claim.claimed) return json({ ok: true, duplicate: true, activationPath });
 
   const actionLink = escapeHtml(
     `https://ludgerosangaletti.com.br${activationPath}`,
@@ -120,8 +124,7 @@ Deno.serve(async (request) => {
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
-      authorization: `Bearer ${apiKey}`,
-      "content-type": "application/json",
+      ...resendHeaders(apiKey, deliveryKey),
     },
     body: JSON.stringify({
       from: `Ludgero Sangaletti <${fromEmail}>`,
@@ -149,7 +152,9 @@ Deno.serve(async (request) => {
     message?: string;
   };
   if (!response.ok) {
+    await markEmailFailed(deliveryKey, `RESEND_${response.status}`);
     return json({ error: result.message || "O provedor recusou o envio." }, 502);
   }
+  await markEmailSent(deliveryKey, result.id || null);
   return json({ ok: true, id: result.id, activationPath });
 });
