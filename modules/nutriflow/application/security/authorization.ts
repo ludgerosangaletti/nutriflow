@@ -39,6 +39,7 @@ export const NUTRIFLOW_ACTIONS = {
   MANAGE_RECIPES: "recipe:manage",
   MANAGE_TRAINING_ENTITLEMENT: "training-entitlement:manage",
   MANAGE_TRAINING_ROUTINE: "training-routine:manage",
+  MANAGE_TRAINING_MEDIA: "training-media:manage",
   READ_TRAINING_LIBRARY: "training-library:read",
   READ_TRAINING: "training:read",
   CONFIGURE_FEATURE_FLAG: "feature-flag:configure",

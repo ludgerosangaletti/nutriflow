@@ -53,7 +53,7 @@ export function addTrainingExercise(content: TrainingRoutineContentV1, weekday: 
     ...group,
     exercises: [...group.exercises, {
       publicId: trainingEditorId("training_exercise"),
-      exercise: { publicId: item.publicId, name: item.name, primaryMuscleGroup: item.primaryMuscleGroup, instructions: item.instructions, posterObjectKey: item.media?.posterObjectKey ?? null, mediaKind: item.media?.mediaKind ?? null },
+      exercise: { publicId: item.publicId, name: item.name, primaryMuscleGroup: item.primaryMuscleGroup, instructions: item.instructions, mediaPublicId: item.media?.publicId ?? null, posterObjectKey: item.media?.posterObjectKey ?? null, mediaObjectKey: item.media?.objectKey ?? null, mediaKind: item.media?.mediaKind ?? null },
       prescription: { sets: 3, repetitions: { min: 8, max: 12 }, durationSeconds: null, restSeconds: 60, notes: null },
       sortOrder: group.exercises.length,
     }],

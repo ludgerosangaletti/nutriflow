@@ -14,7 +14,10 @@ type TrainingExerciseRow = Readonly<{
   instructions: string | null;
   scope: "global" | "organization";
   poster_object_key: string | null;
+  media_public_id: string | null;
+  media_object_key: string | null;
   media_kind: "video" | "gif" | null;
+  duration_ms: number | null;
 }>;
 
 function escapeLike(value: string) {
@@ -49,11 +52,23 @@ export class D1TrainingLibraryRepository implements TrainingLibraryRepository {
               (SELECT media.poster_object_key
                  FROM nf_training_exercise_media AS media
                 WHERE media.exercise_id = exercise.id AND media.status = 'active'
-                ORDER BY media.id ASC LIMIT 1) AS poster_object_key,
+                ORDER BY media.id DESC LIMIT 1) AS poster_object_key,
+              (SELECT media.public_id
+                 FROM nf_training_exercise_media AS media
+                WHERE media.exercise_id = exercise.id AND media.status = 'active'
+                ORDER BY media.id DESC LIMIT 1) AS media_public_id,
+              (SELECT media.object_key
+                 FROM nf_training_exercise_media AS media
+                WHERE media.exercise_id = exercise.id AND media.status = 'active'
+                ORDER BY media.id DESC LIMIT 1) AS media_object_key,
               (SELECT media.media_kind
                  FROM nf_training_exercise_media AS media
                 WHERE media.exercise_id = exercise.id AND media.status = 'active'
-                ORDER BY media.id ASC LIMIT 1) AS media_kind
+                ORDER BY media.id DESC LIMIT 1) AS media_kind
+              ,(SELECT media.duration_ms
+                 FROM nf_training_exercise_media AS media
+                WHERE media.exercise_id = exercise.id AND media.status = 'active'
+                ORDER BY media.id DESC LIMIT 1) AS duration_ms
          FROM nf_training_exercises AS exercise
         WHERE exercise.status = 'active'
           AND (exercise.scope = 'global'
@@ -89,9 +104,9 @@ export class D1TrainingLibraryRepository implements TrainingLibraryRepository {
       aliases: parseAliases(row.aliases_json),
       instructions: row.instructions,
       scope: row.scope,
-      media: row.media_kind === null
+      media: row.media_kind === null || row.media_public_id === null || row.media_object_key === null
         ? null
-        : Object.freeze({ posterObjectKey: row.poster_object_key, mediaKind: row.media_kind }),
+        : Object.freeze({ publicId: row.media_public_id, posterObjectKey: row.poster_object_key, objectKey: row.media_object_key, mediaKind: row.media_kind, durationMs: row.duration_ms }),
     })));
 
     return Object.freeze({

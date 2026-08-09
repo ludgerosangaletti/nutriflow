@@ -8,9 +8,11 @@ import { assertTrainingPrescriptionMetric } from "../modules/nutriflow/domain/tr
 import { D1TrainingLibraryRepository } from "../modules/nutriflow/infrastructure/d1/d1-training-library-repository.ts";
 import { D1TrainingEditorRepository } from "../modules/nutriflow/infrastructure/d1/d1-training-editor-repository.ts";
 import { D1PatientTrainingRepository } from "../modules/nutriflow/infrastructure/d1/d1-patient-training-repository.ts";
+import { D1TrainingMediaRepository } from "../modules/nutriflow/infrastructure/d1/d1-training-media-repository.ts";
 import { GetPatientTraining } from "../modules/nutriflow/application/training/get-patient-training.ts";
 import { NutriFlowApplicationError } from "../modules/nutriflow/application/errors/nutriflow-application-error.ts";
 import { parseTrainingRoutineContentV1 } from "../modules/nutriflow/contracts/v1/validation.ts";
+import { assertTrainingMediaUpload, publicationReferencesTrainingMedia } from "../modules/nutriflow/domain/training/training-media.ts";
 import { addMuscleGroup, addTrainingExercise, moveTrainingExercise } from "../app/admin/clientes/[email]/training/training-editor-state.ts";
 
 class SqliteStatement {
@@ -72,6 +74,13 @@ function trainingEditorDatabase() {
   return new TrainingDatabase(sqlite);
 }
 
+function trainingMediaDatabase() {
+  const database = trainingEditorDatabase();
+  apply(database.sqlite, "0041_nutriflow_training_media.sql");
+  database.sqlite.exec("INSERT INTO nf_training_exercises (public_id, organization_id, scope, name, primary_muscle_group, aliases_json, status) VALUES ('tr_ex_org_media_one', 1, 'organization', 'ExercÃ­cio privado um', 'peito', '[]', 'active'), ('tr_ex_org_media_two', 2, 'organization', 'ExercÃ­cio privado dois', 'costas', '[]', 'active')");
+  return database;
+}
+
 function editorRepository(database = trainingEditorDatabase()) {
   let sequence = 0;
   return new D1TrainingEditorRepository({
@@ -113,6 +122,13 @@ test("training migration is additive, idempotent and keeps the feature disabled 
   assert.equal(NUTRIFLOW_DEFAULT_FEATURE_FLAGS[NUTRIFLOW_FEATURE_FLAGS.TRAINING], false);
 });
 
+test("Training media migration keeps bytes in object storage metadata and remains additive", () => {
+  const sqlite = trainingDatabase();
+  apply(sqlite, "0041_nutriflow_training_media.sql");
+  const columns = sqlite.prepare("PRAGMA table_info(nf_training_exercise_media)").all() as { name: string }[];
+  assert.deepEqual(columns.filter((column) => ["poster_mime_type", "byte_size", "poster_byte_size"].includes(column.name)).map((column) => column.name), ["poster_mime_type", "byte_size", "poster_byte_size"]);
+});
+
 test("training library exposes global plus only the requesting organization's private exercises", async () => {
   const database = new CountingDatabase(trainingDatabase());
   database.sqlite.exec("INSERT INTO nf_training_exercises (public_id, organization_id, scope, name, primary_muscle_group, aliases_json, status) VALUES ('tr_ex_org_one', 1, 'organization', 'Remada da OrganizaÃ§Ã£o Um', 'costas', '[\"remada especial\"]', 'active'), ('tr_ex_org_two', 2, 'organization', 'Remada da OrganizaÃ§Ã£o Dois', 'costas', '[]', 'active')");
@@ -147,6 +163,36 @@ test("training prescription accepts repetitions or time and rejects an empty exe
 test("training library contract bounds query cost", () => {
   assert.equal(query("supino", "peito", 1).limit, 1);
   assert.throws(() => query("supino", null, 26));
+});
+
+test("Training media validates mobile-safe upload bounds and publication references", () => {
+  assert.doesNotThrow(() => assertTrainingMediaUpload({ kind: "video", mediaName: "supino.mp4", mediaType: "video/mp4", mediaBytes: 512_000, posterName: "supino.webp", posterType: "image/webp", posterBytes: 24_000, durationMs: 15_000 }));
+  assert.throws(() => assertTrainingMediaUpload({ kind: "video", mediaName: "supino.mov", mediaType: "video/quicktime", mediaBytes: 512_000, posterName: "supino.webp", posterType: "image/webp", posterBytes: 24_000, durationMs: 15_000 }), /video-format/);
+  assert.throws(() => assertTrainingMediaUpload({ kind: "video", mediaName: "supino.mp4", mediaType: "video/mp4", mediaBytes: 512_000, posterName: "supino.gif", posterType: "image/gif", posterBytes: 24_000, durationMs: 15_000 }), /poster-format/);
+  const content = parseTrainingRoutineContentV1({ schemaVersion: 1, days: [{ weekday: "mon", muscleGroups: [{ publicId: "group", name: "Peito", sortOrder: 0, exercises: [{ publicId: "exercise", exercise: { publicId: "catalog", name: "Supino", primaryMuscleGroup: "peito", instructions: null, mediaPublicId: "training_media_snapshot", posterObjectKey: "poster", mediaObjectKey: "video", mediaKind: "video" }, prescription: { sets: 3, repetitions: { min: 8, max: 10 }, durationSeconds: null, restSeconds: 60, notes: null }, sortOrder: 0 }] }] }] });
+  assert.equal(publicationReferencesTrainingMedia(content, "training_media_snapshot"), true);
+  assert.equal(publicationReferencesTrainingMedia(content, "training_media_other_org"), false);
+});
+
+test("Training media association is scoped, auditable and keeps replaced blobs available to immutable snapshots", async () => {
+  const database = trainingMediaDatabase();
+  let sequence = 0;
+  const repository = new D1TrainingMediaRepository(database, (kind) => `${kind}_${++sequence}`, () => new Date("2026-08-09T12:00:00.000Z"));
+  const privateExercise = await repository.getManageableExercise({ organizationId: 1, exercisePublicId: "tr_ex_org_media_one", allowGlobal: false });
+  await assert.rejects(() => repository.getManageableExercise({ organizationId: 1, exercisePublicId: "tr_ex_org_media_two", allowGlobal: false }), (error) => error instanceof NutriFlowApplicationError && error.code === "NF_FORBIDDEN");
+  await assert.rejects(() => repository.getManageableExercise({ organizationId: 1, exercisePublicId: "tr_ex_global_supino_reto", allowGlobal: false }), (error) => error instanceof NutriFlowApplicationError && error.code === "NF_FORBIDDEN");
+  const globalExercise = await repository.getManageableExercise({ organizationId: 1, exercisePublicId: "tr_ex_global_supino_reto", allowGlobal: true });
+  assert.equal(globalExercise.scope, "global");
+  const first = await repository.replace({ organizationId: 1, actorAuthUserId: "auth_owner", actorRole: "owner", exercise: privateExercise, mediaKind: "video", objectKey: "training-media/org/one.mp4", posterObjectKey: "training-media/org/one.webp", mimeType: "video/mp4", posterMimeType: "image/webp", byteSize: 512_000, posterByteSize: 24_000, durationMs: 15_000, correlationId: "corr_media_first" });
+  const second = await repository.replace({ organizationId: 1, actorAuthUserId: "auth_owner", actorRole: "owner", exercise: privateExercise, mediaKind: "video", objectKey: "training-media/org/two.mp4", posterObjectKey: "training-media/org/two.webp", mimeType: "video/mp4", posterMimeType: "image/webp", byteSize: 520_000, posterByteSize: 25_000, durationMs: 16_000, correlationId: "corr_media_second" });
+  assert.equal((await repository.findAsset(first.publicId))?.status, "replaced");
+  assert.equal((await repository.findAsset(second.publicId))?.status, "active");
+  const otherExercise = await repository.getManageableExercise({ organizationId: 2, exercisePublicId: "tr_ex_org_media_two", allowGlobal: false });
+  const otherOrganizationMedia = await repository.replace({ organizationId: 2, actorAuthUserId: "auth_owner_two", actorRole: "owner", exercise: otherExercise, mediaKind: "gif", objectKey: "training-media/org/two.gif", posterObjectKey: "training-media/org/two.webp", mimeType: "image/gif", posterMimeType: "image/webp", byteSize: 300_000, posterByteSize: 25_000, durationMs: null, correlationId: "corr_media_other" });
+  assert.equal(await repository.findAssetForOrganization(otherOrganizationMedia.publicId, 1), null);
+  await repository.remove({ organizationId: 1, actorAuthUserId: "auth_owner", actorRole: "owner", exercise: privateExercise, correlationId: "corr_media_remove" });
+  assert.equal((await repository.findAsset(second.publicId))?.status, "removed");
+  assert.equal(database.sqlite.prepare("SELECT count(*) AS total FROM nf_audit_entries WHERE action LIKE 'training.exercise-media.%'").get().total, 4);
 });
 
 test("administrative entitlement is auditable and revocation preserves Training history", async () => {

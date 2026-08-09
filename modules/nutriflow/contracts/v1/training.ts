@@ -13,7 +13,13 @@ export type TrainingExerciseLibraryItemV1 = Readonly<{
   aliases: readonly string[];
   instructions: string | null;
   scope: TrainingExerciseScope;
-  media: Readonly<{ posterObjectKey: string | null; mediaKind: "video" | "gif" | null }> | null;
+  media: Readonly<{
+    publicId: string;
+    posterObjectKey: string | null;
+    objectKey: string;
+    mediaKind: "video" | "gif";
+    durationMs: number | null;
+  }> | null;
 }>;
 
 export type SearchTrainingExerciseLibraryQueryV1 = Readonly<{
@@ -37,7 +43,10 @@ export type TrainingExerciseSnapshotV1 = Readonly<{
   name: string;
   primaryMuscleGroup: string;
   instructions: string | null;
+  /** Stable media reference captured with this routine version; never resolved from a mutable catalog entry. */
+  mediaPublicId: string | null;
   posterObjectKey: string | null;
+  mediaObjectKey: string | null;
   mediaKind: "video" | "gif" | null;
 }>;
 

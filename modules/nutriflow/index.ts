@@ -61,3 +61,5 @@ export * from "./infrastructure/d1/d1-training-library-repository.ts";
 export * from "./infrastructure/d1/d1-training-editor-repository.ts";
 export * from "./infrastructure/d1/d1-patient-training-repository.ts";
 export * from "./application/training/get-patient-training.ts";
+export * from "./domain/training/training-media.ts";
+export * from "./infrastructure/d1/d1-training-media-repository.ts";

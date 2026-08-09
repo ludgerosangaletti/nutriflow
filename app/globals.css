@@ -7478,6 +7478,11 @@ button:disabled {
 .training-patient-placeholder { display: grid; place-content: center; gap: 3px; background: #f0f0eb; color: #77776f; text-align: center; }
 .training-patient-placeholder span { font-size: 1.35rem; }
 .training-patient-placeholder small { font-size: .55rem; font-weight: 750; }
+.training-patient-poster, .training-patient-media { position: relative; display: grid; min-width: 80px; min-height: 100%; border: 0; background: #f0f0eb; overflow: hidden; }
+.training-patient-poster { padding: 0; cursor: pointer; }
+.training-patient-poster img, .training-patient-media img, .training-patient-media video { width: 100%; height: 100%; min-height: 116px; object-fit: cover; }
+.training-patient-poster span { position: absolute; right: 5px; bottom: 5px; border-radius: 999px; background: rgba(17,17,15,.82); color: #fff; font-size: .55rem; font-weight: 800; padding: 4px 6px; }
+.training-patient-media button { position: absolute; right: 5px; bottom: 5px; border: 0; border-radius: 999px; background: rgba(17,17,15,.82); color: #fff; font: inherit; font-size: .55rem; font-weight: 800; padding: 4px 6px; cursor: pointer; }
 .training-patient-copy { display: grid; gap: 4px; padding: 12px 12px 12px 0; }
 .training-patient-copy > span { color: #8a8a81; font-size: .64rem; font-weight: 850; }
 .training-patient-copy h3 { margin: 0; font-size: .98rem; }
@@ -7545,6 +7550,12 @@ button:disabled {
 .training-library li { display: flex; align-items: center; justify-content: space-between; gap: 10px; border: 1px solid #e1e1d9; border-radius: 9px; background: #fff; padding: 9px; }
 .training-library li strong { display: block; font-size: .75rem; }
 .training-library li small { color: #74746c; font-size: .61rem; }
+.training-library li > span { display: flex; gap: 5px; flex: 0 0 auto; }
+.training-media-form { display: grid; gap: 8px; border-top: 1px solid #deded6; padding-top: 10px; }
+.training-media-form header, .training-media-form footer { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.training-media-form p { margin: 0; color: #686860; font-size: .67rem; line-height: 1.4; }
+.training-media-form label { display: grid; gap: 4px; color: #56564f; font-size: .65rem; font-weight: 800; }
+.training-media-form input, .training-media-form select { min-height: 36px; border: 1px solid #d8d8d0; border-radius: 8px; background: #fff; color: #11110f; font: inherit; padding: 6px 8px; }
 @media (max-width: 780px) { .training-editor-header, .training-status-bar { align-items: stretch; flex-direction: column; } .training-entitlement { align-self: stretch; justify-content: space-between; } .training-days { grid-template-columns: repeat(4, 1fr); } .training-prescription { grid-template-columns: repeat(2, 1fr); } .training-prescription .is-note { grid-column: 1 / -1; } .training-library > div { grid-template-columns: 1fr; } }
 .admin-patient-nav a.is-nutriflow {
   background: #11110f;

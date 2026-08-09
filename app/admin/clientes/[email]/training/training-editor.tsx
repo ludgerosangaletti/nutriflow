@@ -21,6 +21,8 @@ export default function TrainingEditor({ clientId, patientName }: Readonly<{ cli
   const [filter, setFilter] = useState("");
   const [library, setLibrary] = useState<readonly TrainingExerciseLibraryItemV1[]>([]);
   const [libraryGroupId, setLibraryGroupId] = useState<string | null>(null);
+  const [mediaExercise, setMediaExercise] = useState<TrainingExerciseLibraryItemV1 | null>(null);
+  const [mediaSaving, setMediaSaving] = useState(false);
 
   const load = useCallback(async () => {
     const response = await fetch(`/api/admin/nutriflow/training?clientId=${clientId}`, { cache: "no-store" });
@@ -71,6 +73,35 @@ export default function TrainingEditor({ clientId, patientName }: Readonly<{ cli
     setLibrary(result.data.items);
   }
 
+  async function submitMedia(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!mediaExercise) return;
+    setMediaSaving(true); setMessage("");
+    try {
+      const form = new FormData(event.currentTarget);
+      form.set("clientId", String(clientId));
+      const response = await fetch(`/api/admin/nutriflow/training/exercises/${encodeURIComponent(mediaExercise.publicId)}/media`, { method: "POST", headers: { "x-correlation-id": `corr_${crypto.randomUUID()}` }, body: form });
+      const result = await response.json().catch(() => ({})) as Envelope<unknown>;
+      if (!response.ok) throw new Error(result.message || "Não foi possível associar a mídia.");
+      setMessage("Mídia associada. Exercícios publicados permanecem inalterados.");
+      setMediaExercise(null); await searchLibrary();
+    } catch (error) { setMessage(error instanceof Error ? error.message : "Não foi possível associar a mídia."); }
+    finally { setMediaSaving(false); }
+  }
+
+  async function removeMedia() {
+    if (!mediaExercise) return;
+    setMediaSaving(true); setMessage("");
+    try {
+      const response = await fetch(`/api/admin/nutriflow/training/exercises/${encodeURIComponent(mediaExercise.publicId)}/media`, { method: "DELETE", headers: requestHeaders(), body: JSON.stringify({ clientId }) });
+      const result = await response.json().catch(() => ({})) as Envelope<unknown>;
+      if (!response.ok) throw new Error(result.message || "Não foi possível remover a mídia.");
+      setMessage("Associação de mídia removida. Publicações anteriores foram preservadas.");
+      setMediaExercise(null); await searchLibrary();
+    } catch (error) { setMessage(error instanceof Error ? error.message : "Não foi possível remover a mídia."); }
+    finally { setMediaSaving(false); }
+  }
+
   if (!workspace) return <section className="training-editor training-loading"><p>Preparando o editor de treinoâ€¦</p>{message ? <p role="alert">{message}</p> : null}</section>;
   const groups = groupsForDay(content, activeDay);
   const activePublication = workspace.publication;
@@ -92,7 +123,20 @@ export default function TrainingEditor({ clientId, patientName }: Readonly<{ cli
       <div className="training-groups">{groups.map((group) => <article key={group.publicId} className="training-group"><header><input aria-label="Grupamento muscular" value={group.name} onChange={(event) => setContent((current) => renameMuscleGroup(current, activeDay, group.publicId, event.target.value))} list="training-muscle-groups" /><button type="button" className="is-remove" onClick={() => setContent((current) => removeMuscleGroup(current, activeDay, group.publicId))}>Remover</button></header>
         <div className="training-exercises">{group.exercises.map((exercise, index) => <article key={exercise.publicId} className="training-exercise"><header><div><strong>{exercise.exercise.name}</strong><small>{exercise.exercise.primaryMuscleGroup}</small></div><div className="training-order"><button type="button" disabled={index === 0} onClick={() => setContent((current) => moveTrainingExercise(current, activeDay, group.publicId, exercise.publicId, -1))}>â†‘</button><button type="button" disabled={index === group.exercises.length - 1} onClick={() => setContent((current) => moveTrainingExercise(current, activeDay, group.publicId, exercise.publicId, 1))}>â†“</button><button type="button" className="is-remove" onClick={() => setContent((current) => removeTrainingExercise(current, activeDay, group.publicId, exercise.publicId))}>Ã—</button></div></header><div className="training-prescription"><label><span>SÃ©ries</span><input inputMode="numeric" value={exercise.prescription.sets ?? ""} onChange={(event) => setContent((current) => updateTrainingExercise(current, activeDay, group.publicId, exercise.publicId, { sets: numeric(event.target.value) }))} /></label><label><span>Reps. min.</span><input inputMode="numeric" value={exercise.prescription.repetitions?.min ?? ""} onChange={(event) => setContent((current) => updateTrainingExercise(current, activeDay, group.publicId, exercise.publicId, { repetitions: { min: numeric(event.target.value) ?? 0, max: exercise.prescription.repetitions?.max ?? 0 }, durationSeconds: null }))} /></label><label><span>Reps. mÃ¡x.</span><input inputMode="numeric" value={exercise.prescription.repetitions?.max ?? ""} onChange={(event) => setContent((current) => updateTrainingExercise(current, activeDay, group.publicId, exercise.publicId, { repetitions: { min: exercise.prescription.repetitions?.min ?? 0, max: numeric(event.target.value) ?? 0 }, durationSeconds: null }))} /></label><label><span>Tempo (s)</span><input inputMode="numeric" value={exercise.prescription.durationSeconds ?? ""} onChange={(event) => setContent((current) => updateTrainingExercise(current, activeDay, group.publicId, exercise.publicId, { durationSeconds: numeric(event.target.value), repetitions: null }))} /></label><label><span>Descanso (s)</span><input inputMode="numeric" value={exercise.prescription.restSeconds ?? ""} onChange={(event) => setContent((current) => updateTrainingExercise(current, activeDay, group.publicId, exercise.publicId, { restSeconds: numeric(event.target.value) }))} /></label><label className="is-note"><span>ObservaÃ§Ã£o</span><input value={exercise.prescription.notes ?? ""} onChange={(event) => setContent((current) => updateTrainingExercise(current, activeDay, group.publicId, exercise.publicId, { notes: event.target.value || null }))} /></label></div></article>)}</div>
         <button type="button" className="training-add-exercise" onClick={() => void openLibrary(group.publicId)}>+ Adicionar exercÃ­cio</button>
-        {libraryGroupId === group.publicId ? <section className="training-library"><header><strong>Biblioteca de exercÃ­cios</strong><button type="button" onClick={() => setLibraryGroupId(null)}>Fechar</button></header><div><input placeholder="Pesquisar exercÃ­cio" value={search} onChange={(event) => setSearch(event.target.value)} /><select value={filter} onChange={(event) => setFilter(event.target.value)}><option value="">Todos os grupamentos</option>{muscleGroups.map((name) => <option key={name} value={name}>{name}</option>)}</select><button type="button" onClick={() => void searchLibrary()}>Buscar</button></div><ul>{library.map((item) => <li key={item.publicId}><div><strong>{item.name}</strong><small>{item.primaryMuscleGroup} Â· {item.scope === "global" ? "Biblioteca global" : "Da organizaÃ§Ã£o"}</small></div><button type="button" onClick={() => { setContent((current) => addTrainingExercise(current, activeDay, group.publicId, item)); setLibraryGroupId(null); }}>Adicionar</button></li>)}</ul></section> : null}
+        {libraryGroupId === group.publicId ? <section className="training-library">
+          <header><strong>Biblioteca de exercícios</strong><button type="button" onClick={() => { setLibraryGroupId(null); setMediaExercise(null); }}>Fechar</button></header>
+          <div><input placeholder="Pesquisar exercício" value={search} onChange={(event) => setSearch(event.target.value)} /><select value={filter} onChange={(event) => setFilter(event.target.value)}><option value="">Todos os grupamentos</option>{muscleGroups.map((name) => <option key={name} value={name}>{name}</option>)}</select><button type="button" onClick={() => void searchLibrary()}>Buscar</button></div>
+          <ul>{library.map((item) => <li key={item.publicId}><div><strong>{item.name}</strong><small>{item.primaryMuscleGroup} · {item.scope === "global" ? "Biblioteca global" : "Da organização"} · {item.media ? "Mídia associada" : "Sem mídia"}</small></div><span><button type="button" onClick={() => setMediaExercise(item)}>Mídia</button><button type="button" onClick={() => { setContent((current) => addTrainingExercise(current, activeDay, group.publicId, item)); setLibraryGroupId(null); setMediaExercise(null); }}>Adicionar</button></span></li>)}</ul>
+          {mediaExercise ? <form className="training-media-form" onSubmit={(event) => void submitMedia(event)}>
+            <header><strong>Mídia: {mediaExercise.name}</strong><button type="button" onClick={() => setMediaExercise(null)}>Cancelar</button></header>
+            <p>MP4/H.264 curto com poster leve. GIF somente para exceções.</p>
+            <label><span>Formato</span><select name="mediaKind" defaultValue="video"><option value="video">Vídeo MP4</option><option value="gif">GIF (exceção)</option></select></label>
+            <label><span>Arquivo de demonstração</span><input name="media" type="file" required accept="video/mp4,image/gif" /></label>
+            <label><span>Poster estático</span><input name="poster" type="file" required accept="image/jpeg,image/png,image/webp" /></label>
+            <label><span>Duração do vídeo (seg.)</span><input name="durationSeconds" type="number" min="1" max="90" defaultValue="15" /></label>
+            <footer><button type="submit" disabled={mediaSaving}>{mediaSaving ? "Enviando…" : mediaExercise.media ? "Substituir mídia" : "Associar mídia"}</button>{mediaExercise.media ? <button type="button" disabled={mediaSaving} onClick={() => void removeMedia()}>Remover associação</button> : null}</footer>
+          </form> : null}
+        </section> : null}
       </article>)}</div></div>
       <datalist id="training-muscle-groups">{muscleGroups.map((name) => <option key={name} value={name} />)}</datalist>
     </> : null}
