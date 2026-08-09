@@ -1,7 +1,7 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { env } from "cloudflare:workers";
 import { getDb } from "../../../../db";
-import { clients, nfClinicalAssessments } from "../../../../db/schema";
+import { clients, nfClinicalAssessments, nfPlans } from "../../../../db/schema";
 import { requireAdmin } from "../../../supabase/server";
 import { resolveNutriFlowAdminContext, sha256Json } from "../../../nutriflow/server";
 import { calculatePollock7 } from "../../../../modules/nutriflow/domain/assessments/pollock-7";
@@ -14,9 +14,9 @@ export async function GET(request: Request) {
   const email = new URL(request.url).searchParams.get("email");
   if (!email) return Response.json({ error: "Paciente obrigatório." }, { status: 400 });
   const db = getDb();
-  const [client] = await db.select().from(clients).where(eq(clients.email, email)).limit(1);
+  const [client] = await db.select({ id: clients.id, email: clients.email, modality: clients.modality }).from(clients).innerJoin(nfPlans, and(eq(nfPlans.clientId, clients.id), eq(nfPlans.organizationId, context.organizationId))).where(eq(clients.email, email)).limit(1);
   if (!client) return Response.json({ error: "Paciente não encontrado." }, { status: 404 });
-  const rows = await db.select().from(nfClinicalAssessments).where(eq(nfClinicalAssessments.clientId, client.id));
+  const rows = await db.select().from(nfClinicalAssessments).where(and(eq(nfClinicalAssessments.clientId, client.id), eq(nfClinicalAssessments.organizationId, context.organizationId)));
   return Response.json({ assessments: rows.map((row) => ({ ...row, snapshot: JSON.parse(row.snapshotJson) })) });
 }
 
@@ -27,7 +27,7 @@ export async function POST(request: Request) {
   const body = await request.json() as { email?: string; capturedAt?: string; mode?: "preview" | "save"; input?: Parameters<typeof calculatePollock7>[0] };
   if (!body.email || !body.input) return Response.json({ error: "Dados incompletos." }, { status: 400 });
   const db = getDb();
-  const [client] = await db.select().from(clients).where(eq(clients.email, body.email)).limit(1);
+  const [client] = await db.select({ id: clients.id, email: clients.email, modality: clients.modality }).from(clients).innerJoin(nfPlans, and(eq(nfPlans.clientId, clients.id), eq(nfPlans.organizationId, context.organizationId))).where(eq(clients.email, body.email)).limit(1);
   if (!client || client.modality !== "in_person") return Response.json({ error: "Avaliações estruturadas estão disponíveis para pacientes presenciais." }, { status: 400 });
   let result;
   try {
