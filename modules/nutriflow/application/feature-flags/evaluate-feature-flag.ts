@@ -13,6 +13,7 @@ export type FeatureFlagEvaluation = Readonly<{
   variant: string;
   source: "override" | "default";
   scope: "client" | "organization" | "global" | "default";
+  expiresAt: string | null;
 }>;
 
 export async function evaluateFeatureFlag(input: Readonly<{
@@ -28,12 +29,14 @@ export async function evaluateFeatureFlag(input: Readonly<{
         variant: override.variant ?? (override.enabled ? "on" : "off"),
         source: "override",
         scope: override.scope,
+        expiresAt: override.expiresAt,
       })
     : Object.freeze({
         enabled: NUTRIFLOW_DEFAULT_FEATURE_FLAGS[input.flag],
         variant: NUTRIFLOW_DEFAULT_FEATURE_FLAGS[input.flag] ? "on" : "off",
         source: "default",
         scope: "default",
+        expiresAt: null,
       });
 
   input.telemetry?.record({

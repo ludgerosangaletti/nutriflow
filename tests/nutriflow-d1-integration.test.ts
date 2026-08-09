@@ -475,6 +475,7 @@ test("a test-account feature override and its audit entry commit atomically", as
   });
   assert.equal(evaluation.enabled, true);
   assert.equal(evaluation.scope, "client");
+  assert.equal(evaluation.expiresAt, "2026-08-31T15:00:00.000Z");
 
   const rollbackIdentifiers = ["flag_override_02", "audit_flag_02"];
   const disable = new ConfigureFeatureFlagOverride({
