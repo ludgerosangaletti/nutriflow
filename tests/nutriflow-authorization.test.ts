@@ -45,6 +45,10 @@ test("active staff can manage plans only inside their organization", () => {
     }),
     { allowed: false, reason: "cross-organization" },
   );
+  assert.equal(
+    authorizeNutriFlow(nutritionist, NUTRIFLOW_ACTIONS.MANAGE_TRAINING_ENTITLEMENT, resource).reason,
+    "unsupported-action",
+  );
 });
 
 test("suspended staff is denied even inside the same organization", () => {

@@ -32,6 +32,15 @@ export type TrainingPrescriptionMetricV1 = Readonly<{
   notes: string | null;
 }>;
 
+export type TrainingExerciseSnapshotV1 = Readonly<{
+  publicId: string;
+  name: string;
+  primaryMuscleGroup: string;
+  instructions: string | null;
+  posterObjectKey: string | null;
+  mediaKind: "video" | "gif" | null;
+}>;
+
 export type TrainingRoutineContentV1 = Readonly<{
   schemaVersion: 1;
   days: readonly Readonly<{
@@ -42,19 +51,74 @@ export type TrainingRoutineContentV1 = Readonly<{
       sortOrder: number;
       exercises: readonly Readonly<{
         publicId: string;
-        exercise: Readonly<{
-          publicId: string;
-          name: string;
-          primaryMuscleGroup: string;
-          instructions: string | null;
-          posterObjectKey: string | null;
-          mediaKind: "video" | "gif" | null;
-        }>;
+        exercise: TrainingExerciseSnapshotV1;
         prescription: TrainingPrescriptionMetricV1;
         sortOrder: number;
       }>[];
     }>[];
   }>[];
+}>;
+
+export type TrainingRoutineDraftV1 = Readonly<{
+  apiVersion: typeof NUTRIFLOW_API_VERSION;
+  routinePublicId: string;
+  publicId: string;
+  versionNumber: number;
+  revision: number;
+  title: string;
+  content: TrainingRoutineContentV1;
+  updatedAt: string;
+}>;
+
+export type TrainingPublicationV1 = Readonly<{
+  apiVersion: typeof NUTRIFLOW_API_VERSION;
+  publicId: string;
+  routinePublicId: string;
+  routineVersionPublicId: string;
+  versionNumber: number;
+  publishedAt: string;
+  content: TrainingRoutineContentV1;
+}>;
+
+export type TrainingEntitlementV1 = Readonly<{
+  apiVersion: typeof NUTRIFLOW_API_VERSION;
+  active: boolean;
+  publicId: string | null;
+  changedAt: string | null;
+  reason: string | null;
+}>;
+
+export type TrainingEditorWorkspaceV1 = Readonly<{
+  apiVersion: typeof NUTRIFLOW_API_VERSION;
+  entitlement: TrainingEntitlementV1;
+  draft: TrainingRoutineDraftV1 | null;
+  publication: TrainingPublicationV1 | null;
+}>;
+
+export type ConfigureTrainingEntitlementCommandV1 = Readonly<{
+  apiVersion: typeof NUTRIFLOW_API_VERSION;
+  clientId: number;
+  active: boolean;
+  reason: string | null;
+  correlationId: string;
+}>;
+
+export type SaveTrainingRoutineDraftCommandV1 = Readonly<{
+  apiVersion: typeof NUTRIFLOW_API_VERSION;
+  routinePublicId: string;
+  routineVersionPublicId: string;
+  expectedRevision: number;
+  title: string;
+  content: TrainingRoutineContentV1;
+  correlationId: string;
+}>;
+
+export type PublishTrainingRoutineCommandV1 = Readonly<{
+  apiVersion: typeof NUTRIFLOW_API_VERSION;
+  routinePublicId: string;
+  routineVersionPublicId: string;
+  expectedRevision: number;
+  correlationId: string;
 }>;
 
 export type TrainingPatientAccessStateV1 =

@@ -18,6 +18,14 @@ import type {
 import type { SearchFoodCatalogQueryV1 } from "./catalog.ts";
 import type { SearchTrainingExerciseLibraryQueryV1 } from "./training.ts";
 import type {
+  ConfigureTrainingEntitlementCommandV1,
+  PublishTrainingRoutineCommandV1,
+  SaveTrainingRoutineDraftCommandV1,
+  TrainingPrescriptionMetricV1,
+  TrainingRoutineContentV1,
+  TrainingWeekday,
+} from "./training.ts";
+import type {
   ArchiveReusableContentCommandV1,
   ReusableContentItemV1,
   SaveMealTemplateCommandV1,
@@ -293,6 +301,92 @@ export function parseSearchTrainingExerciseLibraryQueryV1(value: unknown): Searc
     limit: input.limit === undefined ? 12 : boundedInteger(input.limit, "limit", 1, 25),
     correlationId: textValue(input.correlationId, "correlationId", 128),
   });
+}
+
+function nullableNonEmptyText(value: unknown, path: string, max = 2000) {
+  return value === null || value === undefined || value === "" ? null : textValue(value, path, max);
+}
+
+function trainingMetric(value: unknown, path: string): TrainingPrescriptionMetricV1 {
+  const input = object(value, path);
+  const repetitions = input.repetitions === null || input.repetitions === undefined
+    ? null
+    : (() => {
+      const range = object(input.repetitions, `${path}.repetitions`);
+      return Object.freeze({
+        min: boundedInteger(range.min, `${path}.repetitions.min`, 1, 999),
+        max: boundedInteger(range.max, `${path}.repetitions.max`, 1, 999),
+      });
+    })();
+  if (repetitions && repetitions.max < repetitions.min) throw new NutriFlowContractError(`${path}.repetitions.max`);
+  const durationSeconds = input.durationSeconds === null || input.durationSeconds === undefined ? null : boundedInteger(input.durationSeconds, `${path}.durationSeconds`, 1, 7200);
+  if (!repetitions && !durationSeconds) throw new NutriFlowContractError(`${path}.execution`);
+  return Object.freeze({
+    sets: input.sets === null || input.sets === undefined ? null : boundedInteger(input.sets, `${path}.sets`, 1, 99),
+    repetitions,
+    durationSeconds,
+    restSeconds: input.restSeconds === null || input.restSeconds === undefined ? null : boundedInteger(input.restSeconds, `${path}.restSeconds`, 0, 3600),
+    notes: nullableNonEmptyText(input.notes, `${path}.notes`, 1000),
+  });
+}
+
+export function parseTrainingRoutineContentV1(value: unknown): TrainingRoutineContentV1 {
+  const input = object(value, "content");
+  if (input.schemaVersion !== 1 || !Array.isArray(input.days) || input.days.length > 7) throw new NutriFlowContractError("content.days");
+  const weekdays = new Set<string>();
+  const days = input.days.map((entry, dayIndex) => {
+    const day = object(entry, `content.days.${dayIndex}`);
+    if (!( ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const).includes(day.weekday as never)) throw new NutriFlowContractError(`content.days.${dayIndex}.weekday`);
+    const weekday = day.weekday as TrainingWeekday;
+    if (weekdays.has(weekday)) throw new NutriFlowContractError(`content.days.${dayIndex}.weekday`);
+    weekdays.add(weekday);
+    if (!Array.isArray(day.muscleGroups) || day.muscleGroups.length > 8) throw new NutriFlowContractError(`content.days.${dayIndex}.muscleGroups`);
+    const groups = day.muscleGroups.map((groupValue, groupIndex) => {
+      const group = object(groupValue, `content.days.${dayIndex}.muscleGroups.${groupIndex}`);
+      if (!Array.isArray(group.exercises) || group.exercises.length === 0 || group.exercises.length > 30) throw new NutriFlowContractError(`content.days.${dayIndex}.muscleGroups.${groupIndex}.exercises`);
+      return Object.freeze({
+        publicId: textValue(group.publicId, `content.days.${dayIndex}.muscleGroups.${groupIndex}.publicId`),
+        name: textValue(group.name, `content.days.${dayIndex}.muscleGroups.${groupIndex}.name`, 80),
+        sortOrder: boundedInteger(group.sortOrder, `content.days.${dayIndex}.muscleGroups.${groupIndex}.sortOrder`, 0, 99),
+        exercises: Object.freeze(group.exercises.map((exerciseValue, exerciseIndex) => {
+          const exercise = object(exerciseValue, `content.days.${dayIndex}.muscleGroups.${groupIndex}.exercises.${exerciseIndex}`);
+          const snapshot = object(exercise.exercise, `content.days.${dayIndex}.muscleGroups.${groupIndex}.exercises.${exerciseIndex}.exercise`);
+          const mediaKind = snapshot.mediaKind;
+          if (mediaKind !== null && mediaKind !== "video" && mediaKind !== "gif") throw new NutriFlowContractError(`content.days.${dayIndex}.muscleGroups.${groupIndex}.exercises.${exerciseIndex}.exercise.mediaKind`);
+          return Object.freeze({
+            publicId: textValue(exercise.publicId, `content.days.${dayIndex}.muscleGroups.${groupIndex}.exercises.${exerciseIndex}.publicId`),
+            exercise: Object.freeze({
+              publicId: textValue(snapshot.publicId, `content.days.${dayIndex}.muscleGroups.${groupIndex}.exercises.${exerciseIndex}.exercise.publicId`),
+              name: textValue(snapshot.name, `content.days.${dayIndex}.muscleGroups.${groupIndex}.exercises.${exerciseIndex}.exercise.name`, 160),
+              primaryMuscleGroup: textValue(snapshot.primaryMuscleGroup, `content.days.${dayIndex}.muscleGroups.${groupIndex}.exercises.${exerciseIndex}.exercise.primaryMuscleGroup`, 80),
+              instructions: nullableNonEmptyText(snapshot.instructions, `content.days.${dayIndex}.muscleGroups.${groupIndex}.exercises.${exerciseIndex}.exercise.instructions`, 2000),
+              posterObjectKey: nullableNonEmptyText(snapshot.posterObjectKey, `content.days.${dayIndex}.muscleGroups.${groupIndex}.exercises.${exerciseIndex}.exercise.posterObjectKey`, 600),
+              mediaKind: mediaKind as "video" | "gif" | null,
+            }),
+            prescription: trainingMetric(exercise.prescription, `content.days.${dayIndex}.muscleGroups.${groupIndex}.exercises.${exerciseIndex}.prescription`),
+            sortOrder: boundedInteger(exercise.sortOrder, `content.days.${dayIndex}.muscleGroups.${groupIndex}.exercises.${exerciseIndex}.sortOrder`, 0, 99),
+          });
+        })),
+      });
+    });
+    return Object.freeze({ weekday, muscleGroups: Object.freeze(groups) });
+  });
+  return Object.freeze({ schemaVersion: 1, days: Object.freeze(days) });
+}
+
+export function parseConfigureTrainingEntitlementCommandV1(value: unknown): ConfigureTrainingEntitlementCommandV1 {
+  const input = object(value, "command");
+  return Object.freeze({ apiVersion: apiVersion(input.apiVersion), clientId: integer(input.clientId, "clientId", 1), active: booleanValue(input.active, "active"), reason: nullableNonEmptyText(input.reason, "reason", 1000), correlationId: textValue(input.correlationId, "correlationId", 128) });
+}
+
+export function parseSaveTrainingRoutineDraftCommandV1(value: unknown): SaveTrainingRoutineDraftCommandV1 {
+  const input = object(value, "command");
+  return Object.freeze({ apiVersion: apiVersion(input.apiVersion), routinePublicId: textValue(input.routinePublicId, "routinePublicId"), routineVersionPublicId: textValue(input.routineVersionPublicId, "routineVersionPublicId"), expectedRevision: integer(input.expectedRevision, "expectedRevision", 1), title: textValue(input.title, "title", 160), content: parseTrainingRoutineContentV1(input.content), correlationId: textValue(input.correlationId, "correlationId", 128) });
+}
+
+export function parsePublishTrainingRoutineCommandV1(value: unknown): PublishTrainingRoutineCommandV1 {
+  const input = object(value, "command");
+  return Object.freeze({ apiVersion: apiVersion(input.apiVersion), routinePublicId: textValue(input.routinePublicId, "routinePublicId"), routineVersionPublicId: textValue(input.routineVersionPublicId, "routineVersionPublicId"), expectedRevision: integer(input.expectedRevision, "expectedRevision", 1), correlationId: textValue(input.correlationId, "correlationId", 128) });
 }
 
 function reusableItem(value: unknown, path: string): ReusableContentItemV1 {

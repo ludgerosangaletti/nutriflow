@@ -28,6 +28,7 @@ import { GetPatientPortal } from "../../modules/nutriflow/application/portal/get
 import { PublishFoodPlanVersion } from "../../modules/nutriflow/application/plans/publish-food-plan-version.ts";
 import { PublishFoodPlanVersionOperation } from "../../modules/nutriflow/application/plans/publish-food-plan-version-operation.ts";
 import { D1FoodPlanPublicationStore } from "../../modules/nutriflow/infrastructure/d1/d1-food-plan-publication-store.ts";
+import { D1TrainingEditorRepository } from "../../modules/nutriflow/infrastructure/d1/d1-training-editor-repository.ts";
 import {
   ConfigureControlledHomologation,
   CONTROLLED_HOMOLOGATION_FLAGS,
@@ -416,6 +417,14 @@ export function createNutriFlowAdminRuntime(context: NutriFlowAdminContext) {
       generatePublicId,
       environment: process.env.NODE_ENV === "production" ? "production" : "development",
     }),
+  });
+}
+
+export function createTrainingEditorRepository() {
+  return new D1TrainingEditorRepository({
+    database: env.DB,
+    generatePublicId,
+    hashJson: sha256Json,
   });
 }
 

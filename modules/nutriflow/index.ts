@@ -58,3 +58,4 @@ export * from "./infrastructure/d1/d1-food-plan-draft-store.ts";
 export * from "./infrastructure/d1/d1-food-catalog-read-repository.ts";
 export * from "./infrastructure/d1/d1-reusable-content-repository.ts";
 export * from "./infrastructure/d1/d1-training-library-repository.ts";
+export * from "./infrastructure/d1/d1-training-editor-repository.ts";

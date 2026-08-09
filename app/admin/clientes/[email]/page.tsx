@@ -14,7 +14,8 @@ import RenewalEmailTest from "./renewal-email-test";
 import { daysRemaining, hasActiveAccess } from "../../../access";
 import InPersonCareManager from "./in-person-care-manager";
 import AppointmentRequests from "./appointment-requests";
-import { canUseNutriFlowEditor, ensureNutriFlowAdminContext, getControlledHomologationSnapshot } from "../../../nutriflow/server";
+import { canUseNutriFlowEditor, canUseNutriFlowFeature, ensureNutriFlowAdminContext, getControlledHomologationSnapshot } from "../../../nutriflow/server";
+import { NUTRIFLOW_FEATURE_FLAGS } from "../../../../modules/nutriflow/config/feature-flags";
 import NutriFlowHomologationPanel from "./nutriflow-homologation-panel";
 import ClinicalAssessmentForm from "./clinical-assessment-form";
 import ClinicalAssessmentHistory from "./clinical-assessment-history";
@@ -105,6 +106,9 @@ export default async function ClientAnswers({
   const nutriFlowEnabled = nutriFlowContext
     ? await canUseNutriFlowEditor(nutriFlowContext, row.client.id)
     : false;
+  const trainingEnabled = nutriFlowContext
+    ? await canUseNutriFlowFeature(nutriFlowContext, row.client.id, NUTRIFLOW_FEATURE_FLAGS.TRAINING)
+    : false;
   const homologation = nutriFlowContext
     ? await getControlledHomologationSnapshot(nutriFlowContext, row.client)
     : null;
@@ -167,6 +171,7 @@ export default async function ClientAnswers({
               Editor NutriFlow
             </Link>
           ) : null}
+          {trainingEnabled ? <Link className="is-nutriflow" href={`/admin/clientes/${encodeURIComponent(row.client.email)}/training`}>Treino</Link> : null}
           {isInPerson ? <><a href="#dados-presenciais">Atendimento</a><Link href={`/admin/clientes/${encodeURIComponent(row.client.email)}/anamnese`}>{row.anamnesis ? "Editar anamnese" : "Preencher anamnese"}</Link></> : null}
           <a href="#documentos">{isInPerson ? "Protocolo e avaliação" : "Documentos"}</a>
           <a href="#check-ins">Check-ins</a>

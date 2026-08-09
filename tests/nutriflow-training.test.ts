@@ -6,6 +6,9 @@ import { NUTRIFLOW_DEFAULT_FEATURE_FLAGS, NUTRIFLOW_FEATURE_FLAGS } from "../mod
 import { parseSearchTrainingExerciseLibraryQueryV1 } from "../modules/nutriflow/contracts/v1/validation.ts";
 import { assertTrainingPrescriptionMetric } from "../modules/nutriflow/domain/training/training-prescription.ts";
 import { D1TrainingLibraryRepository } from "../modules/nutriflow/infrastructure/d1/d1-training-library-repository.ts";
+import { D1TrainingEditorRepository } from "../modules/nutriflow/infrastructure/d1/d1-training-editor-repository.ts";
+import { parseTrainingRoutineContentV1 } from "../modules/nutriflow/contracts/v1/validation.ts";
+import { addMuscleGroup, addTrainingExercise, moveTrainingExercise } from "../app/admin/clientes/[email]/training/training-editor-state.ts";
 
 class SqliteStatement {
   private readonly query: string;
@@ -32,6 +35,13 @@ class CountingDatabase {
   prepare(query: string) { this.prepareCount += 1; return new SqliteStatement(query, this.sqlite); }
 }
 
+class TrainingDatabase {
+  readonly sqlite: DatabaseSync;
+  constructor(sqlite: DatabaseSync) { this.sqlite = sqlite; }
+  prepare(query: string) { return new SqliteStatement(query, this.sqlite); }
+  async batch(statements: SqliteStatement[]) { return Promise.all(statements.map((statement) => statement.run())); }
+}
+
 function apply(database: DatabaseSync, name: string) {
   const sql = readFileSync(new URL(`../drizzle/${name}`, import.meta.url), "utf8");
   for (const statement of sql.split("--> statement-breakpoint").map((value) => value.trim()).filter(Boolean)) {
@@ -47,6 +57,39 @@ function trainingDatabase() {
   sqlite.exec("INSERT INTO nf_organizations (public_id, name) VALUES ('org_train_one', 'OrganizaÃ§Ã£o um'), ('org_train_two', 'OrganizaÃ§Ã£o dois')");
   apply(sqlite, "0040_nutriflow_training_foundation.sql");
   return sqlite;
+}
+
+function trainingEditorDatabase() {
+  const sqlite = new DatabaseSync(":memory:");
+  sqlite.exec("PRAGMA foreign_keys = ON; CREATE TABLE clients (id INTEGER PRIMARY KEY, organization_id INTEGER)");
+  apply(sqlite, "0020_parallel_lucky_pierre.sql");
+  sqlite.exec("INSERT INTO clients (id, organization_id) VALUES (10, 1)");
+  sqlite.exec("INSERT INTO nf_organizations (public_id, name) VALUES ('org_training_editor', 'OrganizaÃ§Ã£o Training')");
+  apply(sqlite, "0040_nutriflow_training_foundation.sql");
+  return new TrainingDatabase(sqlite);
+}
+
+function editorRepository(database = trainingEditorDatabase()) {
+  let sequence = 0;
+  return new D1TrainingEditorRepository({
+    database,
+    generatePublicId: (kind) => `${kind}_${++sequence}`,
+    now: () => new Date("2026-08-09T12:00:00.000Z"),
+    hashJson: async (value) => `hash_${JSON.stringify(value).length}`,
+  });
+}
+
+function editorExercise() {
+  return {
+    apiVersion: "v1" as const,
+    publicId: "tr_ex_global_supino_reto",
+    name: "Supino reto",
+    primaryMuscleGroup: "peito",
+    aliases: [],
+    instructions: null,
+    scope: "global" as const,
+    media: null,
+  };
 }
 
 function query(value: string, muscleGroup: string | null = null, limit = 12) {
@@ -101,4 +144,55 @@ test("training prescription accepts repetitions or time and rejects an empty exe
 test("training library contract bounds query cost", () => {
   assert.equal(query("supino", "peito", 1).limit, 1);
   assert.throws(() => query("supino", null, 26));
+});
+
+test("administrative entitlement is auditable and revocation preserves Training history", async () => {
+  const database = trainingEditorDatabase();
+  const repository = editorRepository(database);
+  const granted = await repository.configureEntitlement({ organizationId: 1, actorAuthUserId: "auth_admin", actorRole: "admin", command: { apiVersion: "v1", clientId: 10, active: true, reason: "ServiÃ§o contratado", correlationId: "corr_entitlement_grant" } });
+  assert.equal(granted.entitlement.active, true);
+  assert.equal(database.sqlite.prepare("SELECT count(*) AS total FROM nf_audit_entries WHERE action = 'training.entitlement.granted'").get().total, 1);
+
+  const draft = await repository.createDraft({ organizationId: 1, clientId: 10, actorAuthUserId: "auth_admin", actorRole: "admin", correlationId: "corr_draft", patientName: "Ana" });
+  assert.equal(draft.draft?.versionNumber, 1);
+
+  const revoked = await repository.configureEntitlement({ organizationId: 1, actorAuthUserId: "auth_admin", actorRole: "admin", command: { apiVersion: "v1", clientId: 10, active: false, reason: "Pausa solicitada", correlationId: "corr_entitlement_revoke" } });
+  assert.equal(revoked.entitlement.active, false);
+  assert.equal(revoked.draft?.publicId, draft.draft?.publicId);
+  assert.equal(database.sqlite.prepare("SELECT count(*) AS total FROM nf_training_routines").get().total, 1);
+  assert.equal(database.sqlite.prepare("SELECT count(*) AS total FROM nf_audit_entries WHERE action = 'training.entitlement.revoked'").get().total, 1);
+});
+
+test("Training draft supports ordered exercises, validates prescriptions and publishes an immutable snapshot", async () => {
+  const database = trainingEditorDatabase();
+  const repository = editorRepository(database);
+  await repository.configureEntitlement({ organizationId: 1, actorAuthUserId: "auth_admin", actorRole: "admin", command: { apiVersion: "v1", clientId: 10, active: true, reason: null, correlationId: "corr_grant" } });
+  const created = await repository.createDraft({ organizationId: 1, clientId: 10, actorAuthUserId: "auth_admin", actorRole: "admin", correlationId: "corr_create", patientName: "Ana" });
+  const initial = created.draft!;
+  let content = addMuscleGroup(initial.content, "mon", "Peito");
+  const groupId = content.days[0]!.muscleGroups[0]!.publicId;
+  content = addTrainingExercise(content, "mon", groupId, editorExercise());
+  content = addTrainingExercise(content, "mon", groupId, { ...editorExercise(), publicId: "tr_ex_global_crucifixo", name: "Crucifixo" });
+  const firstId = content.days[0]!.muscleGroups[0]!.exercises[0]!.publicId;
+  content = moveTrainingExercise(content, "mon", groupId, firstId, 1);
+  assert.deepEqual(content.days[0]!.muscleGroups[0]!.exercises.map((exercise) => exercise.exercise.name), ["Crucifixo", "Supino reto"]);
+
+  const saved = await repository.saveDraft({ organizationId: 1, clientId: 10, actorAuthUserId: "auth_admin", actorRole: "admin", command: { apiVersion: "v1", routinePublicId: initial.routinePublicId, routineVersionPublicId: initial.publicId, expectedRevision: initial.revision, title: "Treino semanal", content, correlationId: "corr_save" } });
+  assert.equal(saved.draft?.revision, 2);
+  const published = await repository.publish({ organizationId: 1, clientId: 10, actorAuthUserId: "auth_admin", actorRole: "admin", routinePublicId: saved.draft!.routinePublicId, routineVersionPublicId: saved.draft!.publicId, expectedRevision: saved.draft!.revision, correlationId: "corr_publish" });
+  assert.equal(published.publication?.content.days[0]?.muscleGroups[0]?.exercises[0]?.exercise.name, "Crucifixo");
+  assert.equal(database.sqlite.prepare("SELECT count(*) AS total FROM nf_training_publications WHERE status = 'active'").get().total, 1);
+  assert.throws(() => database.sqlite.exec("UPDATE nf_training_routine_versions SET snapshot_json = '{}' WHERE state = 'published'"), /NF_PUBLICATION_IMMUTABLE/);
+
+  await repository.configureEntitlement({ organizationId: 1, actorAuthUserId: "auth_admin", actorRole: "admin", command: { apiVersion: "v1", clientId: 10, active: false, reason: "Pausa", correlationId: "corr_revoke" } });
+  assert.equal(database.sqlite.prepare("SELECT count(*) AS total FROM nf_training_publications").get().total, 1);
+  await repository.configureEntitlement({ organizationId: 1, actorAuthUserId: "auth_admin", actorRole: "admin", command: { apiVersion: "v1", clientId: 10, active: true, reason: "Retomado", correlationId: "corr_reactivate" } });
+  const revision = await repository.createDraft({ organizationId: 1, clientId: 10, actorAuthUserId: "auth_admin", actorRole: "admin", correlationId: "corr_copy", patientName: "Ana" });
+  assert.equal(revision.draft?.versionNumber, 2);
+  assert.equal(revision.draft?.content.days[0]?.muscleGroups[0]?.exercises[0]?.exercise.name, "Crucifixo");
+});
+
+test("Training validation rejects empty groups and exercises without repetitions or time", () => {
+  assert.throws(() => parseTrainingRoutineContentV1({ schemaVersion: 1, days: [{ weekday: "mon", muscleGroups: [{ publicId: "group", name: "Peito", sortOrder: 0, exercises: [] }] }] }), /muscleGroups.0.exercises/);
+  assert.throws(() => parseTrainingRoutineContentV1({ schemaVersion: 1, days: [{ weekday: "mon", muscleGroups: [{ publicId: "group", name: "Peito", sortOrder: 0, exercises: [{ publicId: "exercise", exercise: { publicId: "catalog", name: "Supino", primaryMuscleGroup: "peito", instructions: null, posterObjectKey: null, mediaKind: null }, prescription: { sets: 3, repetitions: null, durationSeconds: null, restSeconds: 60, notes: null }, sortOrder: 0 }] }] }] }), /execution/);
 });

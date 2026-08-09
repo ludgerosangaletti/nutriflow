@@ -7458,6 +7458,63 @@ button:disabled {
   }
 }
 /* NutriFlow — editor administrativo protegido por feature flag */
+.training-page { max-width: 1320px; }
+.training-editor { display: grid; gap: 18px; padding: 22px 0 42px; }
+.training-loading, .training-empty { min-height: 230px; place-content: center; justify-items: center; border: 1px solid #deded7; border-radius: 20px; background: #fafaf7; text-align: center; padding: 26px; }
+.training-empty h2 { margin: 0; font-size: 1.35rem; }
+.training-empty p { max-width: 510px; color: #676760; line-height: 1.5; }
+.training-empty button, .training-status-bar button, .training-day-panel > header > button { border: 0; border-radius: 10px; background: #11110f; color: #fff; font: inherit; font-size: .78rem; font-weight: 850; padding: 11px 14px; cursor: pointer; }
+.training-editor-header { display: flex; align-items: start; justify-content: space-between; gap: 18px; border-bottom: 1px solid #e1e1da; padding-bottom: 18px; }
+.training-editor-header h1 { margin: 3px 0 5px; font-size: clamp(1.5rem, 3vw, 2.1rem); }
+.training-editor-header p:not(.section-kicker) { margin: 0; color: #6d6d65; }
+.training-entitlement { display: flex; align-items: center; gap: 9px; border: 1px solid #e1c7c1; border-radius: 12px; background: #fff8f6; color: #8d3027; padding: 8px 9px 8px 12px; font-size: .72rem; font-weight: 850; }
+.training-entitlement.is-active { border-color: #c8dfd0; background: #f3fbf5; color: #216839; }
+.training-entitlement button { border: 0; border-radius: 8px; background: #fff; color: inherit; font: inherit; font-weight: 850; padding: 8px 9px; cursor: pointer; }
+.training-message { margin: 0; border-radius: 10px; background: #fff4d1; color: #625000; padding: 11px 13px; font-size: .78rem; }
+.training-status-bar { display: flex; align-items: center; gap: 10px; border: 1px solid #d7d7cf; border-radius: 13px; background: #f7f7f2; padding: 10px; }
+.training-status-bar > span { border-radius: 999px; background: #fff; color: #33332e; font-size: .68rem; font-weight: 900; padding: 6px 9px; }
+.training-status-bar small { flex: 1; color: #6b6b64; font-size: .72rem; }
+.training-status-bar button { padding: 9px 11px; background: #fff; color: #22221f; border: 1px solid #d3d3cb; }
+.training-status-bar button.is-publish { border-color: #ffe600; background: #ffe600; color: #11110f; }
+.training-title { display: grid; gap: 6px; max-width: 570px; }
+.training-title span, .training-prescription label span { color: #6b6b63; font-size: .65rem; font-weight: 850; letter-spacing: .08em; text-transform: uppercase; }
+.training-title input { border: 0; border-bottom: 2px solid #d4d4cc; background: transparent; color: #11110f; font: 800 1.25rem/1.2 inherit; padding: 7px 0; }
+.training-title input:focus { outline: 0; border-color: #11110f; }
+.training-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 7px; }
+.training-days button { display: grid; gap: 4px; border: 1px solid #deded6; border-radius: 11px; background: #fafaf7; color: #343430; text-align: left; padding: 10px; cursor: pointer; }
+.training-days button strong { font-size: .75rem; }
+.training-days button small { color: #7a7a72; font-size: .62rem; }
+.training-days button.is-active { border-color: #11110f; background: #11110f; color: #fff; }
+.training-days button.is-active small { color: #d4d4cc; }
+.training-day-panel { display: grid; gap: 16px; border: 1px solid #deded6; border-radius: 19px; background: #fafaf7; padding: 18px; }
+.training-day-panel > header { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+.training-day-panel > header h2 { margin: 2px 0 0; font-size: 1.15rem; }
+.training-rest { margin: 0; border: 1px dashed #c9c9c0; border-radius: 12px; color: #6e6e67; padding: 20px; text-align: center; }
+.training-groups { display: grid; gap: 13px; }
+.training-group { overflow: hidden; border: 1px solid #dfdfd8; border-radius: 15px; background: #fff; }
+.training-group > header, .training-exercise > header, .training-library > header { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.training-group > header { background: #f3f3ed; padding: 10px; }
+.training-group > header input { flex: 1; min-width: 0; border: 0; background: transparent; color: #22221f; font: 850 .95rem/1.2 inherit; padding: 7px; }
+.training-group button, .training-library button { border: 1px solid #d5d5cd; border-radius: 8px; background: #fff; color: #33332e; font: inherit; font-size: .7rem; font-weight: 850; padding: 7px 9px; cursor: pointer; }
+.training-group button.is-remove, .training-order button.is-remove { color: #9e3128; }
+.training-exercises { display: grid; gap: 8px; padding: 10px; }
+.training-exercise { border: 1px solid #e3e3dc; border-radius: 11px; background: #fff; padding: 10px; }
+.training-exercise > header strong { display: block; font-size: .82rem; }
+.training-exercise > header small { color: #77776f; font-size: .65rem; }
+.training-order { display: flex; gap: 4px; }
+.training-order button { display: grid; place-items: center; width: 29px; min-width: 29px; height: 29px; padding: 0; }
+.training-order button:disabled { opacity: .35; cursor: default; }
+.training-prescription { display: grid; grid-template-columns: repeat(5, minmax(74px, 1fr)) minmax(160px, 2fr); gap: 7px; margin-top: 10px; }
+.training-prescription label { display: grid; gap: 5px; }
+.training-prescription input, .training-library input, .training-library select { min-width: 0; height: 37px; border: 1px solid #d8d8d0; border-radius: 8px; background: #fff; color: #11110f; font: inherit; padding: 0 9px; }
+.training-add-exercise { margin: 0 10px 11px; border: 0 !important; background: transparent !important; color: #33332e !important; padding: 6px 2px !important; }
+.training-library { display: grid; gap: 10px; margin: 0 10px 12px; border: 1px solid #d8d8cf; border-radius: 12px; background: #fafaf7; padding: 11px; }
+.training-library > div { display: grid; grid-template-columns: minmax(120px, 1fr) 150px auto; gap: 7px; }
+.training-library ul { display: grid; gap: 6px; max-height: 250px; overflow-y: auto; list-style: none; margin: 0; padding: 0; }
+.training-library li { display: flex; align-items: center; justify-content: space-between; gap: 10px; border: 1px solid #e1e1d9; border-radius: 9px; background: #fff; padding: 9px; }
+.training-library li strong { display: block; font-size: .75rem; }
+.training-library li small { color: #74746c; font-size: .61rem; }
+@media (max-width: 780px) { .training-editor-header, .training-status-bar { align-items: stretch; flex-direction: column; } .training-entitlement { align-self: stretch; justify-content: space-between; } .training-days { grid-template-columns: repeat(4, 1fr); } .training-prescription { grid-template-columns: repeat(2, 1fr); } .training-prescription .is-note { grid-column: 1 / -1; } .training-library > div { grid-template-columns: 1fr; } }
 .admin-patient-nav a.is-nutriflow {
   background: #11110f;
   border-color: #11110f;

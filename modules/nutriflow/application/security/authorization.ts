@@ -37,6 +37,9 @@ export const NUTRIFLOW_ACTIONS = {
   READ_CATALOG: "catalog:read",
   MANAGE_MEAL_TEMPLATES: "meal-template:manage",
   MANAGE_RECIPES: "recipe:manage",
+  MANAGE_TRAINING_ENTITLEMENT: "training-entitlement:manage",
+  MANAGE_TRAINING_ROUTINE: "training-routine:manage",
+  READ_TRAINING_LIBRARY: "training-library:read",
   CONFIGURE_FEATURE_FLAG: "feature-flag:configure",
 } as const;
 
@@ -48,7 +51,7 @@ export const NUTRIFLOW_AUTHORIZATION_MATRIX = Object.freeze({
   admin: Object.freeze(Object.values(NUTRIFLOW_ACTIONS)),
   nutritionist: Object.freeze(
     Object.values(NUTRIFLOW_ACTIONS).filter(
-      (action) => action !== NUTRIFLOW_ACTIONS.CONFIGURE_FEATURE_FLAG,
+      (action) => action !== NUTRIFLOW_ACTIONS.CONFIGURE_FEATURE_FLAG && action !== NUTRIFLOW_ACTIONS.MANAGE_TRAINING_ENTITLEMENT,
     ),
   ),
   patient: Object.freeze([
