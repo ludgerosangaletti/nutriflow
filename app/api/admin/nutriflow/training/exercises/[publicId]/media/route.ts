@@ -46,7 +46,7 @@ export async function POST(request: Request, route: { params: Promise<{ publicId
     assertTrainingMediaUpload({ kind, mediaName: media.name, mediaType: media.type, mediaBytes: media.size, posterName: poster.name, posterType: poster.type, posterBytes: poster.size, durationMs: durationSeconds === null ? null : Math.round(durationSeconds * 1000) });
     const { admin, context } = await authorized(currentClientId);
     const repository = createTrainingMediaRepository();
-    const exercise = await repository.getManageableExercise({ organizationId: context.organizationId, exercisePublicId: (await route.params).publicId, allowGlobal: context.actor.role === "owner" });
+    const exercise = await repository.getManageableExercise({ organizationId: context.organizationId, exercisePublicId: (await route.params).publicId, allowGlobal: false });
     const token = crypto.randomUUID();
     const prefix = exercise.scope === "global" ? `training-media/global/${exercise.publicId}` : `training-media/organization/${context.organizationId}/${exercise.publicId}`;
     const objectKey = `${prefix}/${token}/demonstration${extension(media.name, kind === "video" ? ".mp4" : ".gif")}`;
@@ -71,7 +71,7 @@ export async function DELETE(request: Request, route: { params: Promise<{ public
     const currentClientId = clientId(body.clientId);
     const { admin, context } = await authorized(currentClientId);
     const repository = createTrainingMediaRepository();
-    const exercise = await repository.getManageableExercise({ organizationId: context.organizationId, exercisePublicId: (await route.params).publicId, allowGlobal: context.actor.role === "owner" });
+    const exercise = await repository.getManageableExercise({ organizationId: context.organizationId, exercisePublicId: (await route.params).publicId, allowGlobal: false });
     await repository.remove({ organizationId: context.organizationId, actorAuthUserId: admin.user.id, actorRole: context.actor.role, exercise, correlationId });
     return Response.json({ apiVersion: NUTRIFLOW_API_VERSION, correlationId, data: { removed: true } }, { headers: { "cache-control": "private, no-store" } });
   } catch (error) { return failure(error, correlationId); }

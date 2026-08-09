@@ -7,6 +7,12 @@ export const TRAINING_MEDIA_LIMITS = Object.freeze({
   videoDurationSeconds: 90,
 });
 
+export const GLOBAL_TRAINING_MEDIA_IMPORT_LIMITS = Object.freeze({
+  items: 24,
+  manifestBytes: 64 * 1024,
+  totalBytes: 64 * 1024 * 1024,
+});
+
 export type TrainingMediaKind = "video" | "gif";
 export type TrainingMediaUpload = Readonly<{
   kind: TrainingMediaKind;
@@ -19,7 +25,61 @@ export type TrainingMediaUpload = Readonly<{
   durationMs: number | null;
 }>;
 
+export type GlobalTrainingMediaImportItem = Readonly<{
+  slug: string;
+  exercisePublicId: string;
+  videoFile: string;
+  posterFile: string;
+  durationMs: number;
+}>;
+
+export type GlobalTrainingMediaImportManifest = Readonly<{
+  apiVersion: 1;
+  items: readonly GlobalTrainingMediaImportItem[];
+}>;
+
 function invalid(message: string): never { throw new Error(`NUTRIFLOW_TRAINING_MEDIA_INVALID:${message}`); }
+
+function manifestObject(value: unknown, path: string): Record<string, unknown> {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) invalid(path);
+  return value as Record<string, unknown>;
+}
+
+function manifestText(value: unknown, path: string, pattern: RegExp) {
+  if (typeof value !== "string" || !pattern.test(value)) invalid(path);
+  return value;
+}
+
+/**
+ * Parses the curated global-library manifest. The stable slug maps directly to
+ * the existing immutable catalog identifier `tr_ex_global_<slug>`.
+ */
+export function parseGlobalTrainingMediaImportManifest(value: unknown): GlobalTrainingMediaImportManifest {
+  const input = manifestObject(value, "manifest");
+  if (input.apiVersion !== 1 || !Array.isArray(input.items) || input.items.length < 1 || input.items.length > GLOBAL_TRAINING_MEDIA_IMPORT_LIMITS.items) invalid("manifest-shape");
+  const slugs = new Set<string>();
+  const filenames = new Set<string>();
+  const items = input.items.map((entry, index): GlobalTrainingMediaImportItem => {
+    const item = manifestObject(entry, `items.${index}`);
+    const slug = manifestText(item.slug, `items.${index}.slug`, /^[a-z0-9]+(?:_[a-z0-9]+){0,7}$/);
+    const videoFile = manifestText(item.videoFile, `items.${index}.videoFile`, /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,119}\.mp4$/i);
+    const posterFile = manifestText(item.posterFile, `items.${index}.posterFile`, /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,119}\.(?:jpe?g|png|webp)$/i);
+    if (slugs.has(slug)) invalid(`items.${index}.slug-duplicate`);
+    if (filenames.has(videoFile) || filenames.has(posterFile) || videoFile === posterFile) invalid(`items.${index}.file-duplicate`);
+    if (typeof item.durationSeconds !== "number" || !Number.isFinite(item.durationSeconds) || item.durationSeconds < 1 || item.durationSeconds > TRAINING_MEDIA_LIMITS.videoDurationSeconds) invalid(`items.${index}.durationSeconds`);
+    slugs.add(slug);
+    filenames.add(videoFile);
+    filenames.add(posterFile);
+    return Object.freeze({
+      slug,
+      exercisePublicId: `tr_ex_global_${slug}`,
+      videoFile,
+      posterFile,
+      durationMs: Math.round(item.durationSeconds * 1000),
+    });
+  });
+  return Object.freeze({ apiVersion: 1, items: Object.freeze(items) });
+}
 
 /** Validates cheap, deterministic upload properties. Codec optimisation remains part of the curated-media workflow. */
 export function assertTrainingMediaUpload(input: TrainingMediaUpload) {
@@ -34,6 +94,32 @@ export function assertTrainingMediaUpload(input: TrainingMediaUpload) {
   if (!( ["image/jpeg", "image/png", "image/webp"] as const).includes(input.posterType as never)) invalid("poster-format");
   if (!/\.(jpe?g|png|webp)$/i.test(input.posterName)) invalid("poster-name");
   if (input.posterBytes < 1 || input.posterBytes > TRAINING_MEDIA_LIMITS.posterBytes) invalid("poster-size");
+}
+
+function bytesMatch(bytes: Uint8Array, offset: number, expected: readonly number[]) {
+  return expected.every((value, index) => bytes[offset + index] === value);
+}
+
+function containsAscii(bytes: Uint8Array, text: string) {
+  const expected = Array.from(text, (character) => character.charCodeAt(0));
+  for (let offset = 0; offset <= bytes.length - expected.length; offset += 1) {
+    if (bytesMatch(bytes, offset, expected)) return true;
+  }
+  return false;
+}
+
+/** Verifies the actual container, H.264 codec marker and poster signature for curated batch imports. */
+export function assertCuratedTrainingMediaBytes(video: Uint8Array, poster: Uint8Array, posterType: string) {
+  if (video.length < 12 || !bytesMatch(video, 4, [0x66, 0x74, 0x79, 0x70])) invalid("video-container");
+  if (!containsAscii(video, "avc1") && !containsAscii(video, "avc3")) invalid("video-codec-h264");
+  const validPoster = posterType === "image/jpeg"
+    ? bytesMatch(poster, 0, [0xff, 0xd8, 0xff])
+    : posterType === "image/png"
+      ? bytesMatch(poster, 0, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
+      : posterType === "image/webp"
+        ? bytesMatch(poster, 0, [0x52, 0x49, 0x46, 0x46]) && bytesMatch(poster, 8, [0x57, 0x45, 0x42, 0x50])
+        : false;
+  if (!validPoster) invalid("poster-signature");
 }
 
 /** Verifies a requested asset is part of exactly the rendered immutable publication. */

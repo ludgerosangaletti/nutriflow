@@ -12,7 +12,7 @@ import { D1TrainingMediaRepository } from "../modules/nutriflow/infrastructure/d
 import { GetPatientTraining } from "../modules/nutriflow/application/training/get-patient-training.ts";
 import { NutriFlowApplicationError } from "../modules/nutriflow/application/errors/nutriflow-application-error.ts";
 import { parseTrainingRoutineContentV1 } from "../modules/nutriflow/contracts/v1/validation.ts";
-import { assertTrainingMediaUpload, publicationReferencesTrainingMedia } from "../modules/nutriflow/domain/training/training-media.ts";
+import { assertCuratedTrainingMediaBytes, assertTrainingMediaUpload, parseGlobalTrainingMediaImportManifest, publicationReferencesTrainingMedia } from "../modules/nutriflow/domain/training/training-media.ts";
 import { addMuscleGroup, addTrainingExercise, moveTrainingExercise } from "../app/admin/clientes/[email]/training/training-editor-state.ts";
 
 class SqliteStatement {
@@ -180,6 +180,37 @@ test("Training media validates mobile-safe upload bounds and publication referen
   assert.equal(publicationReferencesTrainingMedia(content, "training_media_other_org"), false);
 });
 
+test("global Training media manifest maps stable slugs and rejects ambiguous batches", () => {
+  const manifest = parseGlobalTrainingMediaImportManifest({
+    apiVersion: 1,
+    items: [
+      { slug: "supino_reto", videoFile: "supino_reto.mp4", posterFile: "supino_reto.webp", durationSeconds: 15 },
+      { slug: "triceps_pulley", videoFile: "triceps_pulley.mp4", posterFile: "triceps_pulley.jpg", durationSeconds: 12.5 },
+    ],
+  });
+  assert.deepEqual(manifest.items.map((item) => item.exercisePublicId), ["tr_ex_global_supino_reto", "tr_ex_global_triceps_pulley"]);
+  assert.equal(manifest.items[1]!.durationMs, 12_500);
+  assert.throws(() => parseGlobalTrainingMediaImportManifest({ apiVersion: 1, items: [
+    { slug: "supino_reto", videoFile: "one.mp4", posterFile: "one.webp", durationSeconds: 15 },
+    { slug: "supino_reto", videoFile: "two.mp4", posterFile: "two.webp", durationSeconds: 15 },
+  ] }), /slug-duplicate/);
+  assert.throws(() => parseGlobalTrainingMediaImportManifest({ apiVersion: 1, items: [
+    { slug: "Supino Reto", videoFile: "supino.mp4", posterFile: "supino.webp", durationSeconds: 15 },
+  ] }), /slug/);
+  assert.throws(() => parseGlobalTrainingMediaImportManifest({ apiVersion: 1, items: [
+    { slug: "supino_reto", videoFile: "shared.mp4", posterFile: "shared.webp", durationSeconds: 15 },
+    { slug: "crucifixo", videoFile: "shared.mp4", posterFile: "other.webp", durationSeconds: 15 },
+  ] }), /file-duplicate/);
+});
+
+test("global Training media batch verifies MP4 H.264 and poster signatures", () => {
+  const h264Mp4 = new Uint8Array([0, 0, 0, 24, 0x66, 0x74, 0x79, 0x70, 0x69, 0x73, 0x6f, 0x6d, 0x61, 0x76, 0x63, 0x31]);
+  const webp = new Uint8Array([0x52, 0x49, 0x46, 0x46, 0, 0, 0, 0, 0x57, 0x45, 0x42, 0x50]);
+  assert.doesNotThrow(() => assertCuratedTrainingMediaBytes(h264Mp4, webp, "image/webp"));
+  assert.throws(() => assertCuratedTrainingMediaBytes(new Uint8Array([0, 0, 0, 8, 0x66, 0x74, 0x79, 0x70]), webp, "image/webp"), /video-container|video-codec-h264/);
+  assert.throws(() => assertCuratedTrainingMediaBytes(h264Mp4, new Uint8Array([0, 1, 2]), "image/webp"), /poster-signature/);
+});
+
 test("Training media association is scoped, auditable and keeps replaced blobs available to immutable snapshots", async () => {
   const database = trainingMediaDatabase();
   let sequence = 0;
@@ -199,6 +230,35 @@ test("Training media association is scoped, auditable and keeps replaced blobs a
   await repository.remove({ organizationId: 1, actorAuthUserId: "auth_owner", actorRole: "owner", exercise: privateExercise, correlationId: "corr_media_remove" });
   assert.equal((await repository.findAsset(second.publicId))?.status, "removed");
   assert.equal(database.sqlite.prepare("SELECT count(*) AS total FROM nf_audit_entries WHERE action LIKE 'training.exercise-media.%'").get().total, 4);
+});
+
+test("global Training media batch import is owner-only, auditable and never overwrites silently", async () => {
+  const database = trainingMediaDatabase();
+  let sequence = 0;
+  const repository = new D1TrainingMediaRepository(database, (kind) => `${kind}_${++sequence}`, () => new Date("2026-08-09T12:00:00.000Z"));
+  const targets = await repository.getGlobalImportTargets(["tr_ex_global_supino_reto", "tr_ex_global_crucifixo", "tr_ex_global_missing"]);
+  assert.deepEqual(targets.map((target) => target.publicId), ["tr_ex_global_supino_reto", "tr_ex_global_crucifixo"]);
+  const records = targets.map((target, index) => ({
+    target,
+    objectKey: `training-media/global/batch/video-${index}.mp4`,
+    posterObjectKey: `training-media/global/batch/poster-${index}.webp`,
+    mimeType: "video/mp4" as const,
+    posterMimeType: "image/webp",
+    byteSize: 500_000 + index,
+    posterByteSize: 20_000 + index,
+    durationMs: 15_000,
+  }));
+  await assert.rejects(() => repository.importGlobalBatch({ organizationId: 1, actorAuthUserId: "auth_admin", actorRole: "admin", records, overwriteExisting: false, correlationId: "corr_global_admin" }), (error) => error instanceof NutriFlowApplicationError && error.code === "NF_FORBIDDEN");
+  const first = await repository.importGlobalBatch({ organizationId: 1, actorAuthUserId: "auth_owner", actorRole: "owner", records, overwriteExisting: false, correlationId: "corr_global_first" });
+  assert.equal(first.length, 2);
+  assert.equal(database.sqlite.prepare("SELECT count(*) AS total FROM nf_training_exercise_media WHERE status = 'active'").get().total, 2);
+  assert.equal(database.sqlite.prepare("SELECT count(*) AS total FROM nf_audit_entries WHERE action = 'training.exercise-media.global-imported'").get().total, 2);
+  const occupiedTargets = await repository.getGlobalImportTargets(targets.map((target) => target.publicId));
+  const replacementRecords = records.map((record, index) => ({ ...record, target: occupiedTargets[index]!, objectKey: `${record.objectKey}.replacement` }));
+  await assert.rejects(() => repository.importGlobalBatch({ organizationId: 1, actorAuthUserId: "auth_owner", actorRole: "owner", records: replacementRecords, overwriteExisting: false, correlationId: "corr_global_conflict" }), (error) => error instanceof NutriFlowApplicationError && error.code === "NF_VERSION_CONFLICT");
+  await repository.importGlobalBatch({ organizationId: 1, actorAuthUserId: "auth_owner", actorRole: "owner", records: replacementRecords, overwriteExisting: true, correlationId: "corr_global_replace" });
+  assert.equal(database.sqlite.prepare("SELECT count(*) AS total FROM nf_training_exercise_media WHERE status = 'active'").get().total, 2);
+  assert.equal(database.sqlite.prepare("SELECT count(*) AS total FROM nf_training_exercise_media WHERE status = 'replaced'").get().total, 2);
 });
 
 test("administrative entitlement is auditable and revocation preserves Training history", async () => {
