@@ -21,6 +21,10 @@ export const CONTROLLED_HOMOLOGATION_FLAGS: readonly NutriFlowFeatureFlag[] =
     NUTRIFLOW_FEATURE_FLAGS.MEAL_TEMPLATES,
     NUTRIFLOW_FEATURE_FLAGS.RECIPES,
     NUTRIFLOW_FEATURE_FLAGS.PATIENT_STRUCTURED_PLAN,
+    // Training remains disabled by default. This only makes the existing,
+    // expiring per-client controlled-homologation path available for a
+    // confirmed test account before any organization-level activation.
+    NUTRIFLOW_FEATURE_FLAGS.TRAINING,
   ]);
 
 export type ConfigureControlledHomologationResult = Readonly<{

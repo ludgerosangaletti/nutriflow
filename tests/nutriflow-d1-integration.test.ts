@@ -549,6 +549,7 @@ test("controlled homologation enables only the selected client with audit, outbo
   const configuredFlags = sqlite.prepare("SELECT flag_key, enabled, client_id, variant FROM nf_feature_flag_overrides ORDER BY flag_key").all();
   assert.equal(configuredFlags.length, CONTROLLED_HOMOLOGATION_FLAGS.length);
   assert.ok(configuredFlags.every((row) => row.enabled === 1 && row.client_id === 1 && row.variant === "controlled-homologation"));
+  assert.ok(configuredFlags.some((row) => row.flag_key === "nutriflow.training.enabled"));
 });
 
 test("controlled homologation rejects an unconfirmed or excessive test window", async () => {

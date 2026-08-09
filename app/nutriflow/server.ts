@@ -69,6 +69,8 @@ export type NutriFlowPatientContext = Readonly<{
   actor: Extract<NutriFlowActor, { kind: "patient" }>;
 }>;
 
+type NutriFlowOrganizationScope = Readonly<{ organizationId: number }>;
+
 const staffRoles = new Set<NutriFlowStaffRole>(["owner", "admin", "nutritionist"]);
 
 export async function resolveNutriFlowAdminContext(
@@ -120,6 +122,7 @@ export async function canUseNutriFlowEditor(
   context: NutriFlowAdminContext,
   clientId: number,
 ) {
+  if (!(await isNutriFlowClientInOrganization(context, clientId))) return false;
   const evaluation = await evaluateFeatureFlag({
     flag: NUTRIFLOW_FEATURE_FLAGS.ADMIN_EDITOR,
     context: {
@@ -134,16 +137,48 @@ export async function canUseNutriFlowEditor(
 }
 
 export async function canUseNutriFlowFeature(
-  context: NutriFlowAdminContext,
+  context: NutriFlowOrganizationScope,
   clientId: number,
   flag: (typeof NUTRIFLOW_FEATURE_FLAGS)[keyof typeof NUTRIFLOW_FEATURE_FLAGS],
 ) {
+  // Always establish tenant ownership before reading a per-client override.
+  // This prevents an authenticated staff member from using a guessed foreign
+  // client id as the subject of a feature-flag evaluation.
+  if (!(await isNutriFlowClientInOrganization(context, clientId))) return false;
   const evaluation = await evaluateFeatureFlag({
     flag,
     context: { organizationId: context.organizationId, clientId, correlationId: generatePublicId("corr"), now: new Date() },
     repository: new D1FeatureFlagRepository(env.DB),
   });
   return evaluation.enabled;
+}
+
+/**
+ * Matches the established Training repository scope rule. Some legacy
+ * patients resolve their organization through nf_plans, while newer records
+ * have clients.organization_id populated directly.
+ */
+export async function isNutriFlowClientInOrganization(
+  context: NutriFlowOrganizationScope,
+  clientId: number,
+) {
+  if (!Number.isSafeInteger(clientId) || clientId < 1) return false;
+  const row = await env.DB.prepare(
+    `SELECT client.id
+       FROM clients AS client
+      WHERE client.id = ?
+        AND (
+          client.organization_id = ?
+          OR EXISTS (
+            SELECT 1
+              FROM nf_plans AS plan
+             WHERE plan.client_id = client.id
+               AND plan.organization_id = ?
+          )
+        )
+      LIMIT 1`,
+  ).bind(clientId, context.organizationId, context.organizationId).first<Readonly<{ id: number }>>();
+  return Boolean(row);
 }
 
 export async function resolveNutriFlowPatientContext(
@@ -198,6 +233,7 @@ const homologationFlagLabels = Object.freeze({
   [NUTRIFLOW_FEATURE_FLAGS.MEAL_TEMPLATES]: "Meal Templates",
   [NUTRIFLOW_FEATURE_FLAGS.RECIPES]: "Receitas",
   [NUTRIFLOW_FEATURE_FLAGS.PATIENT_STRUCTURED_PLAN]: "Portal do Paciente",
+  [NUTRIFLOW_FEATURE_FLAGS.TRAINING]: "NutriFlow Training",
 });
 
 type HomologationProgressRow = Readonly<{

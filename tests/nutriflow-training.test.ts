@@ -122,11 +122,15 @@ test("training migration is additive, idempotent and keeps the feature disabled 
   assert.equal(NUTRIFLOW_DEFAULT_FEATURE_FLAGS[NUTRIFLOW_FEATURE_FLAGS.TRAINING], false);
 });
 
-test("Training media migration keeps bytes in object storage metadata and remains additive", () => {
+test("Training media migration keeps bytes in object storage metadata and is safe under the migration ledger", () => {
   const sqlite = trainingDatabase();
   apply(sqlite, "0041_nutriflow_training_media.sql");
   const columns = sqlite.prepare("PRAGMA table_info(nf_training_exercise_media)").all() as { name: string }[];
   assert.deepEqual(columns.filter((column) => ["poster_mime_type", "byte_size", "poster_byte_size"].includes(column.name)).map((column) => column.name), ["poster_mime_type", "byte_size", "poster_byte_size"]);
+  // SQLite cannot conditionally add a column. The deployment migration ledger
+  // is therefore the idempotency boundary: 0041 is applied once, while all
+  // DDL it creates after the columns is repeat-safe.
+  assert.throws(() => apply(sqlite, "0041_nutriflow_training_media.sql"), /duplicate column name/);
 });
 
 test("training library exposes global plus only the requesting organization's private exercises", async () => {
@@ -281,4 +285,36 @@ test("patient Training never reads another organization or a suspended account",
   assert.equal(unseen.card.state, "commercial");
   const operation = new GetPatientTraining(repository);
   await assert.rejects(() => operation.execute({ actor: { kind: "patient", authUserId: "auth_suspended", clientId: 10, accountStatus: "suspended", entitlementEndsAt: null }, organizationId: 1, organizationPublicId: "org_training_editor" }), (error) => error instanceof NutriFlowApplicationError && error.code === "NF_FORBIDDEN");
+});
+
+test("patient Training reads the published snapshot after later library and media changes", async () => {
+  const database = trainingEditorDatabase();
+  apply(database.sqlite, "0041_nutriflow_training_media.sql");
+  const snapshot = {
+    schemaVersion: 1,
+    days: [{
+      weekday: "mon",
+      muscleGroups: [{
+        publicId: "peito", name: "Peito", sortOrder: 0,
+        exercises: [{
+          publicId: "supino", sortOrder: 0,
+          exercise: {
+            publicId: "tr_ex_global_supino_reto", name: "Supino reto",
+            primaryMuscleGroup: "peito", instructions: "Controle a descida.",
+            mediaPublicId: "training_media_original", posterObjectKey: "training-media/original/poster.webp",
+            mediaObjectKey: "training-media/original/demo.mp4", mediaKind: "video",
+          },
+          prescription: { sets: 3, repetitions: { min: 8, max: 10 }, durationSeconds: null, restSeconds: 60, notes: null },
+        }],
+      }],
+    }],
+  };
+  publishTrainingForPatient(database, 1, 10, snapshot);
+  database.sqlite.exec(`UPDATE nf_training_exercises SET name = 'Supino revisado', instructions = 'Texto novo' WHERE public_id = 'tr_ex_global_supino_reto';
+    INSERT INTO nf_training_exercise_media (public_id, exercise_id, media_kind, object_key, poster_object_key, mime_type, status)
+    VALUES ('training_media_replacement', (SELECT id FROM nf_training_exercises WHERE public_id = 'tr_ex_global_supino_reto'), 'video', 'training-media/replacement/demo.mp4', 'training-media/replacement/poster.webp', 'video/mp4', 'active');`);
+
+  const result = await new D1PatientTrainingRepository(database).findForPatient({ organizationId: 1, clientId: 10, now: new Date("2026-08-10T12:00:00.000Z") });
+  const exercise = result.publication?.content.days[0]?.muscleGroups[0]?.exercises[0]?.exercise;
+  assert.deepEqual(exercise, snapshot.days[0].muscleGroups[0].exercises[0].exercise);
 });
