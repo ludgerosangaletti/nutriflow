@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { DatabaseSync, type SQLInputValue } from "node:sqlite";
 import test from "node:test";
 import { NUTRIFLOW_DEFAULT_FEATURE_FLAGS, NUTRIFLOW_FEATURE_FLAGS } from "../modules/nutriflow/config/feature-flags.ts";
@@ -14,6 +17,7 @@ import { NutriFlowApplicationError } from "../modules/nutriflow/application/erro
 import { parseTrainingRoutineContentV1 } from "../modules/nutriflow/contracts/v1/validation.ts";
 import { assertCuratedTrainingMediaBytes, assertTrainingMediaUpload, parseGlobalTrainingMediaImportManifest, publicationReferencesTrainingMedia } from "../modules/nutriflow/domain/training/training-media.ts";
 import { addMuscleGroup, addTrainingExercise, moveTrainingExercise } from "../app/admin/clientes/[email]/training/training-editor-state.ts";
+import { validateTrainingMediaBatch } from "../scripts/validate-training-media-batch.mjs";
 
 class SqliteStatement {
   private readonly query: string;
@@ -203,12 +207,156 @@ test("global Training media manifest maps stable slugs and rejects ambiguous bat
   ] }), /file-duplicate/);
 });
 
+test("global Training media manifest accepts the controlled validation batch and enforces every boundary", () => {
+  const items = [
+    ["supino_reto", 12],
+    ["puxada_frente", 15],
+    ["desenvolvimento", 18],
+    ["agachamento", 20],
+    ["prancha", 30],
+  ].map(([slug, durationSeconds]) => ({
+    slug,
+    videoFile: `${slug}.mp4`,
+    posterFile: `${slug}.webp`,
+    durationSeconds,
+  }));
+  const manifest = parseGlobalTrainingMediaImportManifest({ apiVersion: 1, items });
+  assert.deepEqual(manifest.items.map((item) => item.exercisePublicId), [
+    "tr_ex_global_supino_reto",
+    "tr_ex_global_puxada_frente",
+    "tr_ex_global_desenvolvimento",
+    "tr_ex_global_agachamento",
+    "tr_ex_global_prancha",
+  ]);
+  assert.throws(() => parseGlobalTrainingMediaImportManifest({ apiVersion: 2, items }), /manifest-shape/);
+  assert.throws(() => parseGlobalTrainingMediaImportManifest({ apiVersion: 1, items: [] }), /manifest-shape/);
+  assert.throws(() => parseGlobalTrainingMediaImportManifest({ apiVersion: 1, items: Array.from({ length: 25 }, (_, index) => ({ slug: `exercise_${index}`, videoFile: `video-${index}.mp4`, posterFile: `poster-${index}.webp`, durationSeconds: 10 })) }), /manifest-shape/);
+  assert.throws(() => parseGlobalTrainingMediaImportManifest({ apiVersion: 1, items: [{ slug: "supino_reto", videoFile: "supino.mov", posterFile: "supino.webp", durationSeconds: 15 }] }), /videoFile/);
+  assert.throws(() => parseGlobalTrainingMediaImportManifest({ apiVersion: 1, items: [{ slug: "supino_reto", videoFile: "supino.mp4", posterFile: "supino.gif", durationSeconds: 15 }] }), /posterFile/);
+  assert.throws(() => parseGlobalTrainingMediaImportManifest({ apiVersion: 1, items: [{ slug: "supino_reto", videoFile: "supino.mp4", posterFile: "supino.webp", durationSeconds: 0.9 }] }), /durationSeconds/);
+  assert.throws(() => parseGlobalTrainingMediaImportManifest({ apiVersion: 1, items: [{ slug: "supino_reto", videoFile: "supino.mp4", posterFile: "supino.webp", durationSeconds: 90.1 }] }), /durationSeconds/);
+});
+
 test("global Training media batch verifies MP4 H.264 and poster signatures", () => {
   const h264Mp4 = new Uint8Array([0, 0, 0, 24, 0x66, 0x74, 0x79, 0x70, 0x69, 0x73, 0x6f, 0x6d, 0x61, 0x76, 0x63, 0x31]);
   const webp = new Uint8Array([0x52, 0x49, 0x46, 0x46, 0, 0, 0, 0, 0x57, 0x45, 0x42, 0x50]);
   assert.doesNotThrow(() => assertCuratedTrainingMediaBytes(h264Mp4, webp, "image/webp"));
   assert.throws(() => assertCuratedTrainingMediaBytes(new Uint8Array([0, 0, 0, 8, 0x66, 0x74, 0x79, 0x70]), webp, "image/webp"), /video-container|video-codec-h264/);
   assert.throws(() => assertCuratedTrainingMediaBytes(h264Mp4, new Uint8Array([0, 1, 2]), "image/webp"), /poster-signature/);
+});
+
+test("Training media accepts exact mobile limits and rejects bytes, duration and poster overflow", () => {
+  const exact = {
+    kind: "video" as const,
+    mediaName: "demonstration.mp4",
+    mediaType: "video/mp4",
+    mediaBytes: 8 * 1024 * 1024,
+    posterName: "poster.webp",
+    posterType: "image/webp",
+    posterBytes: 500 * 1024,
+    durationMs: 90_000,
+  };
+  assert.doesNotThrow(() => assertTrainingMediaUpload(exact));
+  assert.throws(() => assertTrainingMediaUpload({ ...exact, mediaBytes: exact.mediaBytes + 1 }), /video-size/);
+  assert.throws(() => assertTrainingMediaUpload({ ...exact, posterBytes: exact.posterBytes + 1 }), /poster-size/);
+  assert.throws(() => assertTrainingMediaUpload({ ...exact, durationMs: 90_001 }), /video-duration/);
+  assert.throws(() => assertTrainingMediaUpload({ ...exact, durationMs: 999 }), /video-duration/);
+
+  const avc3Mp4 = new Uint8Array([0, 0, 0, 24, 0x66, 0x74, 0x79, 0x70, 0x69, 0x73, 0x6f, 0x6d, 0x61, 0x76, 0x63, 0x33]);
+  const jpeg = new Uint8Array([0xff, 0xd8, 0xff, 0xdb]);
+  const png = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+  assert.doesNotThrow(() => assertCuratedTrainingMediaBytes(avc3Mp4, jpeg, "image/jpeg"));
+  assert.doesNotThrow(() => assertCuratedTrainingMediaBytes(avc3Mp4, png, "image/png"));
+  assert.throws(() => assertCuratedTrainingMediaBytes(avc3Mp4, jpeg, "image/png"), /poster-signature/);
+});
+
+test("global importer keeps R2 writes versioned, private and reversible before metadata commit", () => {
+  const route = readFileSync(new URL("../app/api/admin/nutriflow/training/media/import/route.ts", import.meta.url), "utf8");
+  assert.match(route, /training-media\/global\/\$\{item\.slug\}\/\$\{batchId\}/);
+  assert.match(route, /env\.BUCKET\.put\(record\.objectKey/);
+  assert.match(route, /env\.BUCKET\.put\(record\.posterObjectKey/);
+  assert.match(route, /cacheControl:\s*"private, max-age=31536000, immutable"/);
+  assert.match(route, /customMetadata:\s*\{ \.\.\.metadata, kind: "video" \}/);
+  assert.match(route, /customMetadata:\s*\{ \.\.\.metadata, kind: "poster" \}/);
+  assert.match(route, /if \(!metadataCommitted && uploadedKeys\.length\) await env\.BUCKET\.delete\(uploadedKeys\)/);
+  assert.match(route, /repository\.importGlobalBatch\(/);
+});
+
+test("patient Training media stays demand-driven across fallback and day changes", () => {
+  const viewer = readFileSync(new URL("../app/treino/training-patient-viewer.tsx", import.meta.url), "utf8");
+  assert.match(viewer, /const \[showVideo, setShowVideo\] = useState\(false\)/);
+  assert.match(viewer, /if \(showVideo && exercise\.mediaKind === "video"\)[^\n]*<video controls autoPlay muted playsInline loop preload="metadata" poster=\{poster\}/);
+  assert.match(viewer, /<source src=\{mediaUrl\(publicationPublicId, exercise\.mediaPublicId, "video"\)\} type="video\/mp4"/);
+  assert.match(viewer, /<img src=\{poster\} alt=\{`Poster de \$\{exercise\.name\}`\} loading="lazy" onError=\{\(\) => setUnavailable\(true\)\}/);
+  assert.match(viewer, /if \(!exercise\.mediaPublicId \|\| unavailable\) return <div className="training-patient-placeholder"/);
+  assert.match(viewer, /const day = portal\.publication\?\.content\.days\.find\(\(entry\) => entry\.weekday === selected\) \?\? null/);
+  assert.match(viewer, /day\.muscleGroups\.map\(\(group\)/);
+  assert.equal((viewer.match(/mediaUrl\(publicationPublicId, exercise\.mediaPublicId, "video"\)/g) ?? []).length, 2, "only the active video/GIF branches may request media bytes");
+  assert.equal(viewer.includes("portal.publication?.content.days.flatMap"), false, "switching days must not flatten or preload the routine");
+  assert.match(viewer, /<ExerciseMedia exercise=\{item\.exercise\} publicationPublicId=\{publicationPublicId\} \/><div className="training-patient-copy">/);
+});
+
+test("Training media delivery supports Range Requests without exposing unrelated assets", () => {
+  const route = readFileSync(new URL("../app/api/treino/midia/route.ts", import.meta.url), "utf8");
+  assert.match(route, /publicationReferencesTrainingMedia\(portal\.publication\.content, mediaPublicId\)/);
+  assert.match(route, /findAssetForOrganization\(mediaPublicId, context\.organizationId\)/);
+  assert.match(route, /request\.headers\.has\("range"\) && variant === "video"/);
+  assert.match(route, /env\.BUCKET\.get\(objectKey, \{ range: request\.headers \}\)/);
+  assert.match(route, /return new Response\(object\.body, \{ status: 206, headers \}\)/);
+  assert.match(route, /"accept-ranges": "bytes"/);
+  assert.match(route, /catch \{ return new Response\("Arquivo [^"]+ encontrado\.", \{ status: 404 \}\); \}/);
+});
+
+test("batch preflight reports approved and rejected media independently without importing", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "nutriflow-training-media-"));
+  try {
+    const video = new Uint8Array([0, 0, 0, 24, 0x66, 0x74, 0x79, 0x70, 0x69, 0x73, 0x6f, 0x6d, 0x61, 0x76, 0x63, 0x31]);
+    const poster = new Uint8Array([0x52, 0x49, 0x46, 0x46, 0, 0, 0, 0, 0x57, 0x45, 0x42, 0x50]);
+    await Promise.all([
+      writeFile(join(directory, "supino.mp4"), video),
+      writeFile(join(directory, "supino.webp"), poster),
+      writeFile(join(directory, "puxada.webp"), poster),
+      writeFile(join(directory, "manifest.json"), JSON.stringify({ apiVersion: 1, items: [
+        { slug: "supino_reto", videoFile: "supino.mp4", posterFile: "supino.webp", durationSeconds: 15 },
+        { slug: "puxada_frente", videoFile: "puxada.mp4", posterFile: "puxada.webp", durationSeconds: 12 },
+      ] })),
+    ]);
+    const report = await validateTrainingMediaBatch({
+      batchDir: directory,
+      catalogSlugs: new Set(["supino_reto", "puxada_frente"]),
+      probe: async () => ({ codec: "h264", durationSeconds: 15 }),
+    });
+    assert.deepEqual(report.summary, { received: 2, recognized: 2, approved: 1, rejected: 1, maxItemsPerImport: 24, recommendedImportBatches: 1, requiresBatchSplit: false });
+    assert.equal(report.items[0]?.approved, true);
+    assert.deepEqual(report.items[1]?.reasons, ["video-missing"]);
+    assert.deepEqual(report.importPlan, [{ batchNumber: 1, items: [{ index: 0, slug: "supino_reto", videoFile: "supino.mp4", posterFile: "supino.webp" }] }]);
+    assert.equal(report.aptForImport, false);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("batch preflight creates deterministic 24-item import groups in manifest order", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "nutriflow-training-plan-"));
+  try {
+    const video = new Uint8Array([0, 0, 0, 24, 0x66, 0x74, 0x79, 0x70, 0x69, 0x73, 0x6f, 0x6d, 0x61, 0x76, 0x63, 0x31]);
+    const poster = new Uint8Array([0x52, 0x49, 0x46, 0x46, 0, 0, 0, 0, 0x57, 0x45, 0x42, 0x50]);
+    const items = Array.from({ length: 25 }, (_, index) => ({ slug: `exercise_${index}`, videoFile: `video-${index}.mp4`, posterFile: `poster-${index}.webp`, durationSeconds: 10 }));
+    await Promise.all([
+      ...items.flatMap((item) => [writeFile(join(directory, item.videoFile), video), writeFile(join(directory, item.posterFile), poster)]),
+      writeFile(join(directory, "manifest.json"), JSON.stringify({ apiVersion: 1, items })),
+    ]);
+    const report = await validateTrainingMediaBatch({ batchDir: directory, catalogSlugs: new Set(items.map((item) => item.slug)), probe: async () => ({ codec: "h264", durationSeconds: 10 }) });
+    assert.equal(report.summary.approved, 25);
+    assert.equal(report.summary.requiresBatchSplit, true);
+    assert.equal(report.summary.recommendedImportBatches, 2);
+    assert.equal(report.importPlan[0]?.items.length, 24);
+    assert.deepEqual(report.importPlan[0]?.items.map((item) => item.slug), items.slice(0, 24).map((item) => item.slug));
+    assert.deepEqual(report.importPlan[1]?.items.map((item) => item.slug), ["exercise_24"]);
+    assert.equal(report.aptForImport, false, "the current official importer still accepts at most 24 items per operation");
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
 });
 
 test("Training media association is scoped, auditable and keeps replaced blobs available to immutable snapshots", async () => {
@@ -259,6 +407,61 @@ test("global Training media batch import is owner-only, auditable and never over
   await repository.importGlobalBatch({ organizationId: 1, actorAuthUserId: "auth_owner", actorRole: "owner", records: replacementRecords, overwriteExisting: true, correlationId: "corr_global_replace" });
   assert.equal(database.sqlite.prepare("SELECT count(*) AS total FROM nf_training_exercise_media WHERE status = 'active'").get().total, 2);
   assert.equal(database.sqlite.prepare("SELECT count(*) AS total FROM nf_training_exercise_media WHERE status = 'replaced'").get().total, 2);
+});
+
+test("programmatic admin-to-patient media flow keeps simulated R2 objects and published references immutable", async () => {
+  const database = trainingMediaDatabase();
+  let sequence = 0;
+  const repository = new D1TrainingMediaRepository(database, (kind) => `${kind}_${++sequence}`, () => new Date("2026-08-09T12:00:00.000Z"));
+  const objects = new Map<string, Readonly<{ bytes: Uint8Array; metadata: Record<string, string> }>>();
+  const bucket = {
+    async put(key: string, bytes: Uint8Array, metadata: Record<string, string>) { objects.set(key, Object.freeze({ bytes, metadata: Object.freeze(metadata) })); },
+    async get(key: string) { return objects.get(key) ?? null; },
+  };
+  const manifest = parseGlobalTrainingMediaImportManifest({ apiVersion: 1, items: [
+    { slug: "supino_reto", videoFile: "supino.mp4", posterFile: "supino.webp", durationSeconds: 15 },
+  ] });
+  const video = new Uint8Array([0, 0, 0, 24, 0x66, 0x74, 0x79, 0x70, 0x69, 0x73, 0x6f, 0x6d, 0x61, 0x76, 0x63, 0x31]);
+  const poster = new Uint8Array([0x52, 0x49, 0x46, 0x46, 0, 0, 0, 0, 0x57, 0x45, 0x42, 0x50]);
+  assertCuratedTrainingMediaBytes(video, poster, "image/webp");
+  const target = (await repository.getGlobalImportTargets([manifest.items[0]!.exercisePublicId]))[0]!;
+  const firstVideoKey = "training-media/global/supino_reto/batch-one/demonstration.mp4";
+  const firstPosterKey = "training-media/global/supino_reto/batch-one/poster.webp";
+  await Promise.all([
+    bucket.put(firstVideoKey, video, { exerciseSlug: "supino_reto", kind: "video", curated: "true" }),
+    bucket.put(firstPosterKey, poster, { exerciseSlug: "supino_reto", kind: "poster", curated: "true" }),
+  ]);
+  const [firstAsset] = await repository.importGlobalBatch({
+    organizationId: 1, actorAuthUserId: "auth_owner", actorRole: "owner", overwriteExisting: false, correlationId: "corr_pipeline_first",
+    records: [{ target, objectKey: firstVideoKey, posterObjectKey: firstPosterKey, mimeType: "video/mp4", posterMimeType: "image/webp", byteSize: video.byteLength, posterByteSize: poster.byteLength, durationMs: 15_000 }],
+  });
+  assert.equal((await bucket.get(firstVideoKey))?.metadata.kind, "video");
+  assert.equal(firstAsset?.publicId, "training_media_1");
+
+  const snapshot = { schemaVersion: 1, days: [{ weekday: "mon", muscleGroups: [{ publicId: "peito", name: "Peito", sortOrder: 0, exercises: [{ publicId: "supino", sortOrder: 0, exercise: { publicId: target.publicId, name: "Supino reto", primaryMuscleGroup: "peito", instructions: null, mediaPublicId: firstAsset!.publicId, posterObjectKey: firstPosterKey, mediaObjectKey: firstVideoKey, mediaKind: "video" }, prescription: { sets: 3, repetitions: { min: 8, max: 10 }, durationSeconds: null, restSeconds: 60, notes: null } }] }] }] };
+  publishTrainingForPatient(database, 1, 10, snapshot);
+
+  const occupied = (await repository.getGlobalImportTargets([target.publicId]))[0]!;
+  const replacementVideoKey = "training-media/global/supino_reto/batch-two/demonstration.mp4";
+  const replacementPosterKey = "training-media/global/supino_reto/batch-two/poster.webp";
+  await Promise.all([
+    bucket.put(replacementVideoKey, video, { exerciseSlug: "supino_reto", kind: "video", curated: "true" }),
+    bucket.put(replacementPosterKey, poster, { exerciseSlug: "supino_reto", kind: "poster", curated: "true" }),
+  ]);
+  const [replacement] = await repository.importGlobalBatch({
+    organizationId: 1, actorAuthUserId: "auth_owner", actorRole: "owner", overwriteExisting: true, correlationId: "corr_pipeline_replace",
+    records: [{ target: occupied, objectKey: replacementVideoKey, posterObjectKey: replacementPosterKey, mimeType: "video/mp4", posterMimeType: "image/webp", byteSize: video.byteLength, posterByteSize: poster.byteLength, durationMs: 15_000 }],
+  });
+  assert.equal((await repository.findAsset(firstAsset!.publicId))?.status, "replaced");
+  assert.equal((await repository.findAsset(replacement!.publicId))?.status, "active");
+  assert.notEqual(replacement?.publicId, firstAsset?.publicId);
+  assert.ok(await bucket.get(firstVideoKey), "historical R2 object must remain available");
+
+  const portal = await new D1PatientTrainingRepository(database).findForPatient({ organizationId: 1, clientId: 10, now: new Date("2026-08-10T12:00:00.000Z") });
+  const publishedExercise = portal.publication?.content.days[0]?.muscleGroups[0]?.exercises[0]?.exercise;
+  assert.equal(publishedExercise?.mediaPublicId, firstAsset?.publicId);
+  assert.equal(publishedExercise?.mediaObjectKey, firstVideoKey);
+  assert.notEqual(publishedExercise?.mediaPublicId, replacement?.publicId);
 });
 
 test("administrative entitlement is auditable and revocation preserves Training history", async () => {
