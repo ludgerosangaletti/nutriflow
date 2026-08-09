@@ -119,6 +119,8 @@ test("training migration is additive, idempotent and keeps the feature disabled 
   apply(sqlite, "0040_nutriflow_training_foundation.sql");
   const globalExercises = sqlite.prepare("SELECT count(*) AS total FROM nf_training_exercises WHERE scope = 'global'").get() as { total: number };
   assert.equal(globalExercises.total, 12);
+  const migrationSql = readFileSync(new URL("../drizzle/0040_nutriflow_training_foundation.sql", import.meta.url), "utf8");
+  assert.equal(migrationSql.includes("UNION ALL"), false);
   assert.equal(NUTRIFLOW_DEFAULT_FEATURE_FLAGS[NUTRIFLOW_FEATURE_FLAGS.TRAINING], false);
 });
 

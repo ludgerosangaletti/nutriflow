@@ -80,20 +80,19 @@ BEGIN
   SELECT RAISE(ABORT, 'NF_PUBLICATION_IMMUTABLE');
 END;
 
-INSERT INTO nf_training_exercises (public_id, organization_id, scope, name, primary_muscle_group, aliases_json, instructions, status, created_by_auth_user_id)
-SELECT seed.public_id, NULL, 'global', seed.name, seed.group_name, seed.aliases_json, seed.instructions, 'active', 'system-training-library'
-FROM (
-  SELECT 'tr_ex_global_supino_reto' AS public_id, 'Supino reto' AS name, 'peito' AS group_name, '["supino barra"]' AS aliases_json, 'Mantenha escápulas apoiadas e controle a descida.' AS instructions
-  UNION ALL SELECT 'tr_ex_global_crucifixo', 'Crucifixo com halteres', 'peito', '["crucifixo"]', 'Movimento controlado, sem perder a posição dos ombros.'
-  UNION ALL SELECT 'tr_ex_global_puxada_frente', 'Puxada frontal', 'costas', '["pulldown"]', 'Puxe em direção ao peito mantendo o tronco estável.'
-  UNION ALL SELECT 'tr_ex_global_remada_baixa', 'Remada baixa', 'costas', '["remada sentada"]', 'Conduza os cotovelos para trás sem compensar com o tronco.'
-  UNION ALL SELECT 'tr_ex_global_desenvolvimento', 'Desenvolvimento com halteres', 'ombros', '["desenvolvimento"]', 'Mantenha o abdômen ativo durante o movimento.'
-  UNION ALL SELECT 'tr_ex_global_rosca_direta', 'Rosca direta', 'biceps', '["rosca barra"]', 'Evite balanço do tronco e controle a descida.'
-  UNION ALL SELECT 'tr_ex_global_triceps_pulley', 'Tríceps pulley', 'triceps', '["triceps corda"]', 'Mantenha os cotovelos próximos ao corpo.'
-  UNION ALL SELECT 'tr_ex_global_agachamento', 'Agachamento livre', 'quadriceps', '["agachamento"]', 'Mantenha os joelhos alinhados e a coluna neutra.'
-  UNION ALL SELECT 'tr_ex_global_leg_press', 'Leg press', 'quadriceps', '["leg press 45"]', 'Controle a amplitude sem retirar o quadril do apoio.'
-  UNION ALL SELECT 'tr_ex_global_mesa_flexora', 'Mesa flexora', 'posterior_coxa', '["flexora deitada"]', 'Controle o retorno e evite elevar o quadril.'
-  UNION ALL SELECT 'tr_ex_global_elevacao_panturrilha', 'Elevação de panturrilha', 'panturrilhas', '["panturrilha em pé"]', 'Use amplitude confortável e movimento controlado.'
-  UNION ALL SELECT 'tr_ex_global_prancha', 'Prancha isométrica', 'core', '["plank"]', 'Mantenha alinhamento entre ombros, quadril e calcanhares.'
-) AS seed
-WHERE NOT EXISTS (SELECT 1 FROM nf_training_exercises AS existing WHERE existing.public_id = seed.public_id);
+-- D1 limits compound SELECT terms, so use a bounded multi-row insert.
+-- public_id is unique, preserving repeat-safe seeding.
+INSERT INTO nf_training_exercises (public_id, organization_id, scope, name, primary_muscle_group, aliases_json, instructions, status, created_by_auth_user_id) VALUES
+  ('tr_ex_global_supino_reto', NULL, 'global', 'Supino reto', 'peito', '["supino barra"]', 'Mantenha escápulas apoiadas e controle a descida.', 'active', 'system-training-library'),
+  ('tr_ex_global_crucifixo', NULL, 'global', 'Crucifixo com halteres', 'peito', '["crucifixo"]', 'Movimento controlado, sem perder a posição dos ombros.', 'active', 'system-training-library'),
+  ('tr_ex_global_puxada_frente', NULL, 'global', 'Puxada frontal', 'costas', '["pulldown"]', 'Puxe em direção ao peito mantendo o tronco estável.', 'active', 'system-training-library'),
+  ('tr_ex_global_remada_baixa', NULL, 'global', 'Remada baixa', 'costas', '["remada sentada"]', 'Conduza os cotovelos para trás sem compensar com o tronco.', 'active', 'system-training-library'),
+  ('tr_ex_global_desenvolvimento', NULL, 'global', 'Desenvolvimento com halteres', 'ombros', '["desenvolvimento"]', 'Mantenha o abdômen ativo durante o movimento.', 'active', 'system-training-library'),
+  ('tr_ex_global_rosca_direta', NULL, 'global', 'Rosca direta', 'biceps', '["rosca barra"]', 'Evite balanço do tronco e controle a descida.', 'active', 'system-training-library'),
+  ('tr_ex_global_triceps_pulley', NULL, 'global', 'Tríceps pulley', 'triceps', '["triceps corda"]', 'Mantenha os cotovelos próximos ao corpo.', 'active', 'system-training-library'),
+  ('tr_ex_global_agachamento', NULL, 'global', 'Agachamento livre', 'quadriceps', '["agachamento"]', 'Mantenha os joelhos alinhados e a coluna neutra.', 'active', 'system-training-library'),
+  ('tr_ex_global_leg_press', NULL, 'global', 'Leg press', 'quadriceps', '["leg press 45"]', 'Controle a amplitude sem retirar o quadril do apoio.', 'active', 'system-training-library'),
+  ('tr_ex_global_mesa_flexora', NULL, 'global', 'Mesa flexora', 'posterior_coxa', '["flexora deitada"]', 'Controle o retorno e evite elevar o quadril.', 'active', 'system-training-library'),
+  ('tr_ex_global_elevacao_panturrilha', NULL, 'global', 'Elevação de panturrilha', 'panturrilhas', '["panturrilha em pé"]', 'Use amplitude confortável e movimento controlado.', 'active', 'system-training-library'),
+  ('tr_ex_global_prancha', NULL, 'global', 'Prancha isométrica', 'core', '["plank"]', 'Mantenha alinhamento entre ombros, quadril e calcanhares.', 'active', 'system-training-library')
+ON CONFLICT(public_id) DO NOTHING;
