@@ -12,6 +12,7 @@ export const clients = sqliteTable(
   {
     id: integer("id").primaryKey({ autoIncrement: true }),
     authUserId: text("auth_user_id"),
+    organizationId: integer("organization_id"),
     email: text("email").notNull(),
     name: text("name").notNull(),
     whatsapp: text("whatsapp").notNull(),

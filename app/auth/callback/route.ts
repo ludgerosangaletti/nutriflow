@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDb } from "../../../db";
-import { clients } from "../../../db/schema";
+import { clients, nfOrganizations } from "../../../db/schema";
 import { isPlanId } from "../../plans";
 import { createClient, isAdminEmail } from "../../supabase/server";
 
@@ -55,7 +55,10 @@ export async function GET(request: Request) {
       })
       .where(eq(clients.email, user.email));
   } else {
+    const activeOrganizations = await db.select({ id: nfOrganizations.id }).from(nfOrganizations).where(eq(nfOrganizations.status, "active")).limit(2);
+    const organizationId = activeOrganizations.length === 1 ? activeOrganizations[0].id : null;
     await db.insert(clients).values({
+      organizationId,
       authUserId: user.id,
       email: user.email,
       name: name || user.email.split("@")[0],

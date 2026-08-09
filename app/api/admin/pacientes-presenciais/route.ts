@@ -18,6 +18,7 @@ import {
   upsertPatientCalendarEvent,
 } from "../../../google-calendar";
 import { sendActivationWhatsApp } from "../../../whatsapp-activation";
+import { resolveNutriFlowAdminContext } from "../../../nutriflow/server";
 
 const allowedPlans = ["mensal", "trimestral", "semestral"];
 
@@ -122,6 +123,8 @@ async function deliverActivationWhatsApp(input: {
 
 export async function POST(request: Request) {
   const admin = await getAdminSession();
+  const nutriFlowContext = admin ? await resolveNutriFlowAdminContext(admin.id) : null;
+  if (!nutriFlowContext) return Response.json({ error: "OrganizaÃ§Ã£o nÃ£o autorizada." }, { status: 403 });
   if (!admin) return Response.json({ error: "Não autorizado." }, { status: 403 });
 
   const body = (await request.json().catch(() => ({}))) as {
@@ -174,6 +177,7 @@ export async function POST(request: Request) {
   const now = new Date().toISOString();
   const access = calculateAccessPeriod(plan, startsAt);
   await db.insert(clients).values({
+    organizationId: nutriFlowContext.organizationId,
     email,
     name,
     whatsapp,

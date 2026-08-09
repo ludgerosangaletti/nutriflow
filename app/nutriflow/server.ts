@@ -150,8 +150,8 @@ export async function resolveNutriFlowPatientContext(
        client.access_expires_at, organization.id AS organization_id,
        organization.public_id AS organization_public_id
      FROM clients AS client
-     INNER JOIN nf_plans AS plan ON plan.client_id = client.id
-     INNER JOIN nf_organizations AS organization ON organization.id = plan.organization_id
+     LEFT JOIN nf_plans AS plan ON plan.client_id = client.id
+     INNER JOIN nf_organizations AS organization ON organization.id = COALESCE(client.organization_id, plan.organization_id)
      WHERE client.auth_user_id = ? AND organization.status = 'active'
      ORDER BY CASE WHEN plan.status = 'published' THEN 0 ELSE 1 END, plan.updated_at DESC, plan.id DESC
      LIMIT 1`,
