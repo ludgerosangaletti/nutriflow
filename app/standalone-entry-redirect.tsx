@@ -20,7 +20,7 @@ export function StandaloneEntryRedirect() {
   }, [pathname]);
 
   if (pathname === "/" && standalone) {
-    return <div className="app-login-splash" role="status" aria-label="Abrindo o NutriFlow"><img src="/logo-ludgero.png" alt="" /><strong>NutriFlow</strong><span className="app-login-loader" /></div>;
+    return <div className="app-login-splash" role="status" aria-label="Abrindo o NutriFlow"><img src="/icons/splash-mark-512.png" alt="" /><strong>NutriFlow</strong><span className="app-login-loader" /></div>;
   }
   return null;
 }

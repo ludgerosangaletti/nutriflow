@@ -21,8 +21,9 @@ export const metadata: Metadata = {
   description:
     "Consultoria nutricional personalizada para emagrecimento, saúde e performance. Atendimento presencial em Guarapuava e online.",
   icons: {
-    icon: "/logo-ludgero.png",
-    shortcut: "/logo-ludgero.png",
+    icon: "/icons/icon-192.png",
+    shortcut: "/icons/icon-192.png",
+    apple: "/icons/apple-touch-icon-180.png",
   },
   manifest: "/manifest.webmanifest",
   appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "NutriFlow" },
@@ -39,6 +40,12 @@ export default function RootLayout({
   return (
     <html lang="pt-BR">
       <head>
+        <link rel="apple-touch-startup-image" href="/splash/iphone-1290x2796.png" media="(device-width:430px) and (device-height:932px) and (-webkit-device-pixel-ratio:3)" />
+        <link rel="apple-touch-startup-image" href="/splash/iphone-1179x2556.png" media="(device-width:393px) and (device-height:852px) and (-webkit-device-pixel-ratio:3)" />
+        <link rel="apple-touch-startup-image" href="/splash/iphone-1170x2532.png" media="(device-width:390px) and (device-height:844px) and (-webkit-device-pixel-ratio:3)" />
+        <link rel="apple-touch-startup-image" href="/splash/iphone-1125x2436.png" media="(device-width:375px) and (device-height:812px) and (-webkit-device-pixel-ratio:3)" />
+        <link rel="apple-touch-startup-image" href="/splash/iphone-828x1792.png" media="(device-width:414px) and (device-height:896px) and (-webkit-device-pixel-ratio:2)" />
+        <link rel="apple-touch-startup-image" href="/splash/iphone-750x1334.png" media="(device-width:375px) and (device-height:667px) and (-webkit-device-pixel-ratio:2)" />
         <script
           dangerouslySetInnerHTML={{
             __html: `
