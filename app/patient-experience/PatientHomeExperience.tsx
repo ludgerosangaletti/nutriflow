@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { TrainingPatientAccessStateV1 } from "../../modules/nutriflow/contracts/v1/training.ts";
 
 type Action = { eyebrow: string; title: string; description: string; href: string | null; button: string | null };
 
@@ -17,13 +18,14 @@ type Props = {
   appointmentLocation?: string | null;
   currentProtocol?: boolean;
   photosCount?: number;
+  training: TrainingPatientAccessStateV1;
 };
 
 function firstName(name: string) { return name.trim().split(/\s+/)[0] || "Paciente"; }
 
 export function PatientHomeExperience({
   name, modality, planLabel, active, action, structuredPlanEnabled, documentsCount,
-  checkInsCount, checkInDone, checkInAvailable = false, nextAppointment, appointmentLocation, currentProtocol, photosCount = 0,
+  checkInsCount, checkInDone, checkInAvailable = false, nextAppointment, appointmentLocation, currentProtocol, photosCount = 0, training,
 }: Props) {
   const today = new Intl.DateTimeFormat("pt-BR", { weekday: "long", day: "numeric", month: "long" }).format(new Date());
   const appointment = nextAppointment
@@ -48,6 +50,7 @@ export function PatientHomeExperience({
 
       <div className="nf-home-section-title"><span>Acessos rápidos</span><small>O que você precisa agora?</small></div>
       <section className="nf-home-links nf-home-links-grid" aria-label="Recursos principais">
+        {training.state === "commercial" ? <a href={`https://wa.me/5542999846280?text=${encodeURIComponent("Olá! Tenho interesse em contratar meu treino personalizado.")}`}><i aria-hidden="true">△</i><span>{training.title}<small>{training.subtitle}</small></span><b>→</b></a> : <Link className={training.state === "today" ? "is-primary" : ""} href="/treino"><i aria-hidden="true">△</i><span>{training.title}<small>{training.subtitle}</small></span><b>→</b></Link>}
         {structuredPlanEnabled ? <Link className="is-primary" href="/plano-alimentar"><i aria-hidden="true">◐</i><span>Plano alimentar<small>Refeições do dia</small></span><b>→</b></Link> : null}
         <Link href="/check-in"><i aria-hidden="true">✓</i><span>Check-in<small>{checkInDone ? "Enviado nesta semana" : checkInAvailable ? "Disponível hoje" : "Abre na segunda-feira"}</small></span><b>→</b></Link>
         <Link href="/documentos"><i aria-hidden="true">□</i><span>Documentos<small>{documentsCount ? `${documentsCount} disponível(is)` : "Protocolos e avaliações"}</small></span><b>→</b></Link>

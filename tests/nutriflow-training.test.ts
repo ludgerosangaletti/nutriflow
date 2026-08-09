@@ -7,6 +7,9 @@ import { parseSearchTrainingExerciseLibraryQueryV1 } from "../modules/nutriflow/
 import { assertTrainingPrescriptionMetric } from "../modules/nutriflow/domain/training/training-prescription.ts";
 import { D1TrainingLibraryRepository } from "../modules/nutriflow/infrastructure/d1/d1-training-library-repository.ts";
 import { D1TrainingEditorRepository } from "../modules/nutriflow/infrastructure/d1/d1-training-editor-repository.ts";
+import { D1PatientTrainingRepository } from "../modules/nutriflow/infrastructure/d1/d1-patient-training-repository.ts";
+import { GetPatientTraining } from "../modules/nutriflow/application/training/get-patient-training.ts";
+import { NutriFlowApplicationError } from "../modules/nutriflow/application/errors/nutriflow-application-error.ts";
 import { parseTrainingRoutineContentV1 } from "../modules/nutriflow/contracts/v1/validation.ts";
 import { addMuscleGroup, addTrainingExercise, moveTrainingExercise } from "../app/admin/clientes/[email]/training/training-editor-state.ts";
 
@@ -63,8 +66,8 @@ function trainingEditorDatabase() {
   const sqlite = new DatabaseSync(":memory:");
   sqlite.exec("PRAGMA foreign_keys = ON; CREATE TABLE clients (id INTEGER PRIMARY KEY, organization_id INTEGER)");
   apply(sqlite, "0020_parallel_lucky_pierre.sql");
-  sqlite.exec("INSERT INTO clients (id, organization_id) VALUES (10, 1)");
-  sqlite.exec("INSERT INTO nf_organizations (public_id, name) VALUES ('org_training_editor', 'OrganizaÃ§Ã£o Training')");
+  sqlite.exec("INSERT INTO clients (id, organization_id) VALUES (10, 1), (20, 2)");
+  sqlite.exec("INSERT INTO nf_organizations (public_id, name) VALUES ('org_training_editor', 'OrganizaÃ§Ã£o Training'), ('org_training_other', 'Outra organizaÃ§Ã£o')");
   apply(sqlite, "0040_nutriflow_training_foundation.sql");
   return new TrainingDatabase(sqlite);
 }
@@ -195,4 +198,41 @@ test("Training draft supports ordered exercises, validates prescriptions and pub
 test("Training validation rejects empty groups and exercises without repetitions or time", () => {
   assert.throws(() => parseTrainingRoutineContentV1({ schemaVersion: 1, days: [{ weekday: "mon", muscleGroups: [{ publicId: "group", name: "Peito", sortOrder: 0, exercises: [] }] }] }), /muscleGroups.0.exercises/);
   assert.throws(() => parseTrainingRoutineContentV1({ schemaVersion: 1, days: [{ weekday: "mon", muscleGroups: [{ publicId: "group", name: "Peito", sortOrder: 0, exercises: [{ publicId: "exercise", exercise: { publicId: "catalog", name: "Supino", primaryMuscleGroup: "peito", instructions: null, posterObjectKey: null, mediaKind: null }, prescription: { sets: 3, repetitions: null, durationSeconds: null, restSeconds: 60, notes: null }, sortOrder: 0 }] }] }] }), /execution/);
+});
+
+function publishTrainingForPatient(database: TrainingDatabase, organizationId: number, clientId: number, content: unknown) {
+  const sql = database.sqlite;
+  sql.exec(`INSERT INTO nf_training_entitlements (public_id, organization_id, client_id, status) VALUES ('ent_${organizationId}_${clientId}', ${organizationId}, ${clientId}, 'active');
+    INSERT INTO nf_training_routines (public_id, organization_id, client_id, title, created_by_auth_user_id) VALUES ('routine_${organizationId}_${clientId}', ${organizationId}, ${clientId}, 'Treino', 'auth_admin');
+    INSERT INTO nf_training_routine_versions (public_id, routine_id, version_number, state, snapshot_json, created_by_auth_user_id) VALUES ('version_${organizationId}_${clientId}', (SELECT id FROM nf_training_routines WHERE public_id = 'routine_${organizationId}_${clientId}'), 1, 'published', '${JSON.stringify(content).replaceAll("'", "''")}', 'auth_admin');
+    INSERT INTO nf_training_publications (public_id, organization_id, client_id, routine_id, routine_version_id, published_by_auth_user_id, published_at) VALUES ('publication_${organizationId}_${clientId}', ${organizationId}, ${clientId}, (SELECT id FROM nf_training_routines WHERE public_id = 'routine_${organizationId}_${clientId}'), (SELECT id FROM nf_training_routine_versions WHERE public_id = 'version_${organizationId}_${clientId}'), 'auth_admin', '2026-08-10T12:00:00.000Z');`);
+}
+
+test("patient Training contract resolves commercial, preparing, today and rest on the server", async () => {
+  const database = trainingEditorDatabase();
+  const repository = new D1PatientTrainingRepository(database);
+  const monday = new Date("2026-08-10T12:00:00.000Z");
+  assert.equal((await repository.findForPatient({ organizationId: 1, clientId: 10, now: monday })).card.state, "commercial");
+  database.sqlite.exec("INSERT INTO nf_training_entitlements (public_id, organization_id, client_id, status) VALUES ('ent_preparing', 1, 10, 'active')");
+  assert.equal((await repository.findForPatient({ organizationId: 1, clientId: 10, now: monday })).card.state, "preparing");
+  database.sqlite.exec("DELETE FROM nf_training_entitlements WHERE public_id = 'ent_preparing'");
+  publishTrainingForPatient(database, 1, 10, { schemaVersion: 1, days: [{ weekday: "mon", muscleGroups: [{ publicId: "group_1", name: "Peito", sortOrder: 0, exercises: [] }, { publicId: "group_2", name: "Tríceps", sortOrder: 1, exercises: [] }] }] });
+  const today = await repository.findForPatient({ organizationId: 1, clientId: 10, now: monday });
+  assert.deepEqual(today.card, { state: "today", title: "Treino de hoje", subtitle: "Peito • Tríceps", weekday: "mon" });
+  database.sqlite.exec("UPDATE nf_training_publications SET status = 'revoked' WHERE public_id = 'publication_1_10'");
+  assert.equal((await repository.findForPatient({ organizationId: 1, clientId: 10, now: monday })).card.state, "preparing");
+  const restDatabase = trainingEditorDatabase();
+  publishTrainingForPatient(restDatabase, 1, 10, { schemaVersion: 1, days: [] });
+  const rest = await new D1PatientTrainingRepository(restDatabase).findForPatient({ organizationId: 1, clientId: 10, now: monday });
+  assert.equal(rest.card.state, "rest");
+});
+
+test("patient Training never reads another organization or a suspended account", async () => {
+  const database = trainingEditorDatabase();
+  publishTrainingForPatient(database, 2, 20, { schemaVersion: 1, days: [{ weekday: "mon", muscleGroups: [{ publicId: "other", name: "Costas", sortOrder: 0, exercises: [] }] }] });
+  const repository = new D1PatientTrainingRepository(database);
+  const unseen = await repository.findForPatient({ organizationId: 1, clientId: 10, now: new Date("2026-08-10T12:00:00.000Z") });
+  assert.equal(unseen.card.state, "commercial");
+  const operation = new GetPatientTraining(repository);
+  await assert.rejects(() => operation.execute({ actor: { kind: "patient", authUserId: "auth_suspended", clientId: 10, accountStatus: "suspended", entitlementEndsAt: null }, organizationId: 1, organizationPublicId: "org_training_editor" }), (error) => error instanceof NutriFlowApplicationError && error.code === "NF_FORBIDDEN");
 });

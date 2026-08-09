@@ -40,6 +40,7 @@ export const NUTRIFLOW_ACTIONS = {
   MANAGE_TRAINING_ENTITLEMENT: "training-entitlement:manage",
   MANAGE_TRAINING_ROUTINE: "training-routine:manage",
   READ_TRAINING_LIBRARY: "training-library:read",
+  READ_TRAINING: "training:read",
   CONFIGURE_FEATURE_FLAG: "feature-flag:configure",
 } as const;
 
@@ -57,6 +58,7 @@ export const NUTRIFLOW_AUTHORIZATION_MATRIX = Object.freeze({
   patient: Object.freeze([
     NUTRIFLOW_ACTIONS.READ_PUBLISHED_PLAN,
     NUTRIFLOW_ACTIONS.READ_PATIENT_PORTAL,
+    NUTRIFLOW_ACTIONS.READ_TRAINING,
   ]),
   service: Object.freeze([NUTRIFLOW_ACTIONS.READ_PUBLISHED_PLAN]),
 });
@@ -108,7 +110,8 @@ export function authorizeNutriFlow(
     if (actor.accountStatus !== "active") return denied("inactive-identity");
     if (
       action !== NUTRIFLOW_ACTIONS.READ_PUBLISHED_PLAN &&
-      action !== NUTRIFLOW_ACTIONS.READ_PATIENT_PORTAL
+      action !== NUTRIFLOW_ACTIONS.READ_PATIENT_PORTAL &&
+      action !== NUTRIFLOW_ACTIONS.READ_TRAINING
     ) {
       return denied("unsupported-action");
     }

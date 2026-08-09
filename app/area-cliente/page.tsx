@@ -18,6 +18,7 @@ import { isPlanId, plans } from "../plans";
 import { requirePatient } from "../supabase/server";
 import {
   canUseNutriFlowPatientPortal,
+  createNutriFlowPatientRuntime,
   resolveNutriFlowPatientContext,
 } from "../nutriflow/server";
 import AccessCountdown from "./access-countdown";
@@ -113,6 +114,9 @@ export default async function ClientArea() {
   const structuredPlanEnabled = Boolean(
     nutriFlowContext && (await canUseNutriFlowPatientPortal(nutriFlowContext)),
   );
+  const training = nutriFlowContext && active
+    ? (await createNutriFlowPatientRuntime().getTraining.execute({ actor: nutriFlowContext.actor, organizationId: nutriFlowContext.organizationId, organizationPublicId: nutriFlowContext.organizationPublicId })).card
+    : { state: "commercial" as const, title: "Treino" as const, subtitle: "Contrate seu treino personalizado" as const };
   if (client.modality === "in_person" && !client.profileCompletedAt) {
     redirect("/primeiro-acesso");
   }
@@ -215,6 +219,7 @@ export default async function ClientArea() {
           appointmentLocation={client.appointmentLocation}
           currentProtocol={Boolean(currentProtocol || structuredPlanPublished)}
           photosCount={photos.length}
+          training={training}
         />
       </PatientShell>
     );
@@ -507,6 +512,7 @@ export default async function ClientArea() {
         checkInAvailable={checkInAvailableToday}
         currentProtocol={protocolAvailable}
         photosCount={photos.length}
+        training={training}
       />
     </PatientShell>
   );

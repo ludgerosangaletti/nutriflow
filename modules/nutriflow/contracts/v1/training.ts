@@ -121,6 +121,13 @@ export type PublishTrainingRoutineCommandV1 = Readonly<{
   correlationId: string;
 }>;
 
+export type PatientTrainingPortalV1 = Readonly<{
+  apiVersion: typeof NUTRIFLOW_API_VERSION;
+  card: TrainingPatientAccessStateV1;
+  currentWeekday: TrainingWeekday;
+  publication: Readonly<{ publicId: string; versionNumber: number; publishedAt: string; content: TrainingRoutineContentV1 }> | null;
+}>;
+
 export type TrainingPatientAccessStateV1 =
   | Readonly<{ state: "commercial"; title: "Treino"; subtitle: "Contrate seu treino personalizado" }>
   | Readonly<{ state: "preparing"; title: "Treino"; subtitle: "Seu treino está sendo preparado" }>
