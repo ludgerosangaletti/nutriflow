@@ -16,6 +16,7 @@ import type {
   SaveFoodPlanDraftCommandV1,
 } from "./plans.ts";
 import type { SearchFoodCatalogQueryV1 } from "./catalog.ts";
+import type { SearchTrainingExerciseLibraryQueryV1 } from "./training.ts";
 import type {
   ArchiveReusableContentCommandV1,
   ReusableContentItemV1,
@@ -275,6 +276,20 @@ export function parseSearchFoodCatalogQueryV1(value: unknown): SearchFoodCatalog
     apiVersion: apiVersion(input.apiVersion),
     query: optionalSearchText(input.query, "query", 120),
     categoryCode: input.categoryCode === undefined || input.categoryCode === null || input.categoryCode === "" ? null : textValue(input.categoryCode, "categoryCode", 80),
+    limit: input.limit === undefined ? 12 : boundedInteger(input.limit, "limit", 1, 25),
+    correlationId: textValue(input.correlationId, "correlationId", 128),
+  });
+}
+
+/** Bounds training library queries before they reach D1. */
+export function parseSearchTrainingExerciseLibraryQueryV1(value: unknown): SearchTrainingExerciseLibraryQueryV1 {
+  const input = object(value, "query");
+  return Object.freeze({
+    apiVersion: apiVersion(input.apiVersion),
+    query: optionalSearchText(input.query, "query", 120),
+    muscleGroup: input.muscleGroup === undefined || input.muscleGroup === null || input.muscleGroup === ""
+      ? null
+      : textValue(input.muscleGroup, "muscleGroup", 80),
     limit: input.limit === undefined ? 12 : boundedInteger(input.limit, "limit", 1, 25),
     correlationId: textValue(input.correlationId, "correlationId", 128),
   });

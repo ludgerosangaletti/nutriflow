@@ -1254,6 +1254,143 @@ export const nfDeliverySettings = sqliteTable(
   ],
 );
 
+/** Training is independently entitled per patient; flags only control module availability. */
+export const nfTrainingEntitlements = sqliteTable(
+  "nf_training_entitlements",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    publicId: text("public_id").notNull(),
+    organizationId: integer("organization_id").notNull().references(() => nfOrganizations.id, { onDelete: "restrict" }),
+    clientId: integer("client_id").notNull().references(() => clients.id, { onDelete: "restrict" }),
+    status: text("status").notNull().default("inactive"),
+    grantedByAuthUserId: text("granted_by_auth_user_id"),
+    grantedAt: text("granted_at"),
+    revokedByAuthUserId: text("revoked_by_auth_user_id"),
+    revokedAt: text("revoked_at"),
+    reason: text("reason"),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("nf_training_entitlements_public_id_unique").on(table.publicId),
+    uniqueIndex("nf_training_entitlements_org_client_unique").on(table.organizationId, table.clientId),
+    index("nf_training_entitlements_org_status_idx").on(table.organizationId, table.status),
+  ],
+);
+
+/** Global exercises are curated by the platform; organization exercises remain private. */
+export const nfTrainingExercises = sqliteTable(
+  "nf_training_exercises",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    publicId: text("public_id").notNull(),
+    organizationId: integer("organization_id").references(() => nfOrganizations.id, { onDelete: "restrict" }),
+    scope: text("scope").notNull(),
+    name: text("name").notNull(),
+    primaryMuscleGroup: text("primary_muscle_group").notNull(),
+    aliasesJson: text("aliases_json").notNull().default("[]"),
+    instructions: text("instructions"),
+    status: text("status").notNull().default("active"),
+    createdByAuthUserId: text("created_by_auth_user_id"),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("nf_training_exercises_public_id_unique").on(table.publicId),
+    index("nf_training_exercises_lookup_idx").on(table.scope, table.organizationId, table.primaryMuscleGroup, table.status),
+    index("nf_training_exercises_name_idx").on(table.name),
+  ],
+);
+
+export const nfTrainingExerciseMedia = sqliteTable(
+  "nf_training_exercise_media",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    publicId: text("public_id").notNull(),
+    exerciseId: integer("exercise_id").notNull().references(() => nfTrainingExercises.id, { onDelete: "restrict" }),
+    mediaKind: text("media_kind").notNull().default("video"),
+    objectKey: text("object_key").notNull(),
+    posterObjectKey: text("poster_object_key"),
+    mimeType: text("mime_type").notNull(),
+    durationMs: integer("duration_ms"),
+    status: text("status").notNull().default("active"),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("nf_training_exercise_media_public_id_unique").on(table.publicId),
+    index("nf_training_exercise_media_active_idx").on(table.exerciseId, table.status),
+  ],
+);
+
+/** Routine content is versioned as a draft and frozen as a publication snapshot. */
+export const nfTrainingRoutines = sqliteTable(
+  "nf_training_routines",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    publicId: text("public_id").notNull(),
+    organizationId: integer("organization_id").notNull().references(() => nfOrganizations.id, { onDelete: "restrict" }),
+    clientId: integer("client_id").notNull().references(() => clients.id, { onDelete: "restrict" }),
+    title: text("title").notNull(),
+    status: text("status").notNull().default("draft"),
+    createdByAuthUserId: text("created_by_auth_user_id").notNull(),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("nf_training_routines_public_id_unique").on(table.publicId),
+    index("nf_training_routines_org_client_idx").on(table.organizationId, table.clientId, table.status),
+  ],
+);
+
+export const nfTrainingRoutineVersions = sqliteTable(
+  "nf_training_routine_versions",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    publicId: text("public_id").notNull(),
+    routineId: integer("routine_id").notNull().references(() => nfTrainingRoutines.id, { onDelete: "restrict" }),
+    versionNumber: integer("version_number").notNull(),
+    revision: integer("revision").notNull().default(1),
+    schemaVersion: integer("schema_version").notNull().default(1),
+    state: text("state").notNull().default("draft"),
+    contentJson: text("content_json"),
+    snapshotJson: text("snapshot_json"),
+    contentHash: text("content_hash"),
+    createdByAuthUserId: text("created_by_auth_user_id").notNull(),
+    publishedByAuthUserId: text("published_by_auth_user_id"),
+    publishedAt: text("published_at"),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("nf_training_routine_versions_public_id_unique").on(table.publicId),
+    uniqueIndex("nf_training_routine_versions_number_unique").on(table.routineId, table.versionNumber),
+    index("nf_training_routine_versions_state_idx").on(table.routineId, table.state),
+  ],
+);
+
+export const nfTrainingPublications = sqliteTable(
+  "nf_training_publications",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    publicId: text("public_id").notNull(),
+    organizationId: integer("organization_id").notNull().references(() => nfOrganizations.id, { onDelete: "restrict" }),
+    clientId: integer("client_id").notNull().references(() => clients.id, { onDelete: "restrict" }),
+    routineId: integer("routine_id").notNull().references(() => nfTrainingRoutines.id, { onDelete: "restrict" }),
+    routineVersionId: integer("routine_version_id").notNull().references(() => nfTrainingRoutineVersions.id, { onDelete: "restrict" }),
+    status: text("status").notNull().default("active"),
+    publishedByAuthUserId: text("published_by_auth_user_id").notNull(),
+    publishedAt: text("published_at").notNull(),
+    revokedByAuthUserId: text("revoked_by_auth_user_id"),
+    revokedAt: text("revoked_at"),
+    revocationReason: text("revocation_reason"),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("nf_training_publications_public_id_unique").on(table.publicId),
+    index("nf_training_publications_org_client_status_idx").on(table.organizationId, table.clientId, table.status),
+  ],
+);
+
 /** Immutable clinical assessment snapshots. Payload preserves the exact inputs and formula version. */
 export const nfClinicalAssessments = sqliteTable(
   "nf_clinical_assessments",
