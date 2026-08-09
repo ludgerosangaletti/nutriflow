@@ -19,6 +19,10 @@ if [[ ! -x "${vinext}" ]]; then
 fi
 
 echo "Running bounded vinext build..."
+echo "Running mandatory type-check..."
+npm run type-check
+echo "Running mandatory lint..."
+npm run lint:build
 timeout \
   --signal=TERM \
   --kill-after="${SITES_BUILD_KILL_AFTER:-10s}" \

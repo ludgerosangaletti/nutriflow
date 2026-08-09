@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "target": "ES2023",
+    "lib": ["dom", "es2024"],
+    "noEmit": true,
+    "incremental": false
+  },
+  "include": ["modules/nutriflow/**/*.ts", "types/cloudflare-workers.d.ts"]
+}
