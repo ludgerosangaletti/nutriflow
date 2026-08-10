@@ -7,6 +7,7 @@ import { DatabaseSync, type SQLInputValue } from "node:sqlite";
 import test from "node:test";
 import { NUTRIFLOW_DEFAULT_FEATURE_FLAGS, NUTRIFLOW_FEATURE_FLAGS } from "../modules/nutriflow/config/feature-flags.ts";
 import { parseSearchTrainingExerciseLibraryQueryV1 } from "../modules/nutriflow/contracts/v1/validation.ts";
+import { TRAINING_EXERCISE_LIBRARY_MAX_RESULTS } from "../modules/nutriflow/contracts/v1/training.ts";
 import { assertTrainingPrescriptionMetric } from "../modules/nutriflow/domain/training/training-prescription.ts";
 import { D1TrainingLibraryRepository } from "../modules/nutriflow/infrastructure/d1/d1-training-library-repository.ts";
 import { D1TrainingEditorRepository } from "../modules/nutriflow/infrastructure/d1/d1-training-editor-repository.ts";
@@ -205,7 +206,8 @@ test("training prescription accepts repetitions or time and rejects an empty exe
 
 test("training library contract bounds query cost", () => {
   assert.equal(query("supino", "peito", 1).limit, 1);
-  assert.throws(() => query("supino", null, 26));
+  assert.equal(query("supino", null, TRAINING_EXERCISE_LIBRARY_MAX_RESULTS).limit, TRAINING_EXERCISE_LIBRARY_MAX_RESULTS);
+  assert.throws(() => query("supino", null, TRAINING_EXERCISE_LIBRARY_MAX_RESULTS + 1));
 });
 
 test("Training media validates mobile-safe upload bounds and publication references", () => {

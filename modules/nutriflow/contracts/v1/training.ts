@@ -1,6 +1,7 @@
 import { NUTRIFLOW_API_VERSION } from "./errors.ts";
 
 export const TRAINING_WEEKDAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
+export const TRAINING_EXERCISE_LIBRARY_MAX_RESULTS = 25;
 export type TrainingWeekday = (typeof TRAINING_WEEKDAYS)[number];
 export type TrainingExerciseScope = "global" | "organization";
 export type TrainingEntitlementStatus = "active" | "inactive";

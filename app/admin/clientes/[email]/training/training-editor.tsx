@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { TrainingEditorWorkspaceV1, TrainingExerciseLibraryItemV1, TrainingRoutineContentV1, TrainingWeekday } from "../../../../../modules/nutriflow/contracts/v1/training.ts";
+import { TRAINING_EXERCISE_LIBRARY_MAX_RESULTS, type TrainingEditorWorkspaceV1, type TrainingExerciseLibraryItemV1, type TrainingRoutineContentV1, type TrainingWeekday } from "../../../../../modules/nutriflow/contracts/v1/training.ts";
 import { addMuscleGroup, addTrainingExercise, emptyTrainingContent, groupsForDay, moveTrainingExercise, removeMuscleGroup, removeTrainingExercise, renameMuscleGroup, TRAINING_DAYS, updateTrainingExercise } from "./training-editor-state";
 
 type Envelope<T> = { data?: T; errorCode?: string; message?: string };
@@ -83,7 +83,7 @@ export default function TrainingEditor({ clientId, patientName }: Readonly<{ cli
   }
 
   async function searchLibrary(query = search, muscleGroup = filter) {
-    const parameters = new URLSearchParams({ clientId: String(clientId), query, limit: "40" });
+    const parameters = new URLSearchParams({ clientId: String(clientId), query, limit: String(TRAINING_EXERCISE_LIBRARY_MAX_RESULTS) });
     if (muscleGroup) parameters.set("muscleGroup", muscleGroup);
     const response = await fetch(`/api/admin/nutriflow/training/exercises?${parameters.toString()}`, { cache: "no-store" });
     const result = await response.json().catch(() => ({})) as Envelope<{ items: readonly TrainingExerciseLibraryItemV1[] }>;

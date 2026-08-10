@@ -16,7 +16,7 @@ import type {
   SaveFoodPlanDraftCommandV1,
 } from "./plans.ts";
 import type { SearchFoodCatalogQueryV1 } from "./catalog.ts";
-import type { SearchTrainingExerciseLibraryQueryV1 } from "./training.ts";
+import { TRAINING_EXERCISE_LIBRARY_MAX_RESULTS, type SearchTrainingExerciseLibraryQueryV1 } from "./training.ts";
 import type {
   ConfigureTrainingEntitlementCommandV1,
   PublishTrainingRoutineCommandV1,
@@ -298,7 +298,7 @@ export function parseSearchTrainingExerciseLibraryQueryV1(value: unknown): Searc
     muscleGroup: input.muscleGroup === undefined || input.muscleGroup === null || input.muscleGroup === ""
       ? null
       : textValue(input.muscleGroup, "muscleGroup", 80),
-    limit: input.limit === undefined ? 12 : boundedInteger(input.limit, "limit", 1, 25),
+    limit: input.limit === undefined ? 12 : boundedInteger(input.limit, "limit", 1, TRAINING_EXERCISE_LIBRARY_MAX_RESULTS),
     correlationId: textValue(input.correlationId, "correlationId", 128),
   });
 }
