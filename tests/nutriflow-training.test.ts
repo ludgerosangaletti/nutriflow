@@ -15,7 +15,7 @@ import { D1TrainingMediaRepository } from "../modules/nutriflow/infrastructure/d
 import { GetPatientTraining } from "../modules/nutriflow/application/training/get-patient-training.ts";
 import { NutriFlowApplicationError } from "../modules/nutriflow/application/errors/nutriflow-application-error.ts";
 import { parseTrainingRoutineContentV1 } from "../modules/nutriflow/contracts/v1/validation.ts";
-import { assertCuratedTrainingMediaBytes, assertTrainingMediaUpload, parseGlobalTrainingMediaImportManifest, publicationReferencesTrainingMedia } from "../modules/nutriflow/domain/training/training-media.ts";
+import { assertCuratedTrainingMediaBytes, assertTrainingMediaUpload, globalTrainingCatalogSlug, parseGlobalTrainingMediaImportManifest, publicationReferencesTrainingMedia } from "../modules/nutriflow/domain/training/training-media.ts";
 import { addMuscleGroup, addTrainingExercise, moveTrainingExercise } from "../app/admin/clientes/[email]/training/training-editor-state.ts";
 import { validateTrainingMediaBatch } from "../scripts/validate-training-media-batch.mjs";
 
@@ -139,6 +139,23 @@ test("Training media migration keeps bytes in object storage metadata and is saf
   assert.throws(() => apply(sqlite, "0041_nutriflow_training_media.sql"), /duplicate column name/);
 });
 
+test("Training Global Library 1.0 persists exactly the reconciled 100 exercises", () => {
+  const sqlite = trainingDatabase();
+  apply(sqlite, "0042_nutriflow_training_global_library.sql");
+  apply(sqlite, "0042_nutriflow_training_global_library.sql");
+  const exercises = sqlite.prepare(`SELECT public_id, name FROM nf_training_exercises
+    WHERE scope = 'global' AND organization_id IS NULL ORDER BY public_id`).all() as { public_id: string; name: string }[];
+  const publicIds = new Set(exercises.map((exercise) => exercise.public_id));
+  const slugs = new Set(exercises.map((exercise) => globalTrainingCatalogSlug(exercise.public_id)));
+  const semanticNames = new Set(exercises.map((exercise) => exercise.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim()));
+  assert.equal(exercises.length, 100);
+  assert.equal(publicIds.size, 100);
+  assert.equal(slugs.size, 100);
+  assert.equal(semanticNames.size, 100);
+  assert.equal(sqlite.prepare("SELECT name FROM nf_training_exercises WHERE public_id = 'tr_ex_global_crucifixo'").get()!.name, "Crucifixo reto com halteres");
+  assert.equal(sqlite.prepare("SELECT name FROM nf_training_exercises WHERE public_id = 'tr_ex_global_puxada_frente'").get()!.name, "Puxada frontal pronada");
+});
+
 test("training library exposes global plus only the requesting organization's private exercises", async () => {
   const database = new CountingDatabase(trainingDatabase());
   database.sqlite.exec("INSERT INTO nf_training_exercises (public_id, organization_id, scope, name, primary_muscle_group, aliases_json, status) VALUES ('tr_ex_org_one', 1, 'organization', 'Remada da OrganizaÃ§Ã£o Um', 'costas', '[\"remada especial\"]', 'active'), ('tr_ex_org_two', 2, 'organization', 'Remada da OrganizaÃ§Ã£o Dois', 'costas', '[]', 'active')");
@@ -185,11 +202,13 @@ test("Training media validates mobile-safe upload bounds and publication referen
 });
 
 test("global Training media manifest maps stable slugs and rejects ambiguous batches", () => {
+  assert.equal(globalTrainingCatalogSlug("tr_ex_global_crucifixo"), "crucifixo-reto-halteres");
+  assert.equal(globalTrainingCatalogSlug("tr_ex_global_supino-inclinado-barra"), "supino-inclinado-barra");
   const manifest = parseGlobalTrainingMediaImportManifest({
     apiVersion: 1,
     items: [
       { slug: "supino_reto", videoFile: "supino_reto.mp4", posterFile: "supino_reto.webp", durationSeconds: 15 },
-      { slug: "triceps_pulley", videoFile: "triceps_pulley.mp4", posterFile: "triceps_pulley.jpg", durationSeconds: 12.5 },
+      { slug: "triceps-pulley-corda", exercisePublicId: "tr_ex_global_triceps_pulley", videoFile: "triceps_pulley.mp4", posterFile: "triceps_pulley.jpg", durationSeconds: 12.5 },
     ],
   });
   assert.deepEqual(manifest.items.map((item) => item.exercisePublicId), ["tr_ex_global_supino_reto", "tr_ex_global_triceps_pulley"]);
@@ -329,7 +348,7 @@ test("batch preflight reports approved and rejected media independently without 
     assert.deepEqual(report.summary, { received: 2, recognized: 2, approved: 1, rejected: 1, maxItemsPerImport: 24, recommendedImportBatches: 1, requiresBatchSplit: false });
     assert.equal(report.items[0]?.approved, true);
     assert.deepEqual(report.items[1]?.reasons, ["video-missing"]);
-    assert.deepEqual(report.importPlan, [{ batchNumber: 1, items: [{ index: 0, slug: "supino_reto", videoFile: "supino.mp4", posterFile: "supino.webp" }] }]);
+    assert.deepEqual(report.importPlan, [{ batchNumber: 1, items: [{ index: 0, slug: "supino_reto", exercisePublicId: "tr_ex_global_supino_reto", videoFile: "supino.mp4", posterFile: "supino.webp" }] }]);
     assert.equal(report.aptForImport, false);
   } finally {
     await rm(directory, { recursive: true, force: true });

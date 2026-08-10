@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 
-type GlobalExercise = Readonly<{ slug: string; name: string }>;
+type GlobalExercise = Readonly<{ publicId: string; slug: string; name: string }>;
 type ImportResponse = Readonly<{
   message?: string;
   errorCode?: string;
@@ -15,6 +15,7 @@ export default function GlobalMediaImportForm({ exercises }: Readonly<{ exercise
   const exampleManifest = useMemo(() => ({
     apiVersion: 1,
     items: exercises.map((exercise) => ({
+      exercisePublicId: exercise.publicId,
       slug: exercise.slug,
       videoFile: `${exercise.slug}.mp4`,
       posterFile: `${exercise.slug}.webp`,

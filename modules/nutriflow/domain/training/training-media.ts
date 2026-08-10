@@ -38,6 +38,25 @@ export type GlobalTrainingMediaImportManifest = Readonly<{
   items: readonly GlobalTrainingMediaImportItem[];
 }>;
 
+const HISTORICAL_GLOBAL_TRAINING_SLUGS = Object.freeze<Record<string, string>>({
+  tr_ex_global_supino_reto: "supino-reto-barra",
+  tr_ex_global_crucifixo: "crucifixo-reto-halteres",
+  tr_ex_global_puxada_frente: "puxada-frontal-pronada",
+  tr_ex_global_remada_baixa: "remada-baixa-cabo",
+  tr_ex_global_desenvolvimento: "desenvolvimento-halteres",
+  tr_ex_global_rosca_direta: "rosca-direta-barra",
+  tr_ex_global_triceps_pulley: "triceps-pulley-corda",
+  tr_ex_global_agachamento: "agachamento-livre",
+  tr_ex_global_leg_press: "leg-press-45",
+  tr_ex_global_mesa_flexora: "mesa-flexora",
+  tr_ex_global_elevacao_panturrilha: "panturrilha-em-pe",
+  tr_ex_global_prancha: "prancha",
+});
+
+export function globalTrainingCatalogSlug(publicId: string) {
+  return HISTORICAL_GLOBAL_TRAINING_SLUGS[publicId] ?? publicId.replace(/^tr_ex_global_/, "");
+}
+
 function invalid(message: string): never { throw new Error(`NUTRIFLOW_TRAINING_MEDIA_INVALID:${message}`); }
 
 function manifestObject(value: unknown, path: string): Record<string, unknown> {
@@ -51,28 +70,35 @@ function manifestText(value: unknown, path: string, pattern: RegExp) {
 }
 
 /**
- * Parses the curated global-library manifest. The stable slug maps directly to
- * the existing immutable catalog identifier `tr_ex_global_<slug>`.
+ * Parses the curated global-library manifest. Catalog slug and immutable
+ * public identifier are independent because historical records preserve their
+ * original public_id even when their canonical catalog slug changes.
  */
 export function parseGlobalTrainingMediaImportManifest(value: unknown): GlobalTrainingMediaImportManifest {
   const input = manifestObject(value, "manifest");
   if (input.apiVersion !== 1 || !Array.isArray(input.items) || input.items.length < 1 || input.items.length > GLOBAL_TRAINING_MEDIA_IMPORT_LIMITS.items) invalid("manifest-shape");
   const slugs = new Set<string>();
+  const publicIds = new Set<string>();
   const filenames = new Set<string>();
   const items = input.items.map((entry, index): GlobalTrainingMediaImportItem => {
     const item = manifestObject(entry, `items.${index}`);
-    const slug = manifestText(item.slug, `items.${index}.slug`, /^[a-z0-9]+(?:_[a-z0-9]+){0,7}$/);
+    const slug = manifestText(item.slug, `items.${index}.slug`, /^[a-z0-9]+(?:(?:-|_)[a-z0-9]+){0,7}$/);
+    const exercisePublicId = item.exercisePublicId === undefined
+      ? `tr_ex_global_${slug}`
+      : manifestText(item.exercisePublicId, `items.${index}.exercisePublicId`, /^tr_ex_global_[a-z0-9]+(?:(?:-|_)[a-z0-9]+){0,8}$/);
     const videoFile = manifestText(item.videoFile, `items.${index}.videoFile`, /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,119}\.mp4$/i);
     const posterFile = manifestText(item.posterFile, `items.${index}.posterFile`, /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,119}\.(?:jpe?g|png|webp)$/i);
     if (slugs.has(slug)) invalid(`items.${index}.slug-duplicate`);
+    if (publicIds.has(exercisePublicId)) invalid(`items.${index}.exercisePublicId-duplicate`);
     if (filenames.has(videoFile) || filenames.has(posterFile) || videoFile === posterFile) invalid(`items.${index}.file-duplicate`);
     if (typeof item.durationSeconds !== "number" || !Number.isFinite(item.durationSeconds) || item.durationSeconds < 1 || item.durationSeconds > TRAINING_MEDIA_LIMITS.videoDurationSeconds) invalid(`items.${index}.durationSeconds`);
     slugs.add(slug);
+    publicIds.add(exercisePublicId);
     filenames.add(videoFile);
     filenames.add(posterFile);
     return Object.freeze({
       slug,
-      exercisePublicId: `tr_ex_global_${slug}`,
+      exercisePublicId,
       videoFile,
       posterFile,
       durationMs: Math.round(item.durationSeconds * 1000),

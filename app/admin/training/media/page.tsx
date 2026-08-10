@@ -6,6 +6,7 @@ import { nfTrainingExercises } from "../../../../db/schema";
 import { resolveNutriFlowAdminContext } from "../../../nutriflow/server";
 import { requireAdmin } from "../../../supabase/server";
 import GlobalMediaImportForm from "./global-media-import-form";
+import { globalTrainingCatalogSlug } from "../../../../modules/nutriflow/domain/training/training-media";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +18,7 @@ export default async function GlobalTrainingMediaPage() {
     .from(nfTrainingExercises)
     .where(and(eq(nfTrainingExercises.scope, "global"), eq(nfTrainingExercises.status, "active")))
     .orderBy(asc(nfTrainingExercises.name));
-  const exercises = rows.map((row) => ({ name: row.name, slug: row.publicId.replace(/^tr_ex_global_/, "") }));
+  const exercises = rows.map((row) => ({ publicId: row.publicId, name: row.name, slug: globalTrainingCatalogSlug(row.publicId) }));
 
   return (
     <main className="portal-shell training-global-media-page">

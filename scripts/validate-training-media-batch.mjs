@@ -34,7 +34,18 @@ export async function catalogSlugsFromMigration(projectRoot) {
   return new Set([...sql.matchAll(/tr_ex_global_([a-z0-9_]+)/g)].map((match) => match[1]));
 }
 
-export async function validateTrainingMediaBatch({ batchDir, manifestPath = join(batchDir, "manifest.json"), catalogSlugs, probe = defaultProbe }) {
+export async function catalogEntriesFromCsv(filename) {
+  const text = (await readFile(filename, "utf8")).replace(/^\uFEFF/, "");
+  const rows = text.trim().split(/\r?\n/).map((line) => [...line.matchAll(/(?:^|,)(?:"((?:[^"]|"")*)"|([^,]*))/g)].map((match) => (match[1] ?? match[2] ?? "").replaceAll('""', '"')));
+  const headers = rows.shift();
+  const publicIdIndex = headers.indexOf("public_id_efetivo");
+  const slugIndex = headers.indexOf("slug_catalogo");
+  if (publicIdIndex < 0 || slugIndex < 0) throw new Error("catalog-columns");
+  return new Map(rows.map((row) => [row[slugIndex], row[publicIdIndex]]));
+}
+
+export async function validateTrainingMediaBatch({ batchDir, manifestPath = join(batchDir, "manifest.json"), catalogSlugs, catalogBySlug, probe = defaultProbe }) {
+  const catalog = catalogBySlug ?? new Map([...catalogSlugs].map((slug) => [slug, `tr_ex_global_${slug}`]));
   const manifestBytes = await readFile(manifestPath);
   const batchErrors = [];
   if (manifestBytes.byteLength > GLOBAL_TRAINING_MEDIA_IMPORT_LIMITS.manifestBytes) batchErrors.push("manifest-size");
@@ -59,9 +70,11 @@ export async function validateTrainingMediaBatch({ batchDir, manifestPath = join
     const slug = typeof raw?.slug === "string" ? raw.slug : null;
     const videoFile = typeof raw?.videoFile === "string" ? raw.videoFile : null;
     const posterFile = typeof raw?.posterFile === "string" ? raw.posterFile : null;
-    const recognized = Boolean(slug && catalogSlugs.has(slug));
+    const exercisePublicId = typeof raw?.exercisePublicId === "string" ? raw.exercisePublicId : item?.exercisePublicId ?? null;
+    const recognized = Boolean(slug && exercisePublicId && catalog.get(slug) === exercisePublicId);
     if (slug && (slugCounts.get(slug) ?? 0) > 1) errors.push("slug-duplicate");
-    if (slug && !recognized) errors.push("slug-not-found");
+    if (slug && !catalog.has(slug)) errors.push("slug-not-found");
+    else if (slug && exercisePublicId && catalog.get(slug) !== exercisePublicId) errors.push("exercise-public-id-mismatch");
     for (const name of [videoFile, posterFile]) if (name && (fileCounts.get(name) ?? 0) > 1) errors.push(`file-duplicate:${name}`);
     if (item && videoFile && posterFile) {
       const videoPath = join(batchDir, videoFile);
@@ -83,7 +96,7 @@ export async function validateTrainingMediaBatch({ batchDir, manifestPath = join
         } catch (error) { errors.push(`video-probe:${reason(error)}`); }
       }
     }
-    results.push(Object.freeze({ index, slug, recognized, videoFile, posterFile, approved: errors.length === 0, reasons: Object.freeze([...new Set(errors)]) }));
+    results.push(Object.freeze({ index, slug, exercisePublicId, recognized, videoFile, posterFile, approved: errors.length === 0, reasons: Object.freeze([...new Set(errors)]) }));
   }
   const expectedFiles = new Set(rawItems.flatMap((item) => [item?.videoFile, item?.posterFile]).filter((value) => typeof value === "string"));
   const ignored = new Set([basename(manifestPath)]);
@@ -95,7 +108,7 @@ export async function validateTrainingMediaBatch({ batchDir, manifestPath = join
   for (let offset = 0; offset < approvedItems.length; offset += GLOBAL_TRAINING_MEDIA_IMPORT_LIMITS.items) {
     importPlan.push(Object.freeze({
       batchNumber: importPlan.length + 1,
-      items: Object.freeze(approvedItems.slice(offset, offset + GLOBAL_TRAINING_MEDIA_IMPORT_LIMITS.items).map((item) => Object.freeze({ index: item.index, slug: item.slug, videoFile: item.videoFile, posterFile: item.posterFile }))),
+      items: Object.freeze(approvedItems.slice(offset, offset + GLOBAL_TRAINING_MEDIA_IMPORT_LIMITS.items).map((item) => Object.freeze({ index: item.index, slug: item.slug, exercisePublicId: item.exercisePublicId, videoFile: item.videoFile, posterFile: item.posterFile }))),
     }));
   }
   return Object.freeze({
@@ -111,8 +124,10 @@ export async function validateTrainingMediaBatch({ batchDir, manifestPath = join
 async function main() {
   const batchDir = resolve(process.argv[2] ?? ".");
   const manifestPath = resolve(process.argv[3] ?? join(batchDir, "manifest.json"));
+  const catalogPath = process.argv[4] ? resolve(process.argv[4]) : null;
   const projectRoot = resolve(new URL("..", import.meta.url).pathname.replace(/^\/(?:([A-Za-z]:))/, "$1"));
-  const report = await validateTrainingMediaBatch({ batchDir, manifestPath, catalogSlugs: await catalogSlugsFromMigration(projectRoot) });
+  const catalogBySlug = catalogPath ? await catalogEntriesFromCsv(catalogPath) : null;
+  const report = await validateTrainingMediaBatch({ batchDir, manifestPath, catalogSlugs: await catalogSlugsFromMigration(projectRoot), catalogBySlug });
   process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
   process.exitCode = report.aptForImport ? 0 : 1;
 }
