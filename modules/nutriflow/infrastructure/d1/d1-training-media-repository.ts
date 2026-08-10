@@ -7,7 +7,11 @@ type Database = { prepare(query: string): ReadStatement; batch(statements: D1Pre
 
 export type TrainingMediaExercise = Readonly<{ id: number; publicId: string; scope: "global" | "organization"; organizationId: number | null }>;
 export type TrainingMediaAsset = Readonly<{ publicId: string; objectKey: string; posterObjectKey: string | null; mimeType: string; posterMimeType: string | null; mediaKind: "video" | "gif"; status: string }>;
-export type GlobalTrainingMediaImportTarget = TrainingMediaExercise & Readonly<{ activeMediaPublicId: string | null }>;
+export type GlobalTrainingMediaImportTarget = TrainingMediaExercise & Readonly<{
+  activeMediaPublicId: string | null;
+  activeContentSha256: string | null;
+  activePosterSha256: string | null;
+}>;
 export type GlobalTrainingMediaImportRecord = Readonly<{
   target: GlobalTrainingMediaImportTarget;
   objectKey: string;
@@ -17,9 +21,19 @@ export type GlobalTrainingMediaImportRecord = Readonly<{
   byteSize: number;
   posterByteSize: number;
   durationMs: number;
+  contentSha256?: string | null;
+  posterSha256?: string | null;
+  sourceUrl?: string | null;
+  credit?: string | null;
+  license?: string | null;
+  licenseUrl?: string | null;
 }>;
 type ExerciseRow = Readonly<{ id: number; public_id: string; scope: "global" | "organization"; organization_id: number | null }>;
-type GlobalExerciseRow = ExerciseRow & Readonly<{ active_media_public_id: string | null }>;
+type GlobalExerciseRow = ExerciseRow & Readonly<{
+  active_media_public_id: string | null;
+  active_content_sha256: string | null;
+  active_poster_sha256: string | null;
+}>;
 type MediaRow = Readonly<{ public_id: string; object_key: string; poster_object_key: string | null; mime_type: string; poster_mime_type: string | null; media_kind: "video" | "gif"; status: string }>;
 
 function forbidden() { return new NutriFlowApplicationError(NUTRIFLOW_ERROR_CODES.FORBIDDEN, "Acesso não autorizado.", 403); }
@@ -49,11 +63,25 @@ export class D1TrainingMediaRepository {
       const row = await this.database.prepare(`SELECT exercise.id, exercise.public_id, exercise.scope, exercise.organization_id,
           (SELECT media.public_id FROM nf_training_exercise_media AS media
             WHERE media.exercise_id = exercise.id AND media.status = 'active'
-            ORDER BY media.id DESC LIMIT 1) AS active_media_public_id
+            ORDER BY media.id DESC LIMIT 1) AS active_media_public_id,
+          (SELECT media.content_sha256 FROM nf_training_exercise_media AS media
+            WHERE media.exercise_id = exercise.id AND media.status = 'active'
+            ORDER BY media.id DESC LIMIT 1) AS active_content_sha256,
+          (SELECT media.poster_sha256 FROM nf_training_exercise_media AS media
+            WHERE media.exercise_id = exercise.id AND media.status = 'active'
+            ORDER BY media.id DESC LIMIT 1) AS active_poster_sha256
         FROM nf_training_exercises AS exercise
         WHERE exercise.public_id = ? AND exercise.scope = 'global' AND exercise.organization_id IS NULL AND exercise.status = 'active' LIMIT 1`)
         .bind(exercisePublicId).first<GlobalExerciseRow>();
-      if (row) targets.push(Object.freeze({ id: row.id, publicId: row.public_id, scope: "global", organizationId: null, activeMediaPublicId: row.active_media_public_id }));
+      if (row) targets.push(Object.freeze({
+        id: row.id,
+        publicId: row.public_id,
+        scope: "global",
+        organizationId: null,
+        activeMediaPublicId: row.active_media_public_id,
+        activeContentSha256: row.active_content_sha256,
+        activePosterSha256: row.active_poster_sha256,
+      }));
     }
     return Object.freeze(targets);
   }
@@ -80,9 +108,9 @@ export class D1TrainingMediaRepository {
         statements.push(this.database.prepare("UPDATE nf_training_exercise_media SET status = 'replaced', replaced_at = ? WHERE exercise_id = ? AND status = 'active'").bind(timestamp, record.target.id));
       }
       statements.push(
-        this.database.prepare(`INSERT INTO nf_training_exercise_media (public_id, exercise_id, media_kind, object_key, poster_object_key, mime_type, poster_mime_type, duration_ms, byte_size, poster_byte_size, status, created_at)
-          VALUES (?, ?, 'video', ?, ?, ?, ?, ?, ?, ?, 'active', ?)`)
-          .bind(publicId, record.target.id, record.objectKey, record.posterObjectKey, record.mimeType, record.posterMimeType, record.durationMs, record.byteSize, record.posterByteSize, timestamp),
+        this.database.prepare(`INSERT INTO nf_training_exercise_media (public_id, exercise_id, media_kind, object_key, poster_object_key, mime_type, poster_mime_type, duration_ms, byte_size, poster_byte_size, content_sha256, poster_sha256, source_url, credit, license, license_url, status, created_at)
+          VALUES (?, ?, 'video', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?)`)
+          .bind(publicId, record.target.id, record.objectKey, record.posterObjectKey, record.mimeType, record.posterMimeType, record.durationMs, record.byteSize, record.posterByteSize, record.contentSha256 ?? null, record.posterSha256 ?? null, record.sourceUrl ?? null, record.credit ?? null, record.license ?? null, record.licenseUrl ?? null, timestamp),
         this.database.prepare("INSERT INTO nf_audit_entries (public_id, organization_id, actor_auth_user_id, actor_role, action, entity_type, entity_public_id, correlation_id, before_json, after_json, occurred_at) VALUES (?, ?, ?, ?, 'training.exercise-media.global-imported', 'training-exercise-media', ?, ?, ?, ?, ?)")
           .bind(
             this.generatePublicId("audit"), input.organizationId, input.actorAuthUserId, input.actorRole, publicId, input.correlationId,

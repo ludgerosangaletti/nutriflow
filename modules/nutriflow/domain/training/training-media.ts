@@ -38,6 +38,22 @@ export type GlobalTrainingMediaImportManifest = Readonly<{
   items: readonly GlobalTrainingMediaImportItem[];
 }>;
 
+export type GlobalTrainingMediaImportDisposition = "created" | "already_present" | "updated_version" | "skipped";
+
+/** Resolves idempotent content imports without silently replacing an active version. */
+export function classifyGlobalTrainingMediaImport(input: Readonly<{
+  activeMediaPublicId: string | null;
+  activeContentSha256: string | null;
+  activePosterSha256: string | null;
+  contentSha256: string;
+  posterSha256: string;
+  allowNewVersion: boolean;
+}>): GlobalTrainingMediaImportDisposition {
+  if (!input.activeMediaPublicId) return "created";
+  if (input.activeContentSha256 === input.contentSha256 && input.activePosterSha256 === input.posterSha256) return "already_present";
+  return input.allowNewVersion ? "updated_version" : "skipped";
+}
+
 const HISTORICAL_GLOBAL_TRAINING_SLUGS = Object.freeze<Record<string, string>>({
   tr_ex_global_supino_reto: "supino-reto-barra",
   tr_ex_global_crucifixo: "crucifixo-reto-halteres",

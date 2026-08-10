@@ -15,7 +15,7 @@ import { D1TrainingMediaRepository } from "../modules/nutriflow/infrastructure/d
 import { GetPatientTraining } from "../modules/nutriflow/application/training/get-patient-training.ts";
 import { NutriFlowApplicationError } from "../modules/nutriflow/application/errors/nutriflow-application-error.ts";
 import { parseTrainingRoutineContentV1 } from "../modules/nutriflow/contracts/v1/validation.ts";
-import { assertCuratedTrainingMediaBytes, assertTrainingMediaUpload, globalTrainingCatalogSlug, parseGlobalTrainingMediaImportManifest, publicationReferencesTrainingMedia } from "../modules/nutriflow/domain/training/training-media.ts";
+import { assertCuratedTrainingMediaBytes, assertTrainingMediaUpload, classifyGlobalTrainingMediaImport, globalTrainingCatalogSlug, parseGlobalTrainingMediaImportManifest, publicationReferencesTrainingMedia } from "../modules/nutriflow/domain/training/training-media.ts";
 import { addMuscleGroup, addTrainingExercise, moveTrainingExercise } from "../app/admin/clientes/[email]/training/training-editor-state.ts";
 import { validateTrainingMediaBatch } from "../scripts/validate-training-media-batch.mjs";
 
@@ -81,6 +81,7 @@ function trainingEditorDatabase() {
 function trainingMediaDatabase() {
   const database = trainingEditorDatabase();
   apply(database.sqlite, "0041_nutriflow_training_media.sql");
+  apply(database.sqlite, "0043_nutriflow_training_media_provenance.sql");
   database.sqlite.exec("INSERT INTO nf_training_exercises (public_id, organization_id, scope, name, primary_muscle_group, aliases_json, status) VALUES ('tr_ex_org_media_one', 1, 'organization', 'ExercÃ­cio privado um', 'peito', '[]', 'active'), ('tr_ex_org_media_two', 2, 'organization', 'ExercÃ­cio privado dois', 'costas', '[]', 'active')");
   return database;
 }
@@ -137,6 +138,21 @@ test("Training media migration keeps bytes in object storage metadata and is saf
   // is therefore the idempotency boundary: 0041 is applied once, while all
   // DDL it creates after the columns is repeat-safe.
   assert.throws(() => apply(sqlite, "0041_nutriflow_training_media.sql"), /duplicate column name/);
+});
+
+test("programmatic global media import records provenance and resolves idempotent versions", () => {
+  const sqlite = trainingDatabase();
+  apply(sqlite, "0041_nutriflow_training_media.sql");
+  apply(sqlite, "0043_nutriflow_training_media_provenance.sql");
+  const columns = sqlite.prepare("PRAGMA table_info(nf_training_exercise_media)").all() as { name: string }[];
+  assert.deepEqual(
+    columns.filter((column) => ["content_sha256", "poster_sha256", "source_url", "credit", "license", "license_url"].includes(column.name)).map((column) => column.name),
+    ["content_sha256", "poster_sha256", "source_url", "credit", "license", "license_url"],
+  );
+  assert.equal(classifyGlobalTrainingMediaImport({ activeMediaPublicId: null, activeContentSha256: null, activePosterSha256: null, contentSha256: "a", posterSha256: "b", allowNewVersion: false }), "created");
+  assert.equal(classifyGlobalTrainingMediaImport({ activeMediaPublicId: "tr_media_existing", activeContentSha256: "a", activePosterSha256: "b", contentSha256: "a", posterSha256: "b", allowNewVersion: false }), "already_present");
+  assert.equal(classifyGlobalTrainingMediaImport({ activeMediaPublicId: "tr_media_existing", activeContentSha256: null, activePosterSha256: null, contentSha256: "a", posterSha256: "b", allowNewVersion: false }), "skipped");
+  assert.equal(classifyGlobalTrainingMediaImport({ activeMediaPublicId: "tr_media_existing", activeContentSha256: "old", activePosterSha256: "old", contentSha256: "a", posterSha256: "b", allowNewVersion: true }), "updated_version");
 });
 
 test("Training Global Library 1.0 persists exactly the reconciled 100 exercises", () => {
