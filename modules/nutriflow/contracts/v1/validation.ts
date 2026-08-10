@@ -299,6 +299,7 @@ export function parseSearchTrainingExerciseLibraryQueryV1(value: unknown): Searc
       ? null
       : textValue(input.muscleGroup, "muscleGroup", 80),
     limit: input.limit === undefined ? 12 : boundedInteger(input.limit, "limit", 1, TRAINING_EXERCISE_LIBRARY_MAX_RESULTS),
+    offset: input.offset === undefined ? 0 : boundedInteger(input.offset, "offset", 0, 10_000),
     correlationId: textValue(input.correlationId, "correlationId", 128),
   });
 }

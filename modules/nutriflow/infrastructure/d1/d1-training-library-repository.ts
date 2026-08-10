@@ -82,7 +82,7 @@ export class D1TrainingLibraryRepository implements TrainingLibraryRepository {
                       ELSE 3 END,
                  CASE WHEN exercise.scope = 'organization' THEN 0 ELSE 1 END,
                  exercise.name COLLATE NOCASE
-        LIMIT ?`,
+        LIMIT ? OFFSET ?`,
     ).bind(
       input.organizationId,
       query,
@@ -94,6 +94,7 @@ export class D1TrainingLibraryRepository implements TrainingLibraryRepository {
       `${escapedQuery}%`,
       `%${escapedQuery}%`,
       input.query.limit + 1,
+      input.query.offset,
     ).all<TrainingExerciseRow>();
 
     const items = Object.freeze(result.results.slice(0, input.query.limit).map((row): TrainingExerciseLibraryItemV1 => Object.freeze({

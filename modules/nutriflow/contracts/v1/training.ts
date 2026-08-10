@@ -28,6 +28,7 @@ export type SearchTrainingExerciseLibraryQueryV1 = Readonly<{
   query: string;
   muscleGroup: string | null;
   limit: number;
+  offset: number;
   correlationId: string;
 }>;
 

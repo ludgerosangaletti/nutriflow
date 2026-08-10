@@ -7594,6 +7594,9 @@ button:disabled {
 .training-library-actions { display: flex; gap: 5px; }
 .training-library-actions button.is-secondary { border: 1px solid #d5d5cd; background: #fff; color: #33332e; }
 .training-library-empty { color: #77776f; font-size: .75rem; text-align: center; }
+.training-library-more { justify-self: center; border: 1px solid #d1d1c8; border-radius: 999px; background: #fff; color: #292925; padding: 8px 16px; font-size: .7rem; font-weight: 800; cursor: pointer; }
+.training-library-more:hover:not(:disabled) { border-color: #8d8d84; background: #f7f7f2; }
+.training-library-more:disabled { cursor: wait; opacity: .6; }
 .training-media-form { display: grid; gap: 8px; border-top: 1px solid #deded6; padding-top: 10px; }
 .training-media-form header, .training-media-form footer { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .training-media-form p { margin: 0; color: #686860; font-size: .67rem; line-height: 1.4; }

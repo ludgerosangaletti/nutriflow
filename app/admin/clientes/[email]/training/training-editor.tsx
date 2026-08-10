@@ -1,11 +1,23 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { TRAINING_EXERCISE_LIBRARY_MAX_RESULTS, type TrainingEditorWorkspaceV1, type TrainingExerciseLibraryItemV1, type TrainingRoutineContentV1, type TrainingWeekday } from "../../../../../modules/nutriflow/contracts/v1/training.ts";
 import { addMuscleGroup, addTrainingExercise, emptyTrainingContent, groupsForDay, moveTrainingExercise, removeMuscleGroup, removeTrainingExercise, renameMuscleGroup, TRAINING_DAYS, updateTrainingExercise } from "./training-editor-state";
 
 type Envelope<T> = { data?: T; errorCode?: string; message?: string };
-const muscleGroups = ["Todos", "Peito", "Costas", "Ombros", "Bíceps", "Tríceps", "Quadríceps", "Posterior", "Glúteos", "Panturrilhas", "Core"];
+const muscleGroups = [
+  { label: "Todos", value: "" },
+  { label: "Peito", value: "peito" },
+  { label: "Costas", value: "costas" },
+  { label: "Ombros", value: "ombros" },
+  { label: "Bíceps", value: "biceps" },
+  { label: "Tríceps", value: "triceps" },
+  { label: "Quadríceps", value: "quadriceps" },
+  { label: "Posterior", value: "posterior_coxa" },
+  { label: "Glúteos", value: "gluteos" },
+  { label: "Panturrilhas", value: "panturrilhas" },
+  { label: "Core", value: "core" },
+] as const;
 
 function requestHeaders() { return { "content-type": "application/json", "x-correlation-id": `corr_${crypto.randomUUID()}` }; }
 function numeric(value: string) { return value === "" ? null : Number(value); }
@@ -25,9 +37,12 @@ export default function TrainingEditor({ clientId, patientName }: Readonly<{ cli
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("");
   const [library, setLibrary] = useState<readonly TrainingExerciseLibraryItemV1[]>([]);
+  const [libraryHasMore, setLibraryHasMore] = useState(false);
+  const [libraryLoading, setLibraryLoading] = useState(false);
   const [libraryGroupId, setLibraryGroupId] = useState<string | null>(null);
   const [mediaExercise, setMediaExercise] = useState<TrainingExerciseLibraryItemV1 | null>(null);
   const [mediaSaving, setMediaSaving] = useState(false);
+  const libraryRequestId = useRef(0);
 
   const syncWorkspace = useCallback((next: TrainingEditorWorkspaceV1) => {
     setWorkspace(next);
@@ -78,17 +93,29 @@ export default function TrainingEditor({ clientId, patientName }: Readonly<{ cli
   }
 
   async function openLibrary(groupId: string) {
-    setLibraryGroupId(groupId); setLibrary([]); setSearch(""); setFilter("");
-    await searchLibrary("", "");
+    setLibraryGroupId(groupId); setLibrary([]); setLibraryHasMore(false); setSearch(""); setFilter("");
+    await searchLibrary("", "", false);
   }
 
-  async function searchLibrary(query = search, muscleGroup = filter) {
-    const parameters = new URLSearchParams({ clientId: String(clientId), query, limit: String(TRAINING_EXERCISE_LIBRARY_MAX_RESULTS) });
-    if (muscleGroup) parameters.set("muscleGroup", muscleGroup);
-    const response = await fetch(`/api/admin/nutriflow/training/exercises?${parameters.toString()}`, { cache: "no-store" });
-    const result = await response.json().catch(() => ({})) as Envelope<{ items: readonly TrainingExerciseLibraryItemV1[] }>;
-    if (!response.ok || !result.data) { setMessage(result.message || "Não foi possível consultar a biblioteca."); return; }
-    setLibrary(result.data.items);
+  async function searchLibrary(query = search, muscleGroup = filter, append = false) {
+    if (libraryLoading && append) return;
+    const offset = append ? library.length : 0;
+    const requestId = ++libraryRequestId.current;
+    setLibraryLoading(true);
+    try {
+      const parameters = new URLSearchParams({ clientId: String(clientId), query, limit: String(TRAINING_EXERCISE_LIBRARY_MAX_RESULTS), offset: String(offset) });
+      if (muscleGroup) parameters.set("muscleGroup", muscleGroup);
+      const response = await fetch(`/api/admin/nutriflow/training/exercises?${parameters.toString()}`, { cache: "no-store" });
+      const result = await response.json().catch(() => ({})) as Envelope<{ items: readonly TrainingExerciseLibraryItemV1[]; hasMore: boolean }>;
+      if (requestId !== libraryRequestId.current) return;
+      if (!response.ok || !result.data) { setMessage(result.message || "Não foi possível consultar a biblioteca."); return; }
+      setLibrary((current) => append ? [...current, ...result.data!.items] : result.data!.items);
+      setLibraryHasMore(result.data.hasMore);
+    } catch {
+      if (requestId === libraryRequestId.current) setMessage("Não foi possível consultar a biblioteca.");
+    } finally {
+      if (requestId === libraryRequestId.current) setLibraryLoading(false);
+    }
   }
 
   async function submitMedia(event: React.FormEvent<HTMLFormElement>) {
@@ -158,15 +185,16 @@ export default function TrainingEditor({ clientId, patientName }: Readonly<{ cli
           {isEditing ? <button type="button" className="training-add-exercise" onClick={() => void openLibrary(group.publicId)}>+ Adicionar exercício</button> : null}
         </article>)}</div>
       </div>
-      <datalist id="training-muscle-groups">{muscleGroups.slice(1).map((name) => <option key={name} value={name} />)}</datalist>
+      <datalist id="training-muscle-groups">{muscleGroups.slice(1).map((group) => <option key={group.value} value={group.label} />)}</datalist>
     </> : null}
 
     {libraryGroupId ? <div className="training-library-backdrop" onMouseDown={(event) => { if (event.currentTarget === event.target) setLibraryGroupId(null); }}><section className="training-library" role="dialog" aria-modal="true" aria-label="Biblioteca de exercícios">
       <header><div><p className="section-kicker">Adicionar exercício</p><h2>Biblioteca de exercícios</h2></div><button className="training-icon-button" type="button" aria-label="Fechar biblioteca" onClick={() => { setLibraryGroupId(null); setMediaExercise(null); }}>×</button></header>
       <form className="training-library-search" onSubmit={(event) => { event.preventDefault(); void searchLibrary(); }}><span aria-hidden="true">⌕</span><input autoFocus placeholder="Buscar por nome do exercício" value={search} onChange={(event) => { setSearch(event.target.value); void searchLibrary(event.target.value); }} /><button type="submit">Buscar</button></form>
-      <div className="training-library-filters" aria-label="Filtrar por grupamento">{muscleGroups.map((name) => { const value = name === "Todos" ? "" : name.toLocaleLowerCase("pt-BR"); return <button key={name} type="button" className={filter === value ? "is-active" : ""} onClick={() => { setFilter(value); void searchLibrary(search, value); }}>{name}</button>; })}</div>
+      <div className="training-library-filters" aria-label="Filtrar por grupamento">{muscleGroups.map((group) => <button key={group.value || "all"} type="button" className={filter === group.value ? "is-active" : ""} onClick={() => { setFilter(group.value); void searchLibrary(search, group.value, false); }}>{group.label}</button>)}</div>
       <ul>{library.map((item) => <li key={item.publicId}><span className={`training-library-thumb ${item.media ? "has-media" : ""}`}>{item.media ? "▶" : item.name.charAt(0)}</span><div><strong>{item.name}</strong><small>{item.primaryMuscleGroup}{item.media ? " · demonstração disponível" : ""}</small></div><span className="training-library-actions">{item.scope === "organization" ? <button className="is-secondary" type="button" onClick={() => setMediaExercise(item)}>Mídia</button> : null}<button type="button" onClick={() => { setContent((current) => addTrainingExercise(current, activeDay, libraryGroupId, item)); setMessage(`${item.name} adicionado.`); }}>Adicionar</button></span></li>)}</ul>
       {!library.length ? <p className="training-library-empty">Nenhum exercício encontrado.</p> : null}
+      {libraryHasMore ? <button className="training-library-more" type="button" disabled={libraryLoading} onClick={() => void searchLibrary(search, filter, true)}>{libraryLoading ? "Carregando…" : "Carregar mais"}</button> : null}
       {mediaExercise ? <form className="training-media-form" onSubmit={(event) => void submitMedia(event)}><header><strong>Mídia: {mediaExercise.name}</strong><button type="button" onClick={() => setMediaExercise(null)}>Cancelar</button></header><p>MP4/H.264 curto com poster leve. GIF somente para exceções.</p><label><span>Formato</span><select name="mediaKind" defaultValue="video"><option value="video">Vídeo MP4</option><option value="gif">GIF (exceção)</option></select></label><label><span>Arquivo de demonstração</span><input name="media" type="file" required accept="video/mp4,image/gif" /></label><label><span>Poster estático</span><input name="poster" type="file" required accept="image/jpeg,image/png,image/webp" /></label><label><span>Duração do vídeo (seg.)</span><input name="durationSeconds" type="number" min="1" max="90" defaultValue="15" /></label><footer><button type="submit" disabled={mediaSaving}>{mediaSaving ? "Enviando…" : mediaExercise.media ? "Substituir mídia" : "Associar mídia"}</button>{mediaExercise.media ? <button type="button" disabled={mediaSaving} onClick={() => void removeMedia()}>Remover associação</button> : null}</footer></form> : null}
     </section></div> : null}
   </section>;

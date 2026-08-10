@@ -116,6 +116,7 @@ function query(value: string, muscleGroup: string | null = null, limit = 12) {
     query: value,
     muscleGroup,
     limit,
+    offset: 0,
     correlationId: "corr_training_library",
   });
 }
@@ -207,7 +208,47 @@ test("training prescription accepts repetitions or time and rejects an empty exe
 test("training library contract bounds query cost", () => {
   assert.equal(query("supino", "peito", 1).limit, 1);
   assert.equal(query("supino", null, TRAINING_EXERCISE_LIBRARY_MAX_RESULTS).limit, TRAINING_EXERCISE_LIBRARY_MAX_RESULTS);
+  assert.equal(query("supino").offset, 0);
   assert.throws(() => query("supino", null, TRAINING_EXERCISE_LIBRARY_MAX_RESULTS + 1));
+});
+
+test("training library paginates the full catalog in stable 25-item batches", async () => {
+  const database = new CountingDatabase(trainingDatabase());
+  apply(database.sqlite, "0042_nutriflow_training_global_library.sql");
+  const repository = new D1TrainingLibraryRepository(database);
+  const firstQuery = { ...query("", null, TRAINING_EXERCISE_LIBRARY_MAX_RESULTS), offset: 0 };
+  const secondQuery = { ...firstQuery, offset: TRAINING_EXERCISE_LIBRARY_MAX_RESULTS };
+  const first = await repository.search({ organizationId: 1, query: firstQuery });
+  const second = await repository.search({ organizationId: 1, query: secondQuery });
+  assert.equal(first.items.length, 25);
+  assert.equal(second.items.length, 25);
+  assert.equal(first.hasMore, true);
+  assert.equal(new Set([...first.items, ...second.items].map((item) => item.publicId)).size, 50);
+});
+
+test("training library filters use canonical catalog values", async () => {
+  const database = new CountingDatabase(trainingDatabase());
+  apply(database.sqlite, "0042_nutriflow_training_global_library.sql");
+  const repository = new D1TrainingLibraryRepository(database);
+  for (const muscleGroup of ["biceps", "triceps", "quadriceps", "posterior_coxa", "gluteos"]) {
+    const result = await repository.search({ organizationId: 1, query: { ...query("", muscleGroup, 25), offset: 0 } });
+    assert.ok(result.items.length > 0, muscleGroup);
+    assert.ok(result.items.every((item) => item.primaryMuscleGroup === muscleGroup), muscleGroup);
+  }
+});
+
+test("training library UI requests incremental pages and centralizes canonical filter values", () => {
+  const editor = readFileSync(new URL("../app/admin/clientes/[email]/training/training-editor.tsx", import.meta.url), "utf8");
+  assert.match(editor, /offset: String\(offset\)/);
+  assert.match(editor, /result\.data\.hasMore/);
+  assert.match(editor, /"Carregar mais"/);
+  for (const mapping of [
+    '{ label: "Bíceps", value: "biceps" }',
+    '{ label: "Tríceps", value: "triceps" }',
+    '{ label: "Quadríceps", value: "quadriceps" }',
+    '{ label: "Posterior", value: "posterior_coxa" }',
+    '{ label: "Glúteos", value: "gluteos" }',
+  ]) assert.ok(editor.includes(mapping), mapping);
 });
 
 test("Training media validates mobile-safe upload bounds and publication references", () => {
