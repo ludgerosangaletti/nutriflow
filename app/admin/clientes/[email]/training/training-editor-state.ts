@@ -2,7 +2,7 @@ import type { TrainingExerciseLibraryItemV1, TrainingRoutineContentV1, TrainingW
 
 export const TRAINING_DAYS: readonly Readonly<{ key: TrainingWeekday; label: string }>[] = Object.freeze([
   { key: "mon", label: "SEG" }, { key: "tue", label: "TER" }, { key: "wed", label: "QUA" },
-  { key: "thu", label: "QUI" }, { key: "fri", label: "SEX" }, { key: "sat", label: "SÃB" }, { key: "sun", label: "DOM" },
+  { key: "thu", label: "QUI" }, { key: "fri", label: "SEX" }, { key: "sat", label: "SÁB" }, { key: "sun", label: "DOM" },
 ]);
 
 export function trainingEditorId(kind: string) { return `${kind}_${crypto.randomUUID()}`; }

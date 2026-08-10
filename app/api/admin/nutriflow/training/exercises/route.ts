@@ -15,7 +15,7 @@ export async function GET(request: Request) {
     if (!Number.isSafeInteger(clientId) || clientId < 1) throw new NutriFlowContractError("clientId");
     const admin = await getAdminSession();
     const context = admin ? await resolveNutriFlowAdminContext(admin.user.id) : null;
-    if (!context || !(await canUseNutriFlowFeature(context, clientId, NUTRIFLOW_FEATURE_FLAGS.TRAINING))) throw new NutriFlowApplicationError(NUTRIFLOW_ERROR_CODES.FEATURE_DISABLED, "Treino indisponÃ­vel.", 404);
+    if (!context || !(await canUseNutriFlowFeature(context, clientId, NUTRIFLOW_FEATURE_FLAGS.TRAINING))) throw new NutriFlowApplicationError(NUTRIFLOW_ERROR_CODES.FEATURE_DISABLED, "Treino indisponível.", 404);
     const query = parseSearchTrainingExerciseLibraryQueryV1({ apiVersion: NUTRIFLOW_API_VERSION, query: parameters.get("query") ?? "", muscleGroup: parameters.get("muscleGroup"), limit: Number(parameters.get("limit") ?? 12), correlationId });
     const data = await new D1TrainingLibraryRepository(env.DB).search({ organizationId: context.organizationId, query });
     return Response.json({ apiVersion: NUTRIFLOW_API_VERSION, correlationId, data }, { headers: { "cache-control": "private, max-age=30" } });

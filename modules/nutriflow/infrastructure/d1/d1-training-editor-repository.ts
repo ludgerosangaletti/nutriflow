@@ -84,7 +84,7 @@ export class D1TrainingEditorRepository {
           SELECT 1 FROM nf_plans AS plan WHERE plan.client_id = client.id AND plan.organization_id = ?
         )) LIMIT 1`,
     ).bind(clientId, organizationId, organizationId).first<ScopeRow>();
-    if (!row) throw new NutriFlowApplicationError(NUTRIFLOW_ERROR_CODES.FORBIDDEN, "Acesso nÃ£o autorizado.", 403);
+    if (!row) throw new NutriFlowApplicationError(NUTRIFLOW_ERROR_CODES.FORBIDDEN, "Acesso não autorizado.", 403);
   }
 
   private async rows(organizationId: number, clientId: number) {
@@ -178,7 +178,7 @@ export class D1TrainingEditorRepository {
       this.database.prepare("INSERT INTO nf_audit_entries (public_id, organization_id, actor_auth_user_id, actor_role, action, entity_type, entity_public_id, correlation_id, before_json, after_json, occurred_at) VALUES (?, ?, ?, ?, 'training.draft.saved', 'training-routine-version', ?, ?, NULL, ?, ?)").bind(this.generatePublicId("audit"), input.organizationId, input.actorAuthUserId, input.actorRole, input.command.routineVersionPublicId, input.command.correlationId, JSON.stringify({ revision: nextRevision, days: input.command.content.days.length }), timestamp),
     ];
     const result = await this.database.batch(statements);
-    if (changes(result[0]) !== 1) throw new NutriFlowApplicationError(NUTRIFLOW_ERROR_CODES.VERSION_CONFLICT, "O rascunho foi atualizado em outra sessÃ£o.", 409);
+    if (changes(result[0]) !== 1) throw new NutriFlowApplicationError(NUTRIFLOW_ERROR_CODES.VERSION_CONFLICT, "O rascunho foi atualizado em outra sessão.", 409);
     return this.getWorkspace({ organizationId: input.organizationId, clientId: input.clientId });
   }
 
@@ -186,7 +186,7 @@ export class D1TrainingEditorRepository {
     const current = await this.rows(input.organizationId, input.clientId);
     if (!current.entitlementRow || current.entitlementRow.status !== "active") throw new NutriFlowApplicationError(NUTRIFLOW_ERROR_CODES.FORBIDDEN, "Ative o Training antes de publicar a rotina.", 403);
     const draftRow = current.draftRow;
-    if (!draftRow || draftRow.public_id !== input.routineVersionPublicId || draftRow.routine_public_id !== input.routinePublicId || draftRow.revision !== input.expectedRevision) throw new NutriFlowApplicationError(NUTRIFLOW_ERROR_CODES.VERSION_CONFLICT, "O rascunho foi atualizado em outra sessÃ£o.", 409);
+    if (!draftRow || draftRow.public_id !== input.routineVersionPublicId || draftRow.routine_public_id !== input.routinePublicId || draftRow.revision !== input.expectedRevision) throw new NutriFlowApplicationError(NUTRIFLOW_ERROR_CODES.VERSION_CONFLICT, "O rascunho foi atualizado em outra sessão.", 409);
     const timestamp = this.now().toISOString();
     const content = parseContent(draftRow.content_json);
     const contentJson = JSON.stringify(content);
@@ -198,12 +198,12 @@ export class D1TrainingEditorRepository {
     const statements: D1PreparedStatementLike[] = [
       this.database.prepare("UPDATE nf_training_routine_versions SET revision = ?, state = 'published', snapshot_json = ?, content_hash = ?, published_by_auth_user_id = ?, published_at = ?, updated_at = ? WHERE public_id = ? AND revision = ? AND state = 'draft' AND routine_id = (SELECT id FROM nf_training_routines WHERE public_id = ? AND organization_id = ? AND client_id = ?)").bind(finalRevision, contentJson, contentHash, input.actorAuthUserId, timestamp, timestamp, input.routineVersionPublicId, input.expectedRevision, input.routinePublicId, input.organizationId, input.clientId),
       this.database.prepare(`UPDATE nf_training_routines SET status = 'published', updated_at = ? WHERE public_id = ? AND organization_id = ? AND client_id = ? AND EXISTS (${publishedVersion})`).bind(timestamp, input.routinePublicId, input.organizationId, input.clientId, ...scope),
-      this.database.prepare(`UPDATE nf_training_publications SET status = 'revoked', revoked_by_auth_user_id = ?, revoked_at = ?, revocation_reason = 'SubstituÃ­da por nova versÃ£o publicada' WHERE organization_id = ? AND client_id = ? AND status = 'active' AND EXISTS (${publishedVersion})`).bind(input.actorAuthUserId, timestamp, input.organizationId, input.clientId, ...scope),
+      this.database.prepare(`UPDATE nf_training_publications SET status = 'revoked', revoked_by_auth_user_id = ?, revoked_at = ?, revocation_reason = 'Substituída por nova versão publicada' WHERE organization_id = ? AND client_id = ? AND status = 'active' AND EXISTS (${publishedVersion})`).bind(input.actorAuthUserId, timestamp, input.organizationId, input.clientId, ...scope),
       this.database.prepare(`INSERT INTO nf_training_publications (public_id, organization_id, client_id, routine_id, routine_version_id, status, published_by_auth_user_id, published_at) SELECT ?, ?, ?, routine.id, version.id, 'active', ?, ? FROM nf_training_routines AS routine INNER JOIN nf_training_routine_versions AS version ON version.routine_id = routine.id WHERE version.id = (${publishedVersion})`).bind(publicationPublicId, input.organizationId, input.clientId, input.actorAuthUserId, timestamp, ...scope),
       this.database.prepare(`INSERT INTO nf_audit_entries (public_id, organization_id, actor_auth_user_id, actor_role, action, entity_type, entity_public_id, correlation_id, before_json, after_json, occurred_at) SELECT ?, ?, ?, ?, 'training.routine.published', 'training-publication', ?, ?, NULL, ?, ? WHERE EXISTS (${publishedVersion})`).bind(this.generatePublicId("audit"), input.organizationId, input.actorAuthUserId, input.actorRole, publicationPublicId, input.correlationId, JSON.stringify({ routineVersionPublicId: input.routineVersionPublicId, contentHash }), timestamp, ...scope),
     ];
     const result = await this.database.batch(statements);
-    if (changes(result[0]) !== 1) throw new NutriFlowApplicationError(NUTRIFLOW_ERROR_CODES.VERSION_CONFLICT, "O rascunho foi atualizado em outra sessÃ£o.", 409);
+    if (changes(result[0]) !== 1) throw new NutriFlowApplicationError(NUTRIFLOW_ERROR_CODES.VERSION_CONFLICT, "O rascunho foi atualizado em outra sessão.", 409);
     return this.getWorkspace({ organizationId: input.organizationId, clientId: input.clientId });
   }
 }

@@ -16,5 +16,5 @@ export default async function TrainingEditorPage({ params }: { params: Promise<{
   const [client] = await getDb().select().from(clients).where(and(eq(clients.email, email))).limit(1);
   const context = client ? await resolveNutriFlowAdminContext(user.id) : null;
   if (!client || !context || !(await canUseNutriFlowFeature(context, client.id, NUTRIFLOW_FEATURE_FLAGS.TRAINING))) notFound();
-  return <main className="portal-shell training-page"><header className="portal-header"><Link className="portal-brand" href={`/admin/clientes/${encodeURIComponent(client.email)}`}>â† ProntuÃ¡rio de {client.name}</Link><span>NutriFlow Training</span></header><TrainingEditor clientId={client.id} patientName={client.name} /></main>;
+  return <main className="portal-shell training-page"><header className="portal-header"><Link className="portal-brand" href={`/admin/clientes/${encodeURIComponent(client.email)}`}>← Prontuário de {client.name}</Link><span>NutriFlow Training</span></header><TrainingEditor clientId={client.id} patientName={client.name} /></main>;
 }

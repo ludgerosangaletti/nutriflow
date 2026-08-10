@@ -23,10 +23,10 @@ function headers(startedAt: number) { return { "cache-control": "private, no-sto
 
 async function authorized(client: number) {
   const admin = await getAdminSession();
-  if (!admin) throw new NutriFlowApplicationError(NUTRIFLOW_ERROR_CODES.FORBIDDEN, "Acesso nÃ£o autorizado.", 403);
+  if (!admin) throw new NutriFlowApplicationError(NUTRIFLOW_ERROR_CODES.FORBIDDEN, "Acesso não autorizado.", 403);
   const context = await resolveNutriFlowAdminContext(admin.user.id);
   if (!context || !(await canUseNutriFlowFeature(context, client, NUTRIFLOW_FEATURE_FLAGS.TRAINING))) {
-    throw new NutriFlowApplicationError(NUTRIFLOW_ERROR_CODES.FEATURE_DISABLED, "Treino indisponÃ­vel.", 404);
+    throw new NutriFlowApplicationError(NUTRIFLOW_ERROR_CODES.FEATURE_DISABLED, "Treino indisponível.", 404);
   }
   return { context, admin };
 }
@@ -60,7 +60,7 @@ export async function POST(request: Request) {
     const repository = createTrainingEditorRepository();
     let data;
     if (action === "entitlement") {
-      if (context.actor.role !== "owner" && context.actor.role !== "admin") throw new NutriFlowApplicationError(NUTRIFLOW_ERROR_CODES.FORBIDDEN, "Acesso nÃ£o autorizado.", 403);
+      if (context.actor.role !== "owner" && context.actor.role !== "admin") throw new NutriFlowApplicationError(NUTRIFLOW_ERROR_CODES.FORBIDDEN, "Acesso não autorizado.", 403);
       const command = parseConfigureTrainingEntitlementCommandV1({ ...record(body.command), apiVersion: NUTRIFLOW_API_VERSION, clientId: currentClientId, correlationId: correlation });
       data = await repository.configureEntitlement({ organizationId: context.organizationId, actorAuthUserId: admin.user.id, actorRole: context.actor.role, command });
     } else if (action === "create-draft") {
