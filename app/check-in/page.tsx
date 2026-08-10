@@ -6,6 +6,7 @@ import { hasActiveAccess } from "../access";
 import { PatientShell } from "../patient-experience/shell/PatientShell";
 import { requirePatient } from "../supabase/server";
 import CheckInForm from "./check-in-form";
+import { IconAguardando, IconPeso, IconResposta } from "./CheckinIcons";
 import { isWeeklyCheckInAvailable, nextCheckInDateLabel } from "./availability";
 
 export const dynamic = "force-dynamic";
@@ -57,7 +58,7 @@ export default async function CheckInPage() {
 
   return (
     <PatientShell>
-      <main className="portal-shell checkin-page nf-experience-page nf-checkin-v3">
+      <main className={`portal-shell checkin-page nf-experience-page nf-checkin-v3${!completedThisWeek && availableToday ? " is-answering" : ""}`}>
         <header className="portal-header">
           <Link className="portal-brand" href="/area-cliente">← Área do paciente</Link>
           <form action="/auth/sair" method="post">
@@ -65,14 +66,16 @@ export default async function CheckInPage() {
           </form>
         </header>
 
-        {completedThisWeek ? (
+        {!completedThisWeek && availableToday ? (
+          <CheckInForm nutritionistName="Ludgero" />
+        ) : completedThisWeek ? (
           <section className="nf-checkin-complete" aria-labelledby="checkin-complete-title">
             <div>
               <p className="section-kicker">Enviado</p>
               <h1 id="checkin-complete-title">Check-in registrado.</h1>
               <p>Ludgero costuma responder em até 48 horas. Quando houver um retorno, ele aparecerá no histórico abaixo.</p>
             </div>
-            <span aria-label="Check-in enviado">✓</span>
+            <span aria-label="Check-in enviado"><IconResposta size={21} /></span>
           </section>
         ) : (
           <section className="nf-checkin-intro">
@@ -85,11 +88,7 @@ export default async function CheckInPage() {
           </section>
         )}
 
-        {!completedThisWeek && availableToday ? (
-          <section className="checkin-form-section"><CheckInForm /></section>
-        ) : null}
-
-        <section className="nf-checkin-history" aria-labelledby="checkin-history-title">
+        {!completedThisWeek && availableToday ? null : <section className="nf-checkin-history" aria-labelledby="checkin-history-title">
           <header>
             <div>
               <p className="section-kicker">Histórico</p>
@@ -109,10 +108,10 @@ export default async function CheckInPage() {
                         <span>{index === 0 ? "Mais recente" : "Check-in semanal"}</span>
                         <strong>Semana de {dateLabel(item.weekStart)}</strong>
                       </div>
-                      <b className={hasFeedback ? "has-feedback" : ""}>{hasFeedback ? "Com retorno" : item.adminStatus === "reviewed" ? "Revisado" : "Em análise"}</b>
+                      <b className={hasFeedback ? "has-feedback" : ""}>{hasFeedback ? <IconResposta size={14} /> : <IconAguardando size={14} />}{hasFeedback ? "Com retorno" : item.adminStatus === "reviewed" ? "Revisado" : "Em análise"}</b>
                     </header>
                     <div className="nf-checkin-history-summary">
-                      <div><small>Peso</small><strong>{item.weightKg ? `${item.weightKg.replace(".", ",")} kg` : "—"}</strong></div>
+                      <div><small><IconPeso size={14} /> Peso</small><strong>{item.weightKg ? `${item.weightKg.replace(".", ",")} kg` : "—"}</strong></div>
                       <div><small>Aderência</small><strong>{item.adherence}/5</strong></div>
                       <div><small>Sono</small><strong>{item.sleep}/5</strong></div>
                       <div><small>Energia</small><strong>{item.energy}/5</strong></div>
@@ -127,9 +126,9 @@ export default async function CheckInPage() {
               })}
             </div>
           ) : (
-            <div className="nf-checkin-history-empty"><span>✓</span><p>Depois do primeiro envio, seus registros e os retornos do Ludgero ficarão organizados aqui.</p></div>
+            <div className="nf-checkin-history-empty"><span><IconAguardando size={19} /></span><p>Depois do primeiro envio, seus registros e os retornos do Ludgero ficarão organizados aqui.</p></div>
           )}
-        </section>
+        </section>}
       </main>
     </PatientShell>
   );

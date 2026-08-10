@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { IconCheckin, IconEvolucao, IconInicio, IconPlano } from "../QuickAccessIcons";
 
 /**
  * TabBar — navegação inferior persistente do Portal do Paciente.
@@ -26,10 +27,10 @@ import { usePathname } from "next/navigation";
  */
 
 const ITEMS = [
-  { href: "/area-cliente", label: "Início", icon: IconHome },
-  { href: "/plano-alimentar", label: "Plano", icon: IconPlan },
-  { href: "/check-in", label: "Check-in", icon: IconCheck },
-  { href: "/evolucao", label: "Evolução", icon: IconChart },
+  { href: "/area-cliente", label: "Início", icon: IconInicio },
+  { href: "/plano-alimentar", label: "Plano", icon: IconPlano },
+  { href: "/check-in", label: "Check-in", icon: IconCheckin },
+  { href: "/evolucao", label: "Evolução", icon: IconEvolucao },
 ];
 
 export function TabBar() {
@@ -104,51 +105,5 @@ export function TabBar() {
         );
       })}
     </nav>
-  );
-}
-
-/* --- ícones (stroke currentColor, herdam a cor do item ativo/inativo) --- */
-
-function IconHome({ active }) {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
-      stroke="currentColor" strokeWidth={active ? 2.4 : 1.9}
-      strokeLinecap="round" strokeLinejoin="round">
-      <path d="M3 10.5 12 3l9 7.5" />
-      <path d="M5.5 9.5V20h13V9.5" />
-    </svg>
-  );
-}
-
-function IconPlan({ active }) {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
-      stroke="currentColor" strokeWidth={active ? 2.4 : 1.9}
-      strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="8.5" />
-      <path d="M12 3.5v8.5h8.5" />
-    </svg>
-  );
-}
-
-function IconCheck({ active }) {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
-      stroke="currentColor" strokeWidth={active ? 2.4 : 1.9}
-      strokeLinecap="round" strokeLinejoin="round">
-      <rect x="4" y="4" width="16" height="16" rx="4" />
-      <path d="m8.5 12.5 2.5 2.5 4.5-5" />
-    </svg>
-  );
-}
-
-function IconChart({ active }) {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
-      stroke="currentColor" strokeWidth={active ? 2.4 : 1.9}
-      strokeLinecap="round" strokeLinejoin="round">
-      <path d="M4 19h16" />
-      <path d="m5 15 4.5-5 3.5 3.5L19 6" />
-    </svg>
   );
 }

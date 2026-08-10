@@ -30,6 +30,8 @@ const TITLES = {
   "/check-in": "Check-in",
   "/evolucao": "Evolução",
   "/documentos": "Documentos",
+  "/treino": "Treino",
+  "/treino-info": "Acompanhamento de treino",
 };
 
 export function AppHeader({ syncState = "idle", onBack }) {

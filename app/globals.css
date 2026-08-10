@@ -9053,6 +9053,117 @@ body.nf-sheet-open{overflow:hidden}
 .clinical-report-form select { min-height: 46px; padding: 0 13px; border: 1px solid #d8d6ce; border-radius: 12px; background: #fff; color: #111; font: inherit; }
 .clinical-report-form .button { min-height: 46px; white-space: nowrap; }
 .admin-document-source-actions { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; }
+
+/* Unified quick access, training offer and check-in flow (patient UX v4). */
+.nf-quick-access{display:grid;gap:10px}
+.nf-quick-access>header{display:flex;align-items:end;justify-content:space-between;gap:10px;padding:5px 2px 0}
+.nf-quick-access>header span{font-size:12px;font-weight:900;letter-spacing:.08em;text-transform:uppercase}
+.nf-quick-access>header small{color:var(--ink-muted);font-size:11px}
+.nf-quick-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.nf-quick-card{min-width:0;min-height:126px;display:grid;grid-template-columns:42px minmax(0,1fr) auto;grid-template-rows:auto 1fr;gap:10px 9px;align-items:start;padding:14px;border:1px solid var(--line);border-radius:20px;background:var(--paper);color:var(--ink);text-decoration:none}
+.nf-quick-card.is-primary{border-color:var(--ink);background:var(--ink);color:#fff}
+.nf-quick-card>i,.nf-quick-row>i{display:grid;place-items:center;width:42px;height:42px;border-radius:13px;background:var(--cream-deep);color:var(--ink);font-style:normal}
+.nf-quick-card.is-primary>i{background:var(--lime)}
+.nf-quick-card>span{min-width:0;align-self:end;grid-column:1/3}
+.nf-quick-card strong,.nf-quick-card small{display:block}
+.nf-quick-card strong{font-size:15px;line-height:1.25;letter-spacing:-.01em}
+.nf-quick-card small{margin-top:3px;color:var(--ink-muted);font-size:12px;font-weight:500;line-height:1.35}
+.nf-quick-card.is-primary small{color:rgba(255,255,255,.64)}
+.nf-quick-card>b{grid-column:3;grid-row:1/3;align-self:end;color:currentColor;font-size:15px;opacity:.48}
+.nf-quick-row{min-height:50px;display:grid;grid-template-columns:32px minmax(0,1fr) auto;align-items:center;gap:11px;padding:8px 14px;border:1px solid var(--line);border-radius:16px;color:var(--ink);text-decoration:none}
+.nf-quick-row>i{width:32px;height:32px;border-radius:10px}
+.nf-quick-row>span{font-size:14px;font-weight:700}
+.nf-quick-row>b{opacity:.45}
+.nf-training-offer-card{min-height:106px;display:grid;grid-template-columns:42px minmax(0,1fr);gap:6px 12px;padding:14px;border:1px dashed rgba(10,10,10,.3);border-radius:20px;color:var(--ink);text-decoration:none}
+.nf-training-offer-card>span{grid-column:1/-1;color:var(--ink-muted);font-size:10px;font-weight:900;letter-spacing:.06em;text-transform:uppercase}
+.nf-training-offer-card>i{grid-row:2/4;display:grid;place-items:center;width:42px;height:42px;border:1px solid rgba(10,10,10,.2);border-radius:13px;font-style:normal}
+.nf-training-offer-card>strong{align-self:end;font-size:15px;line-height:1.25}
+.nf-training-offer-card>small{color:var(--ink-muted);font-size:12.5px}
+
+.nf-training-offer-page{width:min(100%,620px);margin:0 auto;padding:2px 0 28px}
+.nf-training-offer-back{display:inline-flex;min-height:44px;align-items:center;margin-bottom:8px;color:var(--ink-muted);font-size:13px;font-weight:750;text-decoration:none}
+.nf-training-offer-hero{padding:24px 22px;border-radius:24px;background:var(--ink);color:#fff}
+.nf-training-offer-hero>i{display:grid;place-items:center;width:44px;height:44px;margin-bottom:18px;border-radius:14px;background:var(--lime);color:var(--ink);font-style:normal}
+.nf-training-offer-hero .nf-eyebrow{color:var(--lime)}
+.nf-training-offer-hero h1{margin:9px 0 9px;font-size:clamp(1.7rem,7vw,2.35rem);line-height:1.05;letter-spacing:-.045em}
+.nf-training-offer-hero>p:last-child{margin:0;color:rgba(255,255,255,.76);font-size:14.5px;line-height:1.55}
+.nf-training-offer-features,.nf-training-offer-how{margin-top:12px;padding:18px;border:1px solid var(--line);border-radius:22px;background:var(--paper)}
+.nf-training-offer-features ul{margin:6px 0 0;padding:0;list-style:none}
+.nf-training-offer-features li{display:flex;gap:11px;padding:11px 0;border-bottom:1px solid var(--line)}
+.nf-training-offer-features li:last-child{border-bottom:0}
+.nf-training-offer-features li>i{display:grid;place-items:center;flex:0 0 22px;width:22px;height:22px;border-radius:50%;background:var(--lime);color:var(--ink);font-size:12px;font-style:normal;font-weight:900}
+.nf-training-offer-features strong,.nf-training-offer-features small{display:block}
+.nf-training-offer-features strong{font-size:14.5px}.nf-training-offer-features small{margin-top:2px;color:var(--ink-muted);font-size:13px;line-height:1.45}
+.nf-training-offer-how{border-style:dashed;background:var(--cream-deep)}
+.nf-training-offer-how>p:last-child{margin:7px 0 0;font-size:14px;line-height:1.6}
+.nf-training-offer-faq{margin-top:8px;padding:0 16px;border:1px solid var(--line);border-radius:16px;background:var(--paper)}
+.nf-training-offer-faq summary{min-height:52px;display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:13.5px;font-weight:800;cursor:pointer}
+.nf-training-offer-faq summary::after{content:"+";font-size:18px;font-weight:500}.nf-training-offer-faq[open] summary::after{content:"−"}
+.nf-training-offer-faq p{margin:0;padding:0 0 15px;color:var(--ink-muted);font-size:13px;line-height:1.5}
+.nf-training-offer-cta{min-height:54px;display:flex;align-items:center;justify-content:center;margin-top:14px;padding:0 18px;border-radius:14px;background:#168b45;color:#fff;font-size:15px;font-weight:800;text-decoration:none}
+.nf-training-offer-note{margin:10px 0 0;color:var(--ink-muted);font-size:12px;line-height:1.5;text-align:center}
+
+.nf-checkin-v3.is-answering{max-width:680px;padding:0}
+.nf-checkin-new-screen{width:100%;min-height:calc(100dvh - var(--nf-header-h) - 126px - var(--nf-safe-top) - var(--nf-safe-bottom));display:flex;flex-direction:column;border-radius:24px;background:var(--cream);color:var(--ink)}
+.nf-checkin-new-intro{padding:clamp(22px,5vw,36px) clamp(20px,5vw,34px)}
+.nf-checkin-nutritionist{display:flex;align-items:center;gap:12px;margin-bottom:clamp(26px,7vh,52px)}
+.nf-checkin-nutritionist span,.nf-checkin-nutritionist strong,.nf-checkin-nutritionist small{display:block}.nf-checkin-nutritionist strong{font-size:15px}.nf-checkin-nutritionist small{margin-top:2px;color:var(--ink-muted);font-size:12.5px}
+.nf-checkin-avatar{display:grid;place-items:center;flex:0 0 auto;border-radius:50%;background:var(--ink);color:var(--lime);font-size:15px;font-style:normal;font-weight:800}
+.nf-checkin-new-intro h1,.nf-checkin-new-done h1{margin:0 0 12px;font-size:clamp(1.85rem,8vw,2.45rem);line-height:1.08;letter-spacing:-.04em}
+.nf-checkin-new-intro>div:nth-child(2)>p{max-width:560px;margin:0;color:var(--ink-soft);font-size:15.5px;line-height:1.6}
+.nf-checkin-meta{display:flex;gap:28px;margin:auto 0 20px;padding-top:34px}
+.nf-checkin-meta>span{display:grid;grid-template-columns:20px auto;align-items:center;gap:1px 6px;color:var(--ink-muted)}
+.nf-checkin-meta strong{color:var(--ink);font-size:14px}.nf-checkin-meta small{grid-column:1/-1;font-size:12px}
+.nf-checkin-new-cta{width:100%;min-height:54px;border:0;border-radius:15px;background:var(--ink);color:#fff;font:inherit;font-size:15.5px;font-weight:750;cursor:pointer}
+.nf-checkin-new-cta:disabled{background:rgba(10,10,10,.12);color:rgba(10,10,10,.35);cursor:default}
+.nf-checkin-new-ghost{width:100%;min-height:44px;margin-top:4px;border:0;background:transparent;color:var(--ink-muted);font:inherit;font-size:13.5px;font-weight:650;cursor:pointer}
+.nf-checkin-new-question{overflow:visible}
+.nf-checkin-new-progress{height:52px;display:grid;grid-template-columns:36px minmax(0,1fr) 38px;align-items:center;gap:12px;padding:0 20px}
+.nf-checkin-new-progress>button{width:36px;height:36px;border:0;background:transparent;color:var(--ink);font-size:31px;line-height:1;cursor:pointer}
+.nf-checkin-new-progress>div{height:4px;overflow:hidden;border-radius:99px;background:rgba(10,10,10,.1)}
+.nf-checkin-new-progress>div>i{display:block;height:100%;border-radius:inherit;background:var(--ink);transition:width .32s ease}
+.nf-checkin-new-progress>span{color:var(--ink-muted);font:650 12px/1 var(--nf-mono,ui-monospace,monospace);text-align:right}
+.nf-checkin-new-body{flex:1;display:flex;flex-direction:column;padding:0 20px 22px}
+.nf-checkin-new-body>header>h1{margin:20px 0 0;font-size:clamp(1.6rem,6vw,2.15rem);line-height:1.14;letter-spacing:-.035em}
+.nf-checkin-new-body>header>p{margin:10px 0 0;color:var(--ink-muted);font-size:14.5px;line-height:1.5}
+.nf-checkin-voice{display:flex;gap:11px;align-items:flex-start;margin-top:18px;padding:13px 15px;border:1px solid var(--line);border-radius:18px;background:var(--paper)}
+.nf-checkin-voice p{margin:0!important;color:var(--ink-soft)!important;font-size:13.5px!important;line-height:1.5!important}
+.nf-checkin-new-field{margin-top:auto;padding-top:26px}
+.nf-checkin-scale-ends{display:flex;justify-content:space-between;gap:20px;margin:0 2px 10px;color:var(--ink-muted);font-size:12px}
+.nf-checkin-choice-list{display:grid;gap:8px}
+.nf-checkin-choice-list button{min-height:54px;display:flex;align-items:center;gap:14px;padding:0 18px;border:1px solid var(--line);border-radius:16px;background:var(--paper);color:var(--ink);font:inherit;font-size:15px;font-weight:650;text-align:left;cursor:pointer}
+.nf-checkin-choice-list button>b{flex:0 0 22px;color:var(--ink-muted);font:700 14px/1 var(--nf-mono,ui-monospace,monospace)}
+.nf-checkin-choice-list button.is-selected{border-color:var(--ink);background:var(--ink);color:#fff}.nf-checkin-choice-list button.is-selected>b{color:var(--lime)}
+.nf-checkin-number{display:flex;align-items:baseline;gap:9px;padding-bottom:6px;border-bottom:2px solid var(--ink)}
+.nf-checkin-number input{min-width:0;width:100%;padding:0;border:0;outline:0;background:transparent;color:var(--ink);font:650 50px/1 var(--nf-mono,ui-monospace,monospace);letter-spacing:-.04em}
+.nf-checkin-number span{color:var(--ink-muted);font-size:18px;font-weight:750}
+.nf-checkin-new-field textarea{width:100%;min-height:140px;padding:14px 16px;border:1px solid var(--line);border-radius:16px;outline:0;resize:vertical;background:var(--paper);color:var(--ink);font:inherit;font-size:16px;line-height:1.5}
+.nf-checkin-new-field textarea:focus,.nf-checkin-number:focus-within{outline:2px solid var(--ink);outline-offset:2px}
+.nf-checkin-new-field>.nf-checkin-new-cta{margin-top:18px}
+.nf-checkin-new-error,.nf-checkin-new-footnote{margin:10px 0 0;font-size:12.5px}.nf-checkin-new-error{color:#a82e26}.nf-checkin-new-footnote{color:var(--ink-muted)}
+.nf-checkin-new-done{align-items:center;justify-content:center;padding:32px;text-align:center}
+.nf-checkin-new-done>i{display:grid;place-items:center;width:62px;height:62px;margin-bottom:20px;border-radius:50%;background:var(--lime);font-size:29px;font-style:normal}
+.nf-checkin-new-done>p{margin:0 0 8px;color:var(--ink-muted);font-size:15px;line-height:1.5}.nf-checkin-new-done>.nf-checkin-new-cta{max-width:260px;margin-top:20px}
+.nf-checkin-history-list article>header>b{display:inline-flex;align-items:center;gap:5px}.nf-checkin-history-summary small{display:flex;align-items:center;gap:4px}
+
+@media(max-width:520px){
+  .nf-quick-access>header small{max-width:128px;text-align:right}
+  .nf-quick-card{min-height:122px;padding:13px}
+  .nf-checkin-new-screen{min-height:calc(100dvh - var(--nf-header-h) - 112px - var(--nf-safe-top) - var(--nf-safe-bottom));border-radius:18px}
+  .nf-checkin-new-intro{padding:22px 18px}
+  .nf-checkin-nutritionist{margin-bottom:30px}
+  .nf-checkin-meta{gap:18px;padding-top:28px}
+  .nf-checkin-new-progress{padding-inline:12px}
+  .nf-checkin-new-body{padding:0 14px 18px}
+  .nf-checkin-new-body>header>h1{margin-top:14px}
+}
+
+@media(max-width:360px){
+  .nf-quick-grid{grid-template-columns:1fr}
+  .nf-quick-card{min-height:82px;grid-template-columns:38px minmax(0,1fr) auto;grid-template-rows:1fr}
+  .nf-quick-card>i{width:38px;height:38px}.nf-quick-card>span{grid-column:2;align-self:center}.nf-quick-card>b{grid-column:3;grid-row:1;align-self:center}
+  .nf-checkin-meta{display:grid;gap:10px}
+}
 .evolution-report-action { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 24px; align-items: center; margin-top: 18px; padding: 22px; border: 1px solid #dddcd6; border-radius: 22px; background: #fff; }
 .evolution-report-action h2 { margin: 4px 0 7px; }
 .evolution-report-action p { margin: 0; color: #605e58; }

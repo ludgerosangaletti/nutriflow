@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { TrainingPatientAccessStateV1 } from "../../modules/nutriflow/contracts/v1/training.ts";
+import { QuickAccess } from "./QuickAccess";
 
 type Action = { eyebrow: string; title: string; description: string; href: string | null; button: string | null };
 
@@ -48,14 +49,7 @@ export function PatientHomeExperience({
         {action.href && action.button ? <Link className="nf-btn nf-btn-dark" href={action.href}>{action.button}</Link> : null}
       </section>
 
-      <div className="nf-home-section-title"><span>Acessos rápidos</span><small>O que você precisa agora?</small></div>
-      <section className="nf-home-links nf-home-links-grid" aria-label="Recursos principais">
-        {training.state === "commercial" ? <a href={`https://wa.me/5542999846280?text=${encodeURIComponent("Olá! Tenho interesse em contratar meu treino personalizado.")}`}><i aria-hidden="true">△</i><span>{training.title}<small>{training.subtitle}</small></span><b>→</b></a> : <Link className={training.state === "today" ? "is-primary" : ""} href="/treino"><i aria-hidden="true">△</i><span>{training.title}<small>{training.subtitle}</small></span><b>→</b></Link>}
-        {structuredPlanEnabled ? <Link className="is-primary" href="/plano-alimentar"><i aria-hidden="true">◐</i><span>Plano alimentar<small>Refeições do dia</small></span><b>→</b></Link> : null}
-        <Link href="/check-in"><i aria-hidden="true">✓</i><span>Check-in<small>{checkInDone ? "Enviado nesta semana" : checkInAvailable ? "Disponível hoje" : "Abre na segunda-feira"}</small></span><b>→</b></Link>
-        <Link href="/documentos"><i aria-hidden="true">□</i><span>Documentos<small>{documentsCount ? `${documentsCount} disponível(is)` : "Protocolos e avaliações"}</small></span><b>→</b></Link>
-        <Link href="/evolucao"><i aria-hidden="true">↗</i><span>Evolução<small>{photosCount ? `${photosCount} foto(s)` : "Registro opcional"}</small></span><b>→</b></Link>
-      </section>
+      <QuickAccess training={training} structuredPlanEnabled={Boolean(structuredPlanEnabled)} documentsCount={documentsCount} checkInDone={checkInDone} checkInAvailable={checkInAvailable} photosCount={photosCount} />
       {currentProtocol ? <Link className="nf-home-adjustments" href="/ajustes">Solicitar ajuste ou falar com Ludgero <span>→</span></Link> : null}
     </main>
   );
