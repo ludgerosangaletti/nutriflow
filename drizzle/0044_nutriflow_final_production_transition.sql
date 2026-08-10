@@ -34,46 +34,38 @@ WHERE organization_id = (
     'nutriflow.training.enabled'
   );
 --> statement-breakpoint
-INSERT INTO nf_feature_flag_overrides (
-  public_id,
-  flag_key,
-  organization_id,
-  client_id,
-  enabled,
-  variant,
-  reason,
-  expires_at,
-  created_by_auth_user_id,
-  created_at,
-  updated_at
-)
-SELECT
-  'flag_prod_' || lower(hex(randomblob(12))),
-  flags.flag_key,
-  organization.id,
-  NULL,
-  1,
-  'production-stable',
-  'Operação oficial da organização',
-  NULL,
-  'system-production-transition',
-  CURRENT_TIMESTAMP,
-  CURRENT_TIMESTAMP
+INSERT INTO nf_feature_flag_overrides (public_id, flag_key, organization_id, client_id, enabled, variant, reason, expires_at, created_by_auth_user_id, created_at, updated_at)
+SELECT 'flag_prod_' || lower(hex(randomblob(12))), 'nutriflow.editor.enabled', organization.id, NULL, 1, 'production-stable', 'Operação oficial da organização', NULL, 'system-production-transition', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
 FROM nf_organizations AS organization
-CROSS JOIN (
-  SELECT 'nutriflow.editor.enabled' AS flag_key
-  UNION ALL SELECT 'nutriflow.catalog.global.enabled'
-  UNION ALL SELECT 'nutriflow.meal_templates.enabled'
-  UNION ALL SELECT 'nutriflow.recipes.enabled'
-  UNION ALL SELECT 'nutriflow.patient_view.enabled'
-  UNION ALL SELECT 'nutriflow.training.enabled'
-) AS flags
-WHERE organization.public_id = 'org_ludgero_sangaletti'
-  AND organization.status = 'active'
-  AND NOT EXISTS (
-    SELECT 1
-    FROM nf_feature_flag_overrides AS existing
-    WHERE existing.flag_key = flags.flag_key
-      AND existing.organization_id = organization.id
-      AND existing.client_id IS NULL
-  );
+WHERE organization.public_id = 'org_ludgero_sangaletti' AND organization.status = 'active'
+  AND NOT EXISTS (SELECT 1 FROM nf_feature_flag_overrides AS existing WHERE existing.flag_key = 'nutriflow.editor.enabled' AND existing.organization_id = organization.id AND existing.client_id IS NULL);
+--> statement-breakpoint
+INSERT INTO nf_feature_flag_overrides (public_id, flag_key, organization_id, client_id, enabled, variant, reason, expires_at, created_by_auth_user_id, created_at, updated_at)
+SELECT 'flag_prod_' || lower(hex(randomblob(12))), 'nutriflow.catalog.global.enabled', organization.id, NULL, 1, 'production-stable', 'Operação oficial da organização', NULL, 'system-production-transition', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+FROM nf_organizations AS organization
+WHERE organization.public_id = 'org_ludgero_sangaletti' AND organization.status = 'active'
+  AND NOT EXISTS (SELECT 1 FROM nf_feature_flag_overrides AS existing WHERE existing.flag_key = 'nutriflow.catalog.global.enabled' AND existing.organization_id = organization.id AND existing.client_id IS NULL);
+--> statement-breakpoint
+INSERT INTO nf_feature_flag_overrides (public_id, flag_key, organization_id, client_id, enabled, variant, reason, expires_at, created_by_auth_user_id, created_at, updated_at)
+SELECT 'flag_prod_' || lower(hex(randomblob(12))), 'nutriflow.meal_templates.enabled', organization.id, NULL, 1, 'production-stable', 'Operação oficial da organização', NULL, 'system-production-transition', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+FROM nf_organizations AS organization
+WHERE organization.public_id = 'org_ludgero_sangaletti' AND organization.status = 'active'
+  AND NOT EXISTS (SELECT 1 FROM nf_feature_flag_overrides AS existing WHERE existing.flag_key = 'nutriflow.meal_templates.enabled' AND existing.organization_id = organization.id AND existing.client_id IS NULL);
+--> statement-breakpoint
+INSERT INTO nf_feature_flag_overrides (public_id, flag_key, organization_id, client_id, enabled, variant, reason, expires_at, created_by_auth_user_id, created_at, updated_at)
+SELECT 'flag_prod_' || lower(hex(randomblob(12))), 'nutriflow.recipes.enabled', organization.id, NULL, 1, 'production-stable', 'Operação oficial da organização', NULL, 'system-production-transition', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+FROM nf_organizations AS organization
+WHERE organization.public_id = 'org_ludgero_sangaletti' AND organization.status = 'active'
+  AND NOT EXISTS (SELECT 1 FROM nf_feature_flag_overrides AS existing WHERE existing.flag_key = 'nutriflow.recipes.enabled' AND existing.organization_id = organization.id AND existing.client_id IS NULL);
+--> statement-breakpoint
+INSERT INTO nf_feature_flag_overrides (public_id, flag_key, organization_id, client_id, enabled, variant, reason, expires_at, created_by_auth_user_id, created_at, updated_at)
+SELECT 'flag_prod_' || lower(hex(randomblob(12))), 'nutriflow.patient_view.enabled', organization.id, NULL, 1, 'production-stable', 'Operação oficial da organização', NULL, 'system-production-transition', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+FROM nf_organizations AS organization
+WHERE organization.public_id = 'org_ludgero_sangaletti' AND organization.status = 'active'
+  AND NOT EXISTS (SELECT 1 FROM nf_feature_flag_overrides AS existing WHERE existing.flag_key = 'nutriflow.patient_view.enabled' AND existing.organization_id = organization.id AND existing.client_id IS NULL);
+--> statement-breakpoint
+INSERT INTO nf_feature_flag_overrides (public_id, flag_key, organization_id, client_id, enabled, variant, reason, expires_at, created_by_auth_user_id, created_at, updated_at)
+SELECT 'flag_prod_' || lower(hex(randomblob(12))), 'nutriflow.training.enabled', organization.id, NULL, 1, 'production-stable', 'Operação oficial da organização', NULL, 'system-production-transition', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+FROM nf_organizations AS organization
+WHERE organization.public_id = 'org_ludgero_sangaletti' AND organization.status = 'active'
+  AND NOT EXISTS (SELECT 1 FROM nf_feature_flag_overrides AS existing WHERE existing.flag_key = 'nutriflow.training.enabled' AND existing.organization_id = organization.id AND existing.client_id IS NULL);
