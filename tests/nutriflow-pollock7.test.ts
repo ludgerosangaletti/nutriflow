@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import { calculatePollock7 } from "../modules/nutriflow/domain/assessments/pollock-7.ts";
+import { pollock7AssessmentContent, pollock7AssessmentSnapshot } from "../modules/nutriflow/domain/assessments/record.ts";
 
 const input = {
   sex: "male" as const,
@@ -39,8 +40,28 @@ test("salvamento da avaliação presencial é idempotente", () => {
   const form = readFileSync(new URL("../app/admin/clientes/[email]/clinical-assessment-form.tsx", import.meta.url), "utf8");
   assert.match(route, /calculation: result, capturedAt/);
   assert.match(route, /onConflictDoNothing/);
+  assert.match(route, /semanticDuplicate/);
   assert.match(route, /duplicate: true/);
   assert.match(form, /capturedAt: calculation\.capturedAt/);
+});
+
+test("deduplicação ignora o horário e considera os dados clínicos", () => {
+  const result = calculatePollock7({ ...input, circumferencesCm: {} });
+  const first = pollock7AssessmentSnapshot({ ...input, circumferencesCm: {} }, result, "2026-08-11T15:00:00.000Z");
+  const second = pollock7AssessmentSnapshot({ ...input, circumferencesCm: {} }, result, "2026-08-11T15:01:00.000Z");
+  assert.notDeepEqual(first, second);
+  assert.deepEqual(pollock7AssessmentContent(first.input, first.result), pollock7AssessmentContent(second.input, second.result));
+});
+
+test("edição recalcula e audita a avaliação sem trocar sua identidade", () => {
+  const route = readFileSync(new URL("../app/api/admin/clinical-assessments/route.ts", import.meta.url), "utf8");
+  const form = readFileSync(new URL("../app/admin/clientes/[email]/clinical-assessment-form.tsx", import.meta.url), "utf8");
+  const history = readFileSync(new URL("../app/admin/clientes/[email]/clinical-assessment-history.tsx", import.meta.url), "utf8");
+  assert.match(route, /export async function PUT/);
+  assert.match(route, /clinical-assessment\.updated/);
+  assert.match(route, /WHERE public_id = \? AND client_id = \? AND organization_id = \?/);
+  assert.match(form, /method: assessment \? "PUT" : "POST"/);
+  assert.match(history, /editAssessment=/);
 });
 
 test("exclusão de avaliação exige paciente e organização correspondentes", () => {

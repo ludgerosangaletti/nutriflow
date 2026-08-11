@@ -16,7 +16,7 @@ import InPersonCareManager from "./in-person-care-manager";
 import AppointmentRequests from "./appointment-requests";
 import { canUseNutriFlowEditor, canUseNutriFlowFeature, ensureNutriFlowAdminContext } from "../../../nutriflow/server";
 import { NUTRIFLOW_FEATURE_FLAGS } from "../../../../modules/nutriflow/config/feature-flags";
-import ClinicalAssessmentForm from "./clinical-assessment-form";
+import ClinicalAssessmentForm, { type EditableAssessment } from "./clinical-assessment-form";
 import ClinicalAssessmentHistory from "./clinical-assessment-history";
 import EnergyExpenditureForm from "./energy-expenditure-form";
 
@@ -24,8 +24,10 @@ export const dynamic = "force-dynamic";
 
 export default async function ClientAnswers({
   params,
+  searchParams,
 }: {
   params: Promise<{ email: string }>;
+  searchParams: Promise<{ editAssessment?: string | string[] }>;
 }) {
   const adminUser = await requireAdmin("/admin/clientes");
 
@@ -62,6 +64,9 @@ export default async function ClientAnswers({
   const patientGoalProgress = await db.select().from(goalProgress).where(eq(goalProgress.clientEmail, email));
   const patientAdjustments = await db.select().from(adjustmentRequests).where(eq(adjustmentRequests.clientEmail, email));
   const clinicalAssessments = await db.select().from(nfClinicalAssessments).where(eq(nfClinicalAssessments.clientId, row.client.id)).orderBy(asc(nfClinicalAssessments.capturedAt));
+  const requestedAssessmentId = (await searchParams).editAssessment;
+  const editableAssessment = clinicalAssessments.find((assessment) => assessment.publicId === (Array.isArray(requestedAssessmentId) ? requestedAssessmentId[0] : requestedAssessmentId));
+  const editableSnapshot = editableAssessment ? JSON.parse(editableAssessment.snapshotJson) as { input: EditableAssessment["input"] } : null;
   const energyCalculations = await db.select().from(nfEnergyExpenditureCalculations).where(eq(nfEnergyExpenditureCalculations.clientId, row.client.id)).orderBy(desc(nfEnergyExpenditureCalculations.createdAt));
   const [activePublication] = await db.select({ id: nfPublications.id }).from(nfPublications).where(and(eq(nfPublications.clientId, row.client.id), eq(nfPublications.status, "active"))).limit(1);
   const appointmentRequests = row.client.modality === "in_person"
@@ -202,7 +207,7 @@ export default async function ClientAnswers({
         ) : null}
         {isInPerson ? <details className="response-section clinical-assessments-section" id="avaliacoes" open>
           <summary className="admin-section-summary"><div><p className="section-kicker">Linha do tempo clínica</p><h2>Avaliações físicas</h2></div><strong>{clinicalAssessments.length} registro(s)</strong><i aria-hidden="true">⌄</i></summary>
-          <ClinicalAssessmentForm email={row.client.email} />
+          <ClinicalAssessmentForm key={editableAssessment?.publicId ?? "new"} email={row.client.email} assessment={editableAssessment && editableSnapshot ? { publicId: editableAssessment.publicId, capturedAt: editableAssessment.capturedAt, input: editableSnapshot.input } : undefined} />
           <ClinicalAssessmentHistory assessments={clinicalAssessments} email={row.client.email} />
         </details> : null}
         <details className="response-section energy-expenditure-section" id="energia" open>
