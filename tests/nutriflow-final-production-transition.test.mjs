@@ -80,3 +80,18 @@ test("a homologação 9/9 não participa mais da tela administrativa normal", ()
   const page = readFileSync(new URL("../app/admin/clientes/[email]/page.tsx", import.meta.url), "utf8");
   assert.doesNotMatch(page, /NutriFlowHomologationPanel|getControlledHomologationSnapshot/);
 });
+
+test("o cadastro presencial resolve a organização com o usuário da sessão administrativa", () => {
+  const route = readFileSync(
+    new URL("../app/api/admin/pacientes-presenciais/route.ts", import.meta.url),
+    "utf8",
+  );
+  assert.match(
+    route,
+    /resolveNutriFlowAdminContext\(admin\.user\.id\)/,
+  );
+  assert.doesNotMatch(
+    route,
+    /resolveNutriFlowAdminContext\(admin\.id\)/,
+  );
+});

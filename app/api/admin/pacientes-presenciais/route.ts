@@ -123,7 +123,9 @@ async function deliverActivationWhatsApp(input: {
 
 export async function POST(request: Request) {
   const admin = await getAdminSession();
-  const nutriFlowContext = admin ? await resolveNutriFlowAdminContext(admin.id) : null;
+  const nutriFlowContext = admin
+    ? await resolveNutriFlowAdminContext(admin.user.id)
+    : null;
   if (!nutriFlowContext) return Response.json({ error: "OrganizaÃ§Ã£o nÃ£o autorizada." }, { status: 403 });
   if (!admin) return Response.json({ error: "Não autorizado." }, { status: 403 });
 
