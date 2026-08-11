@@ -33,3 +33,22 @@ test("avaliação presencial usa o vínculo organizacional direto do paciente", 
   assert.match(route, /eq\(clients\.organizationId, context\.organizationId\)/);
   assert.doesNotMatch(route, /nfPlans|innerJoin/);
 });
+
+test("salvamento da avaliação presencial é idempotente", () => {
+  const route = readFileSync(new URL("../app/api/admin/clinical-assessments/route.ts", import.meta.url), "utf8");
+  const form = readFileSync(new URL("../app/admin/clientes/[email]/clinical-assessment-form.tsx", import.meta.url), "utf8");
+  assert.match(route, /calculation: result, capturedAt/);
+  assert.match(route, /onConflictDoNothing/);
+  assert.match(route, /duplicate: true/);
+  assert.match(form, /capturedAt: calculation\.capturedAt/);
+});
+
+test("exclusão de avaliação exige paciente e organização correspondentes", () => {
+  const route = readFileSync(new URL("../app/api/admin/clinical-assessments/route.ts", import.meta.url), "utf8");
+  const button = readFileSync(new URL("../app/admin/clientes/[email]/clinical-assessment-delete-button.tsx", import.meta.url), "utf8");
+  assert.match(route, /export async function DELETE/);
+  assert.match(route, /eq\(nfClinicalAssessments\.clientId, client\.id\)/);
+  assert.match(route, /eq\(nfClinicalAssessments\.organizationId, context\.organizationId\)/);
+  assert.match(route, /clinical-assessment\.deleted/);
+  assert.match(button, /window\.confirm/);
+});
