@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 import { calculatePollock7 } from "../modules/nutriflow/domain/assessments/pollock-7.ts";
 
@@ -22,4 +23,13 @@ test("Pollock 7 mantém a exigência clínica das sete dobras", () => {
   const incomplete = { ...input.skinfoldsMm } as Record<string, number>;
   delete incomplete.thigh;
   assert.throws(() => calculatePollock7({ ...input, skinfoldsMm: incomplete as typeof input.skinfoldsMm, circumferencesCm: {} }), /sete dobras/i);
+});
+
+test("avaliação presencial usa o vínculo organizacional direto do paciente", () => {
+  const route = readFileSync(
+    new URL("../app/api/admin/clinical-assessments/route.ts", import.meta.url),
+    "utf8",
+  );
+  assert.match(route, /eq\(clients\.organizationId, context\.organizationId\)/);
+  assert.doesNotMatch(route, /nfPlans|innerJoin/);
 });
