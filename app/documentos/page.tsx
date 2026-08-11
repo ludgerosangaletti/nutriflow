@@ -58,7 +58,7 @@ export default async function DocumentsPage() {
         <p className="section-kicker">Seus documentos</p>
         <h1>
           {client.modality === "in_person"
-            ? "Protocolo e avaliação física."
+            ? "Protocolos e avaliações."
             : "Protocolo e materiais."}
         </h1>
         <p>
@@ -78,7 +78,7 @@ export default async function DocumentsPage() {
                 {document.documentType === "protocol"
                   ? "Protocolo alimentar"
                   : document.documentType === "physical_assessment"
-                    ? "Avaliação física"
+                    ? "Bioimpedância"
                   : "Material auxiliar"}
               </span>
               <strong>{document.title}</strong>

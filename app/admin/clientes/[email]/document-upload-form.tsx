@@ -153,13 +153,13 @@ export default function DocumentUploadForm({
       <div className="document-form-grid">
         <label>
           Tipo
-          <select defaultValue="protocol" name="documentType">
-            <option value="protocol">Protocolo alimentar</option>
+          <select defaultValue={inPerson ? "physical_assessment" : "protocol"} name="documentType">
             {inPerson ? (
-              <option value="physical_assessment">Avaliação física</option>
-            ) : (
+              <option value="physical_assessment">Bioimpedância</option>
+            ) : <>
+              <option value="protocol">Protocolo alimentar</option>
               <option value="auxiliary">Material auxiliar</option>
-            )}
+            </>}
           </select>
         </label>
         <label>
@@ -169,7 +169,7 @@ export default function DocumentUploadForm({
         <label className="document-title-field">
           Título exibido ao paciente
           <input
-            defaultValue="Protocolo alimentar"
+            defaultValue={inPerson ? "Bioimpedância" : "Protocolo alimentar"}
             maxLength={120}
             name="title"
             required

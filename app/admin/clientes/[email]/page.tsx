@@ -19,6 +19,7 @@ import { NUTRIFLOW_FEATURE_FLAGS } from "../../../../modules/nutriflow/config/fe
 import ClinicalAssessmentForm, { type EditableAssessment } from "./clinical-assessment-form";
 import ClinicalAssessmentHistory from "./clinical-assessment-history";
 import EnergyExpenditureForm from "./energy-expenditure-form";
+import DocumentUploadForm from "./document-upload-form";
 
 export const dynamic = "force-dynamic";
 
@@ -174,7 +175,7 @@ export default async function ClientAnswers({
           ) : null}
           {trainingEnabled ? <Link className="is-nutriflow" href={`/admin/clientes/${encodeURIComponent(row.client.email)}/training`}>Treino</Link> : null}
           {isInPerson ? <><a href="#dados-presenciais">Atendimento</a><Link href={`/admin/clientes/${encodeURIComponent(row.client.email)}/anamnese`}>{row.anamnesis ? "Editar anamnese" : "Preencher anamnese"}</Link></> : null}
-          <a href="#documentos">{isInPerson ? "Protocolo e avaliação" : "Documentos"}</a>
+          <a href="#documentos">{isInPerson ? "Bioimpedância" : "Documentos"}</a>
           <a href="#check-ins">Check-ins</a>
           <a href="#energia">Energia</a>
           <a href="#ajustes">Ajustes</a>
@@ -287,16 +288,20 @@ export default async function ClientAnswers({
         </details>
         <details className="response-section admin-documents-section" id="documentos">
           <summary className="admin-section-summary">
-            <div><p className="section-kicker">{isInPerson ? "Atendimento presencial" : "Materiais"}</p><h2>{isInPerson ? "Protocolo e avaliação física" : "Documentos do paciente"}</h2></div>
+            <div><p className="section-kicker">{isInPerson ? "Atendimento presencial" : "Materiais"}</p><h2>{isInPerson ? "Bioimpedância" : "Documentos do paciente"}</h2></div>
             <strong>{documents.length} arquivo(s)</strong>
             <i aria-hidden="true">⌄</i>
           </summary>
           <p>
             {isInPerson
-              ? "Publique o protocolo alimentar e a avaliação física em PDF. A versão mais recente de cada categoria será destacada para o paciente."
+              ? "Anexe o PDF gerado pelo exame de bioimpedância. A versão mais recente ficará disponível para o paciente em Documentos, na área Protocolos e avaliações."
               : "Publique o protocolo e os materiais auxiliares. Uma nova versão do protocolo substitui a anterior como versão atual."}
           </p>
-          <div className="admin-document-source-note"><strong>Novos protocolos são criados no NutriFlow.</strong><p>O PDF profissional é gerado a partir da versão estruturada publicada. Os arquivos abaixo permanecem disponíveis apenas como histórico e contingência.</p><div className="admin-document-source-actions"><Link className="admin-response-link" href={`/admin/clientes/${encodeURIComponent(row.client.email)}/nutriflow`}>Abrir Editor NutriFlow</Link>{activePublication ? <a className="admin-response-link" href={`/api/admin/nutriflow/plan-report?email=${encodeURIComponent(row.client.email)}`} rel="noreferrer" target="_blank">Gerar PDF profissional</a> : null}</div></div>
+          {isInPerson ? (
+            <DocumentUploadForm email={row.client.email} inPerson />
+          ) : (
+            <div className="admin-document-source-note"><strong>Novos protocolos são criados no NutriFlow.</strong><p>O PDF profissional é gerado a partir da versão estruturada publicada. Os arquivos abaixo permanecem disponíveis apenas como histórico e contingência.</p><div className="admin-document-source-actions"><Link className="admin-response-link" href={`/admin/clientes/${encodeURIComponent(row.client.email)}/nutriflow`}>Abrir Editor NutriFlow</Link>{activePublication ? <a className="admin-response-link" href={`/api/admin/nutriflow/plan-report?email=${encodeURIComponent(row.client.email)}`} rel="noreferrer" target="_blank">Gerar PDF profissional</a> : null}</div></div>
+          )}
           <div className="admin-document-list">
             {documents
               .toSorted((a, b) => b.publishedAt.localeCompare(a.publishedAt))
@@ -304,7 +309,7 @@ export default async function ClientAnswers({
                 const whatsapp = row.client.whatsapp.replace(/\D/g, "");
                 const phone = whatsapp.startsWith("55") ? whatsapp : `55${whatsapp}`;
                 const message = encodeURIComponent(
-                  `Olá, ${row.client.name.split(" ")[0]}! Seu ${document.documentType === "protocol" ? "protocolo alimentar" : document.documentType === "physical_assessment" ? "arquivo de avaliação física" : "material auxiliar"} já está disponível na Área do Paciente: https://ludgerosangaletti.com.br/area-cliente`,
+                  `Olá, ${row.client.name.split(" ")[0]}! Seu ${document.documentType === "protocol" ? "protocolo alimentar" : document.documentType === "physical_assessment" ? "exame de bioimpedância" : "material auxiliar"} já está disponível na Área do Paciente: https://ludgerosangaletti.com.br/area-cliente`,
                 );
                 return (
                   <article key={document.id}>

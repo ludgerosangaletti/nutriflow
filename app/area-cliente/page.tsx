@@ -312,10 +312,10 @@ export default async function ClientArea() {
               <b>Abrir protocolo →</b>
             </Link>
             <Link className="patient-feature-card" href="/documentos">
-              <span>02 · Avaliação física</span>
+              <span>02 · Bioimpedância</span>
               <strong>{currentAssessment ? "Arquivo disponível" : "Aguardando publicação"}</strong>
-              <p>Consulte o PDF disponibilizado após sua avaliação presencial.</p>
-              <b>Ver avaliação →</b>
+              <p>Consulte o PDF gerado pelo seu exame de bioimpedância.</p>
+              <b>Ver bioimpedância →</b>
             </Link>
             <Link
               className={`patient-feature-card ${!checkInDoneThisWeek && checkInAvailableToday ? "is-priority" : ""}`}
