@@ -17,7 +17,7 @@ export async function PATCH(request: Request) {
   };
   if (
     !payload.email ||
-    !["pending", "approved"].includes(payload.paymentStatus ?? "")
+    !["pending", "approved", "rejected"].includes(payload.paymentStatus ?? "")
   ) {
     return Response.json({ error: "Dados inválidos." }, { status: 400 });
   }
@@ -31,6 +31,13 @@ export async function PATCH(request: Request) {
 
   if (!client) {
     return Response.json({ error: "Paciente não encontrado." }, { status: 404 });
+  }
+
+  if (payload.paymentStatus === "rejected" && client.paymentStatus === "approved") {
+    return Response.json(
+      { error: "Um pagamento aprovado não pode ser recusado." },
+      { status: 409 },
+    );
   }
 
   const shouldSendEmail =
@@ -51,6 +58,11 @@ export async function PATCH(request: Request) {
     .update(clients)
     .set({
       paymentStatus: payload.paymentStatus,
+      archivedAt: payload.paymentStatus === "rejected" ? now : client.archivedAt,
+      archiveReason:
+        payload.paymentStatus === "rejected"
+          ? "Pagamento recusado pelo administrador"
+          : client.archiveReason,
       approvalEmailStatus: shouldSendEmail
         ? "sending"
         : client.approvalEmailStatus,

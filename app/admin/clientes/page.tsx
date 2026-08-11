@@ -85,7 +85,7 @@ export default async function AdminClients() {
   const activeClients = rows.filter((client) => hasActiveAccess(client)).length;
   const pendingPaymentClients = rows.filter(
     (client) =>
-      client.paymentStatus !== "approved" && Boolean(client.purchaseStartedAt),
+      client.paymentStatus === "pending" && Boolean(client.purchaseStartedAt),
   );
   const expiringPlanClients = rows.filter((client) => {
     if (!hasActiveAccess(client) || !client.accessExpiresAt) return false;

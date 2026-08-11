@@ -14,7 +14,15 @@ export default function ApprovalButton({
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
 
-  async function update() {
+  async function update(paymentStatus: "pending" | "approved" | "rejected") {
+    if (
+      paymentStatus === "rejected" &&
+      !window.confirm(
+        "Recusar este pagamento? O cadastro sairá da lista principal, mas será preservado para auditoria.",
+      )
+    ) {
+      return;
+    }
     setSaving(true);
     setMessage("");
     const response = await fetch("/api/admin/clientes", {
@@ -22,7 +30,7 @@ export default function ApprovalButton({
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         email,
-        paymentStatus: approved && !expired ? "pending" : "approved",
+        paymentStatus,
         renew: approved && expired,
       }),
     });
@@ -35,7 +43,9 @@ export default function ApprovalButton({
       setMessage(result.error || "Não foi possível salvar.");
       return;
     }
-    if (expired) {
+    if (paymentStatus === "rejected") {
+      setMessage("Pagamento recusado e cadastro arquivado.");
+    } else if (expired) {
       setMessage("Nova vigência iniciada.");
     } else if (!approved && result.email?.sent) {
       setMessage("Pagamento aprovado e e-mail enviado.");
@@ -46,8 +56,14 @@ export default function ApprovalButton({
   }
 
   return (
-    <div>
-      <button className="admin-action" onClick={update} disabled={saving}>
+    <div className="admin-payment-actions">
+      <button
+        className="admin-action"
+        onClick={() =>
+          update(approved && !expired ? "pending" : "approved")
+        }
+        disabled={saving}
+      >
         {saving
           ? "Salvando..."
           : approved && expired
@@ -56,6 +72,16 @@ export default function ApprovalButton({
               ? "Retirar liberação"
               : "Confirmar pagamento"}
       </button>
+      {!approved ? (
+        <button
+          className="admin-payment-reject"
+          type="button"
+          onClick={() => update("rejected")}
+          disabled={saving}
+        >
+          Recusar pagamento
+        </button>
+      ) : null}
       {message ? <small role="status">{message}</small> : null}
     </div>
   );
