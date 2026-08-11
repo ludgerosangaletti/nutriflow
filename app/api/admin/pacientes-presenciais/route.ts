@@ -1,4 +1,5 @@
-import { eq } from "drizzle-orm";
+import { env } from "cloudflare:workers";
+import { and, eq } from "drizzle-orm";
 import { getDb } from "../../../../db";
 import {
   appointmentChangeRequests,
@@ -21,6 +22,22 @@ import { sendActivationWhatsApp } from "../../../whatsapp-activation";
 import { resolveNutriFlowAdminContext } from "../../../nutriflow/server";
 
 const allowedPlans = ["mensal", "trimestral", "semestral"];
+
+const emailReferenceTables = [
+  "anamneses",
+  "progress_photos",
+  "patient_documents",
+  "check_ins",
+  "push_subscriptions",
+  "check_in_reminders",
+  "renewal_reminders",
+  "appointment_reminders",
+  "patient_activation_messages",
+  "appointment_change_requests",
+  "goals",
+  "goal_progress",
+  "adjustment_requests",
+] as const;
 
 function validEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
@@ -82,6 +99,37 @@ async function sendInvite(
   if (!result.activationPath) {
     throw new Error("O provedor não devolveu um link de ativação seguro.");
   }
+  return result;
+}
+
+async function correctAuthEmail(
+  token: string,
+  payload: {
+    action: "prepare" | "finalize" | "rollback";
+    currentEmail: string;
+    newEmail: string;
+    userId?: string | null;
+    accountActive?: boolean;
+  },
+) {
+  const response = await fetch(
+    `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/correct-patient-email`,
+    {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${token}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    },
+  );
+  const result = (await response.json().catch(() => ({}))) as {
+    error?: string;
+    userId?: string | null;
+    authChanged?: boolean;
+    notificationSent?: boolean;
+  };
+  if (!response.ok) throw new Error(result.error || "Não foi possível atualizar a identidade de acesso.");
   return result;
 }
 
@@ -258,18 +306,102 @@ export async function PATCH(request: Request) {
     startsAt?: string;
     nextAppointmentAt?: string | null;
     appointmentLocation?: string;
+    newEmail?: string;
+    emailConfirmation?: string;
   };
   const email = String(body.email || "").trim().toLowerCase();
+  const nutriFlowContext = await resolveNutriFlowAdminContext(admin.user.id);
+  if (!nutriFlowContext) {
+    return Response.json({ error: "Organização não autorizada." }, { status: 403 });
+  }
   const db = getDb();
   const [client] = await db
     .select()
     .from(clients)
-    .where(eq(clients.email, email))
+    .where(and(eq(clients.email, email), eq(clients.organizationId, nutriFlowContext.organizationId)))
     .limit(1);
   if (!client || client.modality !== "in_person") {
     return Response.json({ error: "Paciente presencial não encontrado." }, { status: 404 });
   }
   const now = new Date().toISOString();
+
+  if (body.action === "correct_email") {
+    const newEmail = String(body.newEmail || "").trim().toLowerCase();
+    const confirmation = String(body.emailConfirmation || "").trim().toLowerCase();
+    if (!validEmail(newEmail) || newEmail !== confirmation) {
+      return Response.json({ error: "Informe e confirme um novo e-mail válido." }, { status: 400 });
+    }
+    if (newEmail === email) {
+      return Response.json({ error: "O novo e-mail deve ser diferente do atual." }, { status: 400 });
+    }
+    if (newEmail === admin.user.email?.toLowerCase()) {
+      return Response.json({ error: "O e-mail administrativo não pode ser usado por um paciente." }, { status: 409 });
+    }
+    const [duplicate] = await db.select({ id: clients.id }).from(clients).where(eq(clients.email, newEmail)).limit(1);
+    if (duplicate) {
+      return Response.json({ error: "Este e-mail já está vinculado a outro paciente." }, { status: 409 });
+    }
+
+    const accountActive = client.inviteStatus === "accepted" || Boolean(client.authUserId);
+    let prepared: Awaited<ReturnType<typeof correctAuthEmail>>;
+    try {
+      prepared = await correctAuthEmail(admin.session.access_token, {
+        action: "prepare",
+        currentEmail: email,
+        newEmail,
+        userId: client.authUserId,
+        accountActive,
+      });
+    } catch (error) {
+      return Response.json({ error: error instanceof Error ? error.message : "Não foi possível corrigir o e-mail." }, { status: 502 });
+    }
+
+    const correlationId = `corr_${crypto.randomUUID()}`;
+    const auditId = `audit_${crypto.randomUUID().replaceAll("-", "")}`;
+    const updates = emailReferenceTables.map((table) =>
+      env.DB.prepare(`UPDATE ${table} SET client_email = ? WHERE client_email = ?`).bind(newEmail, email),
+    );
+    updates.push(
+      env.DB.prepare("UPDATE clients SET email = ?, invite_status = ?, invite_error = NULL, updated_at = ? WHERE id = ? AND email = ? AND organization_id = ?")
+        .bind(newEmail, accountActive ? client.inviteStatus : "sending", now, client.id, email, nutriFlowContext.organizationId),
+      env.DB.prepare("INSERT INTO nf_audit_entries (public_id, organization_id, actor_auth_user_id, actor_role, action, entity_type, entity_public_id, correlation_id, before_json, after_json, occurred_at) VALUES (?, ?, ?, 'admin', 'patient.access-email.corrected', 'client', ?, ?, ?, ?, ?)")
+        .bind(auditId, nutriFlowContext.organizationId, admin.user.id, String(client.id), correlationId, JSON.stringify({ email }), JSON.stringify({ email: newEmail, accountActive }), now),
+    );
+
+    try {
+      await env.DB.batch(updates);
+    } catch (error) {
+      if (prepared.authChanged) {
+        await correctAuthEmail(admin.session.access_token, {
+          action: "rollback",
+          currentEmail: newEmail,
+          newEmail: email,
+          userId: prepared.userId,
+          accountActive,
+        }).catch(() => undefined);
+      }
+      console.error("[patient-email-correction.d1]", JSON.stringify({ clientId: client.id, error: error instanceof Error ? error.message : "unknown" }));
+      return Response.json({ error: "A correção não foi concluída e o prontuário foi preservado. Tente novamente." }, { status: 503 });
+    }
+
+    try {
+      const finalized = await correctAuthEmail(admin.session.access_token, {
+        action: "finalize",
+        currentEmail: email,
+        newEmail,
+        userId: prepared.userId,
+        accountActive,
+      });
+      await db.update(clients).set({ inviteStatus: accountActive ? client.inviteStatus : "sent", inviteSentAt: accountActive ? client.inviteSentAt : now, inviteError: null, updatedAt: now }).where(eq(clients.id, client.id));
+      return Response.json({ ok: true, nextEmail: newEmail, notificationSent: finalized.notificationSent === true });
+    } catch (error) {
+      const message = error instanceof Error ? error.message.slice(0, 300) : "Notificação não enviada.";
+      if (!accountActive) {
+        await db.update(clients).set({ inviteStatus: "failed", inviteError: message, updatedAt: now }).where(eq(clients.id, client.id));
+      }
+      return Response.json({ ok: true, nextEmail: newEmail, warning: `E-mail corrigido, mas a mensagem ao paciente não foi enviada: ${message}` });
+    }
+  }
 
   if (body.action === "resend_invite") {
     try {

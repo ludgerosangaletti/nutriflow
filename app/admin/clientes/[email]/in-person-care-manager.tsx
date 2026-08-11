@@ -24,6 +24,7 @@ export default function InPersonCareManager(props: Props) {
   const [nextAppointmentAt, setNextAppointmentAt] = useState(
     localDateTime(props.nextAppointmentAt),
   );
+  const [showEmailCorrection, setShowEmailCorrection] = useState(false);
 
   async function request(payload: Record<string, unknown>) {
     const action = String(payload.action);
@@ -37,9 +38,20 @@ export default function InPersonCareManager(props: Props) {
       });
       const result = (await response.json().catch(() => ({}))) as {
         error?: string;
+        nextEmail?: string;
+        warning?: string;
         invite?: { id?: string; sent?: boolean; whatsapp?: string };
       };
       if (!response.ok) throw new Error(result.error || "Não foi possível concluir a ação.");
+      if (action === "correct_email") {
+        setMessage(result.warning || "E-mail de acesso corrigido com sucesso.");
+        if (result.nextEmail) {
+          window.setTimeout(() => {
+            window.location.assign(`/admin/clientes/${encodeURIComponent(result.nextEmail!)}`);
+          }, 1100);
+        }
+        return;
+      }
       if (action === "resend_invite") {
         setMessage(
           result.invite?.whatsapp === "sent"
@@ -73,6 +85,19 @@ export default function InPersonCareManager(props: Props) {
         : null,
       appointmentLocation: form.get("appointmentLocation"),
     });
+  }
+
+  async function correctEmail(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const newEmail = String(form.get("newEmail") || "").trim().toLowerCase();
+    const confirmation = String(form.get("emailConfirmation") || "").trim().toLowerCase();
+    if (newEmail !== confirmation) {
+      setMessage("A confirmação deve ser igual ao novo e-mail.");
+      return;
+    }
+    if (!window.confirm(`Corrigir o e-mail de acesso para ${newEmail}?`)) return;
+    await request({ action: "correct_email", newEmail, emailConfirmation: confirmation });
   }
 
   return (
@@ -136,6 +161,13 @@ export default function InPersonCareManager(props: Props) {
           {saving === "resend_invite" ? "Reenviando..." : "Reenviar convite"}
         </button>
         <button
+          disabled={Boolean(saving)}
+          onClick={() => setShowEmailCorrection((visible) => !visible)}
+          type="button"
+        >
+          Corrigir e-mail de acesso
+        </button>
+        <button
           className="is-danger"
           disabled={Boolean(saving)}
           onClick={() => {
@@ -148,6 +180,29 @@ export default function InPersonCareManager(props: Props) {
           Encerrar acesso
         </button>
       </div>
+      {showEmailCorrection ? (
+        <form className="in-person-email-correction" onSubmit={correctEmail}>
+          <div>
+            <strong>Corrigir e-mail de acesso</strong>
+            <small>O prontuário será preservado. Convites pendentes serão substituídos por um novo link.</small>
+          </div>
+          <label>
+            E-mail atual
+            <input readOnly type="email" value={props.email} />
+          </label>
+          <label>
+            Novo e-mail
+            <input autoComplete="off" name="newEmail" required type="email" />
+          </label>
+          <label>
+            Confirme o novo e-mail
+            <input autoComplete="off" name="emailConfirmation" required type="email" />
+          </label>
+          <button className="admin-action" disabled={Boolean(saving)}>
+            {saving === "correct_email" ? "Corrigindo..." : "Confirmar correção"}
+          </button>
+        </form>
+      ) : null}
       {message ? <p role="status">{message}</p> : null}
     </section>
   );

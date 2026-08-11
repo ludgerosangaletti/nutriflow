@@ -5513,6 +5513,26 @@ button:disabled {
   margin: 14px 0 0;
 }
 
+.in-person-care-manager form.in-person-email-correction {
+  background: #fff;
+  border: 1px solid #d9d8d1;
+  border-radius: 14px;
+  grid-template-columns: 1.2fr 1fr 1fr 1fr auto;
+  margin-top: 16px;
+  padding: 16px;
+}
+
+.in-person-email-correction > div {
+  align-self: center;
+  display: grid;
+  gap: 4px;
+}
+
+.in-person-email-correction small {
+  color: #6f6e67;
+  line-height: 1.35;
+}
+
 .in-person-appointment {
   align-items: center;
   background: #111;
