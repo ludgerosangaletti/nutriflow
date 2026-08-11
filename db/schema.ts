@@ -1278,6 +1278,48 @@ export const nfTrainingEntitlements = sqliteTable(
   ],
 );
 
+/** Patient-owned Training onboarding data. Submitted revisions form a small clinical history. */
+export const nfTrainingAnamneses = sqliteTable(
+  "nf_training_anamneses",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    publicId: text("public_id").notNull(),
+    organizationId: integer("organization_id").notNull().references(() => nfOrganizations.id, { onDelete: "restrict" }),
+    clientId: integer("client_id").notNull().references(() => clients.id, { onDelete: "restrict" }),
+    status: text("status").notNull().default("draft"),
+    schemaVersion: integer("schema_version").notNull().default(1),
+    answersJson: text("answers_json").notNull().default("{}"),
+    submittedAnswersJson: text("submitted_answers_json"),
+    revision: integer("revision").notNull().default(0),
+    submittedAt: text("submitted_at"),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("nf_training_anamneses_public_id_unique").on(table.publicId),
+    uniqueIndex("nf_training_anamneses_org_client_unique").on(table.organizationId, table.clientId),
+    index("nf_training_anamneses_org_status_idx").on(table.organizationId, table.status),
+  ],
+);
+
+export const nfTrainingAnamnesisRevisions = sqliteTable(
+  "nf_training_anamnesis_revisions",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    publicId: text("public_id").notNull(),
+    anamnesisId: integer("anamnesis_id").notNull().references(() => nfTrainingAnamneses.id, { onDelete: "restrict" }),
+    revision: integer("revision").notNull(),
+    schemaVersion: integer("schema_version").notNull().default(1),
+    answersJson: text("answers_json").notNull(),
+    submittedByAuthUserId: text("submitted_by_auth_user_id").notNull(),
+    submittedAt: text("submitted_at").notNull(),
+  },
+  (table) => [
+    uniqueIndex("nf_training_anamnesis_revisions_public_id_unique").on(table.publicId),
+    uniqueIndex("nf_training_anamnesis_revisions_number_unique").on(table.anamnesisId, table.revision),
+  ],
+);
+
 /** Global exercises are curated by the platform; organization exercises remain private. */
 export const nfTrainingExercises = sqliteTable(
   "nf_training_exercises",

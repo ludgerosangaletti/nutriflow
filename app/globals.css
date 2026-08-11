@@ -7494,6 +7494,14 @@ button:disabled {
 .training-patient-rest h1, .training-patient-rest h2 { margin: 0; }
 .training-patient-rest p { max-width: 300px; margin: 0; color: #696961; line-height: 1.5; }
 .training-patient-rest a { border-radius: 9px; background: #11110f; color: #fff; font-size: .78rem; font-weight: 850; padding: 10px 13px; text-decoration: none; }
+.training-patient-rest a.is-secondary { background: transparent; color: #5e5e57; text-decoration: underline; text-underline-offset: 3px; }
+.training-anamnesis-call { border-color: #d8cf42; background: #fffef0; }
+.training-patient-anamnesis-reminder { display: flex; align-items: center; justify-content: space-between; gap: 14px; border: 1px solid #ddd34a; border-radius: 15px; background: #fffdeb; padding: 13px 14px; }
+.training-patient-anamnesis-reminder div { display: grid; gap: 3px; }
+.training-patient-anamnesis-reminder strong { font-size: .82rem; }
+.training-patient-anamnesis-reminder span { color: #6d6850; font-size: .7rem; line-height: 1.35; }
+.training-patient-anamnesis-reminder a { flex: 0 0 auto; border-radius: 8px; background: #171715; color: #fff; padding: 8px 10px; font-size: .68rem; font-weight: 850; text-decoration: none; }
+.training-patient-anamnesis-update { justify-self: end; color: #5f5f58; font-size: .7rem; font-weight: 750; text-underline-offset: 3px; }
 .training-page { max-width: 1440px; }
 .training-editor { display: grid; gap: 16px; padding: 18px 0 42px; color: #171715; }
 .training-editor button, .training-editor input { font: inherit; }
@@ -7521,6 +7529,35 @@ button:disabled {
 .training-admin-menu strong { font-size: .78rem; }
 .training-admin-menu button { border: 0; border-radius: 8px; background: #f2f2ec; padding: 9px; color: #74352f; font-size: .7rem; font-weight: 800; cursor: pointer; }
 .training-message { margin: 0; border-radius: 9px; background: #fff7d6; color: #655300; padding: 9px 12px; font-size: .72rem; }
+.training-anamnesis-admin { overflow: hidden; border: 1px solid #dcdcd4; border-radius: 13px; background: #fff; }
+.training-anamnesis-admin > summary { display: grid; grid-template-columns: minmax(0,1fr) auto auto; align-items: center; gap: 16px; min-height: 66px; padding: 12px 14px; cursor: pointer; list-style: none; }
+.training-anamnesis-admin > summary::-webkit-details-marker, .training-anamnesis-full > summary::-webkit-details-marker { display: none; }
+.training-anamnesis-admin > summary div { display: grid; gap: 2px; }
+.training-anamnesis-admin > summary p { margin: 0; }
+.training-anamnesis-admin > summary strong { font-size: .86rem; }
+.training-anamnesis-admin > summary span, .training-anamnesis-admin > summary small { color: #74746c; font-size: .65rem; }
+.training-anamnesis-admin > summary i { font-style: normal; transition: transform 150ms ease; }
+.training-anamnesis-admin[open] > summary { border-bottom: 1px solid #e7e7df; }
+.training-anamnesis-admin[open] > summary i { transform: rotate(180deg); }
+.training-anamnesis-admin.is-pending { padding: 12px 14px; background: #fafaf6; }
+.training-anamnesis-admin.is-pending div { display: grid; gap: 3px; }
+.training-anamnesis-admin.is-pending p { margin: 0; }
+.training-anamnesis-admin.is-pending strong { font-size: .82rem; }
+.training-anamnesis-admin.is-pending span { color: #77776f; font-size: .68rem; }
+.training-anamnesis-admin-grid { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 1px; background: #e7e7df; }
+.training-anamnesis-admin-grid article { min-width: 0; display: grid; align-content: start; gap: 4px; background: #fff; padding: 12px 14px; }
+.training-anamnesis-admin-grid article > span { color: #77776f; font-size: .56rem; font-weight: 850; letter-spacing: .07em; text-transform: uppercase; }
+.training-anamnesis-admin-grid article strong { font-size: .73rem; line-height: 1.4; }
+.training-anamnesis-admin-grid article small { color: #66665f; font-size: .65rem; line-height: 1.35; }
+.training-anamnesis-admin-grid article.is-attention { background: #fff8dc; }
+.training-anamnesis-full { border-top: 1px solid #e7e7df; background: #fafaf6; }
+.training-anamnesis-full > summary { padding: 11px 14px; color: #383834; font-size: .68rem; font-weight: 850; cursor: pointer; list-style: none; }
+.training-anamnesis-full > div { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 8px; padding: 0 14px 14px; }
+.training-anamnesis-full article { border: 1px solid #e3e3dc; border-radius: 9px; background: #fff; padding: 10px; }
+.training-anamnesis-full article span { color: #77776f; font-size: .57rem; font-weight: 850; text-transform: uppercase; }
+.training-anamnesis-full article p { margin: 5px 0 0; color: #44443f; font-size: .69rem; line-height: 1.45; white-space: pre-wrap; }
+.training-availability-note { justify-self: end; margin: -4px 2px -8px; color: #77776f; font-size: .66rem; }
+.training-availability-note strong { color: #33332f; }
 .training-empty { min-height: 320px; display: grid; place-content: center; justify-items: center; border: 1px solid #e0e0d8; border-radius: 16px; background: #fafaf6; text-align: center; padding: 24px; }
 .training-empty-icon { font-size: 2.2rem; color: #b6b6ad; }
 .training-empty h2 { margin: 8px 0 0; font-size: 1.25rem; }
@@ -7622,7 +7659,7 @@ button:disabled {
 .training-global-media-catalog li { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 11px 12px; border-radius: 10px; background: #fff; font-size: .76rem; }
 .training-global-media-catalog code { color: #64645d; font-size: .7rem; }
 @media (max-width: 1100px) { .training-exercise { grid-template-columns: minmax(190px,1fr) minmax(0,2fr); } .training-order { grid-column: 1 / -1; justify-self: end; margin-top: -4px; } .training-prescription { grid-template-columns: 44px 10px 96px 70px 74px minmax(100px,1fr); } }
-@media (max-width: 780px) { .training-editor-header { align-items: stretch; flex-direction: column; } .training-primary-actions { justify-content: flex-start; flex-wrap: wrap; } .training-admin-menu { margin-left: auto; } .training-days { grid-template-columns: repeat(4,1fr); } .training-day-panel > header { align-items: flex-start; } .training-exercise { grid-template-columns: 1fr; align-items: stretch; } .training-prescription { grid-template-columns: 44px 10px 1fr 70px 74px; } .training-prescription .is-note { grid-column: 1 / -1; } .training-order { grid-column: auto; justify-self: start; margin-top: 0; } .training-library { padding: 16px; } }
+@media (max-width: 780px) { .training-editor-header { align-items: stretch; flex-direction: column; } .training-primary-actions { justify-content: flex-start; flex-wrap: wrap; } .training-admin-menu { margin-left: auto; } .training-days { grid-template-columns: repeat(4,1fr); } .training-day-panel > header { align-items: flex-start; } .training-exercise { grid-template-columns: 1fr; align-items: stretch; } .training-prescription { grid-template-columns: 44px 10px 1fr 70px 74px; } .training-prescription .is-note { grid-column: 1 / -1; } .training-order { grid-column: auto; justify-self: start; margin-top: 0; } .training-library { padding: 16px; } .training-anamnesis-admin-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } .training-anamnesis-full > div { grid-template-columns: 1fr; } .training-anamnesis-admin > summary { grid-template-columns: minmax(0,1fr) auto; } .training-anamnesis-admin > summary small { grid-column: 1; } }
 @media (max-width: 700px) { .training-global-media-import > header { display: grid; } .training-global-media-import header button { justify-self: start; } .training-global-media-catalog ul { grid-template-columns: 1fr; } .training-global-media-catalog li { align-items: flex-start; flex-direction: column; } }
 .admin-patient-nav a.is-nutriflow {
   background: #11110f;
@@ -9079,6 +9116,25 @@ body.nf-sheet-open{overflow:hidden}
 .nf-training-offer-card>i{grid-row:2/4;display:grid;place-items:center;width:42px;height:42px;border:1px solid rgba(10,10,10,.2);border-radius:13px;font-style:normal}
 .nf-training-offer-card>strong{align-self:end;font-size:15px;line-height:1.25}
 .nf-training-offer-card>small{color:var(--ink-muted);font-size:12.5px}
+.nf-training-anamnesis-prompt{min-height:68px;display:grid;grid-template-columns:36px minmax(0,1fr) auto;align-items:center;gap:11px;padding:11px 13px;border:1px solid #d8cf42;border-radius:16px;background:#fffdeb;color:var(--ink);text-decoration:none}
+.nf-training-anamnesis-prompt>i{display:grid;place-items:center;width:36px;height:36px;border-radius:11px;background:var(--lime);font-style:normal}
+.nf-training-anamnesis-prompt>span{display:grid;gap:2px}.nf-training-anamnesis-prompt strong{font-size:13px}.nf-training-anamnesis-prompt small{color:var(--ink-muted);font-size:11.5px}.nf-training-anamnesis-prompt>b{opacity:.45}
+
+/* Training anamnesis — mobile-first, entitlement-gated onboarding. */
+.training-anamnesis-screen{width:min(100%,680px);display:grid;gap:14px;margin:0 auto;padding:2px 0 28px}
+.training-anamnesis-header{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px 16px;padding:17px 18px;border-radius:22px;background:#171715;color:#fff}
+.training-anamnesis-header>a{grid-column:1/-1;justify-self:start;color:#d7d7cf;font-size:12px;font-weight:750;text-decoration:none}
+.training-anamnesis-header>div{display:grid;gap:4px}.training-anamnesis-header p{margin:0;color:#ffe600;font-size:10px;font-weight:900;letter-spacing:.1em;text-transform:uppercase}.training-anamnesis-header h1{margin:0;font-size:clamp(1.55rem,7vw,2.1rem);letter-spacing:-.04em}.training-anamnesis-header span{color:#c6c6be;font-size:13px;line-height:1.45}.training-anamnesis-header>small{align-self:end;color:#d2d2ca;font-size:11px;font-weight:750}
+.training-anamnesis-progress{grid-column:1/-1;height:3px!important;border-radius:99px;background:#45453e;overflow:hidden}.training-anamnesis-progress i{display:block;height:100%;border-radius:inherit;background:#ffe600;transition:width 180ms ease}
+.training-anamnesis-form{display:grid;gap:10px}
+.training-anamnesis-field{display:grid;gap:12px;margin:0;padding:17px;border:1px solid #deded6;border-radius:19px;background:#fff}.training-anamnesis-field legend{float:left;width:100%;margin:0 0 2px;padding:0;font-size:15px;font-weight:850;line-height:1.35}.training-anamnesis-field>p{clear:both;margin:0;color:#77776f;font-size:12px;line-height:1.45}
+.training-anamnesis-choices{clear:both;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.training-anamnesis-choices button,.training-anamnesis-yes-no button,.training-anamnesis-number button,.training-anamnesis-weekdays button{min-height:45px;border:1px solid #d9d9d1;border-radius:11px;background:#fafaf6;color:#363631;padding:9px 10px;font:inherit;font-size:12.5px;font-weight:720;line-height:1.3;text-align:left;cursor:pointer}.training-anamnesis-choices button.is-selected,.training-anamnesis-yes-no button.is-selected,.training-anamnesis-number button.is-selected,.training-anamnesis-weekdays button.is-selected{border-color:#171715;background:#171715;color:#fff;box-shadow:inset 0 -3px #ffe600}
+.training-anamnesis-field input,.training-anamnesis-field textarea,.training-anamnesis-field select{width:100%;min-height:46px;border:1px solid #d7d7cf;border-radius:11px;background:#fff;color:#171715;padding:11px 12px;font:inherit;font-size:13px}.training-anamnesis-field textarea{resize:vertical;line-height:1.5}.training-anamnesis-field input:focus,.training-anamnesis-field textarea:focus,.training-anamnesis-field select:focus{border-color:#171715;outline:3px solid rgba(255,230,0,.25)}
+.training-anamnesis-yes-no{display:grid;grid-template-columns:1fr 1fr;gap:7px}.training-anamnesis-yes-no button{text-align:center}.training-anamnesis-number,.training-anamnesis-weekdays{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}.training-anamnesis-number button,.training-anamnesis-weekdays button{min-width:0;padding:7px 3px;text-align:center}.training-anamnesis-frequency{display:grid;gap:6px;color:#5e5e57;font-size:11px;font-weight:850;text-transform:uppercase;letter-spacing:.06em}
+.training-anamnesis-attention{margin:0;padding:12px 14px;border-radius:12px;background:#fff7d4;color:#655700;font-size:12px;line-height:1.5}.training-anamnesis-privacy{font-size:11px!important}.training-anamnesis-privacy a{color:#333;font-weight:750}.training-anamnesis-message{margin:0;padding:11px 13px;border-radius:11px;background:#f9e5df;color:#8a3025;font-size:12px;font-weight:750}
+.training-anamnesis-actions{position:sticky;z-index:4;bottom:calc(72px + env(safe-area-inset-bottom));display:grid;grid-template-columns:1fr 2fr;gap:8px;padding:8px;border:1px solid #deded6;border-radius:15px;background:rgba(250,250,246,.94);backdrop-filter:blur(8px)}.training-anamnesis-actions button{min-height:48px;border:0;border-radius:11px;background:#171715;color:#fff;font:inherit;font-size:13px;font-weight:850;cursor:pointer}.training-anamnesis-actions button.is-secondary{border:1px solid #d6d6ce;background:#fff;color:#33332e}.training-anamnesis-actions button:disabled{opacity:.45;cursor:default}
+.training-anamnesis-complete{min-height:65dvh;display:grid;place-content:center;justify-items:center;gap:9px;padding:28px 20px;text-align:center}.training-anamnesis-complete>span{display:grid;place-items:center;width:54px;height:54px;border-radius:50%;background:#ffe600;color:#171715;font-size:26px;font-weight:900}.training-anamnesis-complete>p:first-of-type{margin:7px 0 0;color:#77776f;font-size:10px;font-weight:900;letter-spacing:.1em;text-transform:uppercase}.training-anamnesis-complete h1{margin:0;font-size:clamp(1.7rem,7vw,2.2rem)}.training-anamnesis-complete>p:last-of-type{max-width:510px;margin:0;color:#686860;font-size:14px;line-height:1.6}.training-anamnesis-complete a{margin-top:8px;border-radius:11px;background:#171715;color:#fff;padding:12px 15px;font-size:13px;font-weight:850;text-decoration:none}
+@media(max-width:540px){.training-anamnesis-screen{padding-bottom:12px}.training-anamnesis-header{border-radius:19px}.training-anamnesis-choices{grid-template-columns:1fr}.training-anamnesis-field{padding:15px}.training-anamnesis-number,.training-anamnesis-weekdays{gap:4px}.training-anamnesis-number button,.training-anamnesis-weekdays button{min-height:42px;font-size:11px}.training-patient-anamnesis-reminder{align-items:flex-start;flex-direction:column}.training-patient-anamnesis-reminder a{align-self:stretch;text-align:center}}
 
 .nf-training-offer-page{width:min(100%,620px);margin:0 auto;padding:2px 0 28px}
 .nf-training-offer-back{display:inline-flex;min-height:44px;align-items:center;margin-bottom:8px;color:var(--ink-muted);font-size:13px;font-weight:750;text-decoration:none}

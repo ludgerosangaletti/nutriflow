@@ -114,9 +114,11 @@ export default async function ClientArea() {
   const structuredPlanEnabled = Boolean(
     nutriFlowContext && (await canUseNutriFlowPatientPortal(nutriFlowContext)),
   );
-  const training = nutriFlowContext && active
-    ? (await createNutriFlowPatientRuntime().getTraining.execute({ actor: nutriFlowContext.actor, organizationId: nutriFlowContext.organizationId, organizationPublicId: nutriFlowContext.organizationPublicId })).card
-    : { state: "commercial" as const, title: "Treino" as const, subtitle: "Contrate seu treino personalizado" as const };
+  const trainingPortal = nutriFlowContext && active
+    ? await createNutriFlowPatientRuntime().getTraining.execute({ actor: nutriFlowContext.actor, organizationId: nutriFlowContext.organizationId, organizationPublicId: nutriFlowContext.organizationPublicId })
+    : null;
+  const training = trainingPortal?.card ?? { state: "commercial" as const, title: "Treino" as const, subtitle: "Contrate seu treino personalizado" as const };
+  const trainingAnamnesis = trainingPortal?.anamnesis ?? { status: "not_started" as const, updatedAt: null, submittedAt: null };
   if (client.modality === "in_person" && !client.profileCompletedAt) {
     redirect("/primeiro-acesso");
   }
@@ -220,6 +222,7 @@ export default async function ClientArea() {
           currentProtocol={Boolean(currentProtocol || structuredPlanPublished)}
           photosCount={photos.length}
           training={training}
+          trainingAnamnesis={trainingAnamnesis}
         />
       </PatientShell>
     );
@@ -513,6 +516,7 @@ export default async function ClientArea() {
         currentProtocol={protocolAvailable}
         photosCount={photos.length}
         training={training}
+        trainingAnamnesis={trainingAnamnesis}
       />
     </PatientShell>
   );

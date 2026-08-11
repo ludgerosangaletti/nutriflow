@@ -66,6 +66,7 @@ function trainingDatabase() {
   sqlite.exec("INSERT INTO clients (id) VALUES (10), (20)");
   sqlite.exec("INSERT INTO nf_organizations (public_id, name) VALUES ('org_train_one', 'OrganizaÃ§Ã£o um'), ('org_train_two', 'OrganizaÃ§Ã£o dois')");
   apply(sqlite, "0040_nutriflow_training_foundation.sql");
+  apply(sqlite, "0045_nutriflow_training_anamnesis.sql");
   return sqlite;
 }
 
@@ -76,6 +77,7 @@ function trainingEditorDatabase() {
   sqlite.exec("INSERT INTO clients (id, organization_id) VALUES (10, 1), (20, 2)");
   sqlite.exec("INSERT INTO nf_organizations (public_id, name) VALUES ('org_training_editor', 'OrganizaÃ§Ã£o Training'), ('org_training_other', 'Outra organizaÃ§Ã£o')");
   apply(sqlite, "0040_nutriflow_training_foundation.sql");
+  apply(sqlite, "0045_nutriflow_training_anamnesis.sql");
   return new TrainingDatabase(sqlite);
 }
 

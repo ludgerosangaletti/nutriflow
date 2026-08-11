@@ -1,4 +1,5 @@
 import { NUTRIFLOW_API_VERSION } from "./errors.ts";
+import type { TrainingAnamnesisStatusV1, TrainingAnamnesisV1 } from "./training-anamnesis.ts";
 
 export const TRAINING_WEEKDAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
 export const TRAINING_EXERCISE_LIBRARY_MAX_RESULTS = 25;
@@ -104,6 +105,7 @@ export type TrainingEditorWorkspaceV1 = Readonly<{
   entitlement: TrainingEntitlementV1;
   draft: TrainingRoutineDraftV1 | null;
   publication: TrainingPublicationV1 | null;
+  anamnesis: TrainingAnamnesisV1 | null;
 }>;
 
 export type ConfigureTrainingEntitlementCommandV1 = Readonly<{
@@ -137,6 +139,7 @@ export type PatientTrainingPortalV1 = Readonly<{
   card: TrainingPatientAccessStateV1;
   currentWeekday: TrainingWeekday;
   publication: Readonly<{ publicId: string; versionNumber: number; publishedAt: string; content: TrainingRoutineContentV1 }> | null;
+  anamnesis: TrainingAnamnesisStatusV1;
 }>;
 
 export type TrainingPatientAccessStateV1 =

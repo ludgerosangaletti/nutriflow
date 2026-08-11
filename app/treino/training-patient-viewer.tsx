@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import type { PatientTrainingPortalV1, TrainingWeekday } from "../../modules/nutriflow/contracts/v1/training.ts";
 
 const days: readonly Readonly<{ key: TrainingWeekday; label: string }>[] = [
@@ -36,6 +37,7 @@ export default function TrainingPatientViewer({ portal }: Readonly<{ portal: Pat
   const publicationPublicId = portal.publication?.publicId ?? "";
   return <main className="training-patient-screen">
     <header className="training-patient-heading"><p>NutriFlow Training</p><h1>{selected === portal.currentWeekday ? portal.card.title : "Seu treino"}</h1><span>{selected === portal.currentWeekday ? portal.card.subtitle : days.find((entry) => entry.key === selected)?.label}</span></header>
+    {portal.anamnesis.status !== "submitted" ? <aside className="training-patient-anamnesis-reminder"><div><strong>Complete sua anamnese de treino</strong><span>Ajude a manter sua prescrição alinhada à sua rotina.</span></div><Link href="/treino/anamnese">Responder</Link></aside> : <Link className="training-patient-anamnesis-update" href="/treino/anamnese">Atualizar informações do treino</Link>}
     <nav className="training-patient-days" aria-label="Dias da rotina">{days.map((entry) => <button key={entry.key} type="button" onClick={() => setSelected(entry.key)} className={selected === entry.key ? "is-active" : ""} aria-pressed={selected === entry.key}>{entry.label}</button>)}</nav>
     {!day?.muscleGroups.length ? <section className="training-patient-rest"><span>◌</span><h2>Dia de descanso</h2><p>Hoje não há exercícios prescritos. Aproveite para recuperar o corpo e retome no próximo treino.</p></section> : <section className="training-patient-groups">{day.muscleGroups.map((group) => <section key={group.publicId}><header><p>Grupamento</p><h2>{group.name}</h2></header><div>{group.exercises.map((item, index) => <article className="training-patient-exercise" key={item.publicId}><ExerciseMedia exercise={item.exercise} publicationPublicId={publicationPublicId} /><div className="training-patient-copy"><span>{String(index + 1).padStart(2, "0")}</span><h3>{item.exercise.name}</h3><strong>{execution(item)}</strong>{item.prescription.restSeconds !== null ? <small>Descanso · {item.prescription.restSeconds}s</small> : null}{item.prescription.notes ? <p>{item.prescription.notes}</p> : null}</div></article>)}</div></section>)}</section>}
   </main>;

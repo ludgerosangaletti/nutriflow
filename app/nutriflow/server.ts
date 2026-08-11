@@ -31,6 +31,7 @@ import { D1FoodPlanPublicationStore } from "../../modules/nutriflow/infrastructu
 import { D1TrainingEditorRepository } from "../../modules/nutriflow/infrastructure/d1/d1-training-editor-repository.ts";
 import { D1PatientTrainingRepository } from "../../modules/nutriflow/infrastructure/d1/d1-patient-training-repository.ts";
 import { D1TrainingMediaRepository } from "../../modules/nutriflow/infrastructure/d1/d1-training-media-repository.ts";
+import { D1TrainingAnamnesisRepository } from "../../modules/nutriflow/infrastructure/d1/d1-training-anamnesis-repository.ts";
 import { GetPatientTraining } from "../../modules/nutriflow/application/training/get-patient-training.ts";
 import {
   ConfigureControlledHomologation,
@@ -469,6 +470,10 @@ export function createTrainingEditorRepository() {
 
 export function createTrainingMediaRepository() {
   return new D1TrainingMediaRepository(env.DB, generatePublicId);
+}
+
+export function createTrainingAnamnesisRepository() {
+  return new D1TrainingAnamnesisRepository(env.DB, generatePublicId);
 }
 
 export function createNutriFlowPatientRuntime() {

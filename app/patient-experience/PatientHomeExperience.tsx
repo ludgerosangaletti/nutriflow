@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { TrainingPatientAccessStateV1 } from "../../modules/nutriflow/contracts/v1/training.ts";
+import type { TrainingAnamnesisStatusV1 } from "../../modules/nutriflow/contracts/v1/training-anamnesis.ts";
 import { QuickAccess } from "./QuickAccess";
 
 type Action = { eyebrow: string; title: string; description: string; href: string | null; button: string | null };
@@ -20,13 +21,14 @@ type Props = {
   currentProtocol?: boolean;
   photosCount?: number;
   training: TrainingPatientAccessStateV1;
+  trainingAnamnesis: TrainingAnamnesisStatusV1;
 };
 
 function firstName(name: string) { return name.trim().split(/\s+/)[0] || "Paciente"; }
 
 export function PatientHomeExperience({
   name, modality, planLabel, active, action, structuredPlanEnabled, documentsCount,
-  checkInsCount, checkInDone, checkInAvailable = false, nextAppointment, appointmentLocation, currentProtocol, photosCount = 0, training,
+  checkInsCount, checkInDone, checkInAvailable = false, nextAppointment, appointmentLocation, currentProtocol, photosCount = 0, training, trainingAnamnesis,
 }: Props) {
   const today = new Intl.DateTimeFormat("pt-BR", { weekday: "long", day: "numeric", month: "long" }).format(new Date());
   const appointment = nextAppointment
@@ -49,7 +51,7 @@ export function PatientHomeExperience({
         {action.href && action.button ? <Link className="nf-btn nf-btn-dark" href={action.href}>{action.button}</Link> : null}
       </section>
 
-      <QuickAccess training={training} structuredPlanEnabled={Boolean(structuredPlanEnabled)} documentsCount={documentsCount} checkInDone={checkInDone} checkInAvailable={checkInAvailable} photosCount={photosCount} />
+      <QuickAccess training={training} trainingAnamnesis={trainingAnamnesis} structuredPlanEnabled={Boolean(structuredPlanEnabled)} documentsCount={documentsCount} checkInDone={checkInDone} checkInAvailable={checkInAvailable} photosCount={photosCount} />
       {currentProtocol ? <Link className="nf-home-adjustments" href="/ajustes">Solicitar ajuste ou falar com Ludgero <span>→</span></Link> : null}
     </main>
   );

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ComponentType } from "react";
 import type { TrainingPatientAccessStateV1 } from "../../modules/nutriflow/contracts/v1/training.ts";
+import type { TrainingAnamnesisStatusV1 } from "../../modules/nutriflow/contracts/v1/training-anamnesis.ts";
 import { IconCheckin, IconDocumentos, IconEvolucao, IconPlano, IconTreino } from "./QuickAccessIcons";
 
 type Icon = ComponentType<Readonly<{ size?: number; active?: boolean }>>;
@@ -33,8 +34,13 @@ function TrainingOfferCard() {
   );
 }
 
+function TrainingAnamnesisPrompt() {
+  return <Link className="nf-training-anamnesis-prompt nf-pressable" href="/treino/anamnese"><i aria-hidden="true"><IconTreino size={19} /></i><span><strong>Complete sua anamnese de treino</strong><small>Rotina, experiência e preferências em poucos minutos.</small></span><b aria-hidden="true">→</b></Link>;
+}
+
 export function QuickAccess(props: Readonly<{
   training: TrainingPatientAccessStateV1;
+  trainingAnamnesis: TrainingAnamnesisStatusV1;
   structuredPlanEnabled: boolean;
   documentsCount: number;
   checkInDone: boolean;
@@ -42,9 +48,11 @@ export function QuickAccess(props: Readonly<{
   photosCount: number;
 }>) {
   const commercial = props.training.state === "commercial";
+  const anamnesisPending = !commercial && props.trainingAnamnesis.status !== "submitted";
   const cards: Item[] = [];
 
-  if (!commercial) cards.push({ href: "/treino", icon: IconTreino, title: props.training.title, subtitle: props.training.subtitle, primary: props.training.state === "today" });
+  if (!commercial && props.training.state === "preparing" && anamnesisPending) cards.push({ href: "/treino/anamnese", icon: IconTreino, title: "Complete sua anamnese de treino", subtitle: "Precisamos conhecer sua rotina e preferências.", primary: true });
+  else if (!commercial) cards.push({ href: "/treino", icon: IconTreino, title: props.training.title, subtitle: props.training.subtitle, primary: props.training.state === "today" });
   if (props.structuredPlanEnabled) cards.push({ href: "/plano-alimentar", icon: IconPlano, title: "Plano alimentar", subtitle: "Refeições do dia", primary: true });
   cards.push({ href: "/check-in", icon: IconCheckin, title: "Check-in", subtitle: props.checkInDone ? "Enviado nesta semana" : props.checkInAvailable ? "Disponível hoje" : "Abre na segunda-feira" });
   cards.push({ href: "/documentos", icon: IconDocumentos, title: "Documentos", subtitle: props.documentsCount ? `${props.documentsCount} disponível(is)` : "Protocolos e avaliações" });
@@ -59,6 +67,7 @@ export function QuickAccess(props: Readonly<{
       <div className="nf-quick-grid">{cards.map((item) => <QuickAccessCard item={item} key={item.href} />)}</div>
       {!evolutionInGrid ? <QuickAccessRow item={evolution} /> : null}
       {commercial ? <TrainingOfferCard /> : null}
+      {anamnesisPending && props.training.state !== "preparing" ? <TrainingAnamnesisPrompt /> : null}
     </section>
   );
 }

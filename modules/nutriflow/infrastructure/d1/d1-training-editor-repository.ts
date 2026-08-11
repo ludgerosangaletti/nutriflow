@@ -8,6 +8,8 @@ import type {
   TrainingRoutineContentV1,
   TrainingRoutineDraftV1,
 } from "../../contracts/v1/training.ts";
+import { parseTrainingAnamnesisAnswersV1 } from "../../contracts/v1/training-anamnesis-validation.ts";
+import type { TrainingAnamnesisV1 } from "../../contracts/v1/training-anamnesis.ts";
 import { NutriFlowApplicationError } from "../../application/errors/nutriflow-application-error.ts";
 import type { D1PreparedStatementLike } from "./d1-unit-of-work.ts";
 
@@ -27,6 +29,7 @@ type DraftRow = Readonly<{ routine_public_id: string; public_id: string; version
 type PublicationRow = Readonly<{ public_id: string; routine_public_id: string; routine_version_public_id: string; version_number: number; published_at: string; snapshot_json: string | null; routine_id: number }>;
 type RoutineRow = Readonly<{ id: number; public_id: string }>;
 type VersionNumberRow = Readonly<{ next_version: number }>;
+type AnamnesisRow = Readonly<{ public_id: string; status: "submitted"; submitted_answers_json: string; revision: number; updated_at: string; submitted_at: string }>;
 
 function parseContent(value: string | null): TrainingRoutineContentV1 {
   if (!value) return Object.freeze({ schemaVersion: 1, days: Object.freeze([]) });
@@ -50,6 +53,13 @@ function draft(row: DraftRow | null): TrainingRoutineDraftV1 | null {
 
 function publication(row: PublicationRow | null): TrainingPublicationV1 | null {
   return row ? Object.freeze({ apiVersion: NUTRIFLOW_API_VERSION, publicId: row.public_id, routinePublicId: row.routine_public_id, routineVersionPublicId: row.routine_version_public_id, versionNumber: row.version_number, publishedAt: row.published_at, content: parseContent(row.snapshot_json) }) : null;
+}
+
+function anamnesis(row: AnamnesisRow | null): TrainingAnamnesisV1 | null {
+  if (!row) return null;
+  try {
+    return Object.freeze({ apiVersion: NUTRIFLOW_API_VERSION, publicId: row.public_id, status: "submitted", answers: parseTrainingAnamnesisAnswersV1(JSON.parse(row.submitted_answers_json), true), revision: row.revision, updatedAt: row.updated_at, submittedAt: row.submitted_at });
+  } catch { return null; }
 }
 
 function changes(value: unknown) {
@@ -89,7 +99,7 @@ export class D1TrainingEditorRepository {
 
   private async rows(organizationId: number, clientId: number) {
     await this.assertClientScope(organizationId, clientId);
-    const [entitlementRow, draftRow, publicationRow] = await Promise.all([
+    const [entitlementRow, draftRow, publicationRow, anamnesisRow] = await Promise.all([
       this.database.prepare("SELECT public_id, status, granted_at, revoked_at, reason FROM nf_training_entitlements WHERE organization_id = ? AND client_id = ? LIMIT 1").bind(organizationId, clientId).first<EntitlementRow>(),
       this.database.prepare(`SELECT routine.public_id AS routine_public_id, version.public_id, version.version_number, version.revision, routine.title, version.content_json, version.updated_at
         FROM nf_training_routines AS routine INNER JOIN nf_training_routine_versions AS version ON version.routine_id = routine.id
@@ -102,13 +112,16 @@ export class D1TrainingEditorRepository {
         INNER JOIN nf_training_routine_versions AS version ON version.id = publication.routine_version_id
         WHERE publication.organization_id = ? AND publication.client_id = ? AND publication.status = 'active'
         ORDER BY publication.published_at DESC, publication.id DESC LIMIT 1`).bind(organizationId, clientId).first<PublicationRow>(),
+      this.database.prepare(`SELECT public_id, status, submitted_answers_json, revision, updated_at, submitted_at
+        FROM nf_training_anamneses WHERE organization_id = ? AND client_id = ? AND status = 'submitted' AND submitted_answers_json IS NOT NULL LIMIT 1`)
+        .bind(organizationId, clientId).first<AnamnesisRow>(),
     ]);
-    return { entitlementRow, draftRow, publicationRow };
+    return { entitlementRow, draftRow, publicationRow, anamnesisRow };
   }
 
   async getWorkspace(input: Readonly<{ organizationId: number; clientId: number }>): Promise<TrainingEditorWorkspaceV1> {
     const rows = await this.rows(input.organizationId, input.clientId);
-    return Object.freeze({ apiVersion: NUTRIFLOW_API_VERSION, entitlement: entitlement(rows.entitlementRow), draft: draft(rows.draftRow), publication: publication(rows.publicationRow) });
+    return Object.freeze({ apiVersion: NUTRIFLOW_API_VERSION, entitlement: entitlement(rows.entitlementRow), draft: draft(rows.draftRow), publication: publication(rows.publicationRow), anamnesis: anamnesis(rows.anamnesisRow) });
   }
 
   async configureEntitlement(input: Readonly<{

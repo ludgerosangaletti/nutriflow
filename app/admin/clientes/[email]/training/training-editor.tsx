@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { TRAINING_EXERCISE_LIBRARY_MAX_RESULTS, type TrainingEditorWorkspaceV1, type TrainingExerciseLibraryItemV1, type TrainingRoutineContentV1, type TrainingWeekday } from "../../../../../modules/nutriflow/contracts/v1/training.ts";
 import { addMuscleGroup, addTrainingExercise, emptyTrainingContent, groupsForDay, moveTrainingExercise, removeMuscleGroup, removeTrainingExercise, renameMuscleGroup, TRAINING_DAYS, updateTrainingExercise } from "./training-editor-state";
+import TrainingAnamnesisSummary from "./training-anamnesis-summary";
 
 type Envelope<T> = { data?: T; errorCode?: string; message?: string };
 const muscleGroups = [
@@ -155,17 +156,19 @@ export default function TrainingEditor({ clientId, patientName }: Readonly<{ cli
     <header className="training-editor-header">
       <div className="training-heading"><p className="section-kicker">NutriFlow Training</p><h1>{isEditing ? title : "Treino semanal"}</h1><p><strong>{patientName}</strong><span aria-hidden="true"> · </span>{activePublication ? `Publicado • Versão ${activePublication.versionNumber}` : isEditing ? "Novo treino" : "Sem treino publicado"}</p></div>
       <div className="training-primary-actions">
-        {workspace.entitlement.active && !isEditing ? <button className="training-edit-button" type="button" disabled={saving} onClick={() => void action("create-draft")}>{activePublication ? "Editar treino" : "Montar treino"}</button> : null}
+        {workspace.entitlement.active && !isEditing ? <button className="training-edit-button" type="button" disabled={saving || (!activePublication && !workspace.anamnesis)} title={!activePublication && !workspace.anamnesis ? "Aguardando o paciente concluir a anamnese" : undefined} onClick={() => void action("create-draft")}>{activePublication ? "Editar treino" : workspace.anamnesis ? "Montar treino" : "Aguardando anamnese"}</button> : null}
         {isEditing ? <><span className={`training-save-state ${isDirty ? "is-dirty" : ""}`}>{saving ? "Salvando…" : isDirty ? "Alterações não salvas" : "Salvo"}</span><button type="button" disabled={saving || !isDirty} onClick={() => void save()}>Salvar</button><button className="is-publish" type="button" disabled={saving || content.days.length === 0} onClick={() => void publish()}>Publicar</button></> : null}
         <details className="training-admin-menu"><summary aria-label="Mais opções">•••</summary><div><small>Acesso do paciente</small><strong>{workspace.entitlement.active ? "Training ativo" : "Training inativo"}</strong><button type="button" disabled={saving} onClick={() => void action("entitlement", { active: !workspace.entitlement.active, reason: workspace.entitlement.active ? "Revogado pelo administrador" : "Ativado pelo administrador" })}>{workspace.entitlement.active ? "Revogar acesso" : "Ativar Training"}</button></div></details>
       </div>
     </header>
 
     {message ? <p className="training-message" role="status">{message}</p> : null}
+    {workspace.entitlement.active ? <TrainingAnamnesisSummary anamnesis={workspace.anamnesis} /> : null}
     {!workspace.entitlement.active ? <section className="training-empty"><span className="training-empty-icon">○</span><h2>Training desativado</h2><p>Ative o acesso nas opções para montar a rotina. Todo o histórico será preservado.</p></section> : null}
     {workspace.entitlement.active && (activePublication || isEditing) ? <>
       {isEditing ? <label className="training-title"><span>Nome do treino</span><input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Ex.: Treino semanal" /></label> : null}
-      <nav className="training-days" aria-label="Dias da semana">{TRAINING_DAYS.map((day) => <button key={day.key} type="button" className={activeDay === day.key ? "is-active" : ""} onClick={() => setActiveDay(day.key)}><strong>{day.label}</strong><small>{daySummary(content, day.key)}</small></button>)}</nav>
+      {workspace.anamnesis ? <p className="training-availability-note">Tempo habitual disponível: <strong>{({ up_to_30: "Até 30 min", "30_to_45": "30–45 min", "45_to_60": "45–60 min", "60_to_75": "60–75 min", over_75: "Mais de 75 min" } as const)[workspace.anamnesis.answers.sessionDuration!]}</strong></p> : null}
+      <nav className="training-days" aria-label="Dias da semana">{TRAINING_DAYS.map((day) => <button key={day.key} type="button" className={activeDay === day.key ? "is-active" : ""} onClick={() => setActiveDay(day.key)}><strong>{day.label}{workspace.anamnesis?.answers.availableDays.includes(day.key) ? " ✓" : ""}</strong><small>{daySummary(content, day.key)}</small></button>)}</nav>
       <div className="training-day-panel">
         <header><div><p className="section-kicker">{TRAINING_DAYS.find((day) => day.key === activeDay)?.label}</p><h2>{groups.length ? daySummary(content, activeDay) : "Dia de descanso"}</h2><small>{groups.reduce((total, group) => total + group.exercises.length, 0)} exercícios</small></div>{isEditing ? <button type="button" onClick={() => setContent((current) => addMuscleGroup(current, activeDay, "Peito"))}>+ Adicionar grupo</button> : null}</header>
         {!groups.length ? <div className="training-rest"><span>☾</span><strong>Descanso</strong><small>{isEditing ? "Adicione um grupo muscular para prescrever este dia." : "Nenhum exercício prescrito para este dia."}</small></div> : null}
