@@ -26,6 +26,14 @@ test("Pollock 7 mantém a exigência clínica das sete dobras", () => {
   assert.throws(() => calculatePollock7({ ...input, skinfoldsMm: incomplete as typeof input.skinfoldsMm, circumferencesCm: {} }), /sete dobras/i);
 });
 
+test("formulário mantém dobra e circunferência da coxa em campos distintos", () => {
+  const form = readFileSync(new URL("../app/admin/clientes/[email]/clinical-assessment-form.tsx", import.meta.url), "utf8");
+  assert.match(form, /`skinfold_\$\{key\}`/);
+  assert.match(form, /`circumference_\$\{key\}`/);
+  assert.match(form, /number\(skinField\(key\)\)/);
+  assert.match(form, /values\.get\(circumferenceField\(key\)\)/);
+});
+
 test("avaliação presencial usa o vínculo organizacional direto do paciente", () => {
   const route = readFileSync(
     new URL("../app/api/admin/clinical-assessments/route.ts", import.meta.url),
