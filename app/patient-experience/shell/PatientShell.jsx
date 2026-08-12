@@ -28,7 +28,7 @@ import { TabBar } from "./TabBar";
  * sticky. Isso preserva zoom, teclado virtual, Dynamic Type e leitores de
  * tela.
  */
-export function PatientShell({ children, onBack }) {
+export function PatientShell({ children, onBack, hideTabBar = false }) {
   const syncState = useConnectionState();
 
   return (
@@ -74,13 +74,13 @@ export function PatientShell({ children, onBack }) {
           paddingLeft: "max(16px, var(--nf-safe-left))",
           paddingRight: "max(16px, var(--nf-safe-right))",
           paddingTop: 16,
-          paddingBottom: "calc(88px + var(--nf-safe-bottom))",
+          paddingBottom: hideTabBar ? "calc(24px + var(--nf-safe-bottom))" : "calc(88px + var(--nf-safe-bottom))",
         }}
       >
         {children}
       </div>
 
-      <TabBar />
+      {hideTabBar ? null : <TabBar />}
     </div>
   );
 }
@@ -99,13 +99,14 @@ function useConnectionState() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    setIsOffline(!navigator.onLine);
+    const initialCheck = window.setTimeout(() => setIsOffline(!navigator.onLine), 0);
 
     const goOffline = () => setIsOffline(true);
     const goOnline = () => setIsOffline(false);
     window.addEventListener("offline", goOffline);
     window.addEventListener("online", goOnline);
     return () => {
+      window.clearTimeout(initialCheck);
       window.removeEventListener("offline", goOffline);
       window.removeEventListener("online", goOnline);
     };

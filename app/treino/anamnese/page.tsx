@@ -15,5 +15,5 @@ export default async function TrainingAnamnesisPage() {
   const portal = await createNutriFlowPatientRuntime().getTraining.execute({ actor: context.actor, organizationId: context.organizationId, organizationPublicId: context.organizationPublicId });
   if (portal.card.state === "commercial") redirect("/treino-info");
   const anamnesis = await createTrainingAnamnesisRepository().getEditableForPatient({ organizationId: context.organizationId, clientId: context.actor.clientId });
-  return <PatientShell><TrainingAnamnesisForm initial={anamnesis} /></PatientShell>;
+  return <PatientShell hideTabBar><TrainingAnamnesisForm initial={anamnesis} /></PatientShell>;
 }
