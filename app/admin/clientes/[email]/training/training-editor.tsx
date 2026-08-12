@@ -17,7 +17,9 @@ const muscleGroups = [
   { label: "Posterior", value: "posterior_coxa" },
   { label: "Glúteos", value: "gluteos" },
   { label: "Panturrilhas", value: "panturrilhas" },
+  { label: "Abdômen", value: "abdomen" },
   { label: "Core", value: "core" },
+  { label: "Cardio", value: "cardio" },
 ] as const;
 
 function requestHeaders() { return { "content-type": "application/json", "x-correlation-id": `corr_${crypto.randomUUID()}` }; }

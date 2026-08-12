@@ -176,6 +176,31 @@ test("Training Global Library 1.0 persists exactly the reconciled 100 exercises"
   assert.equal(sqlite.prepare("SELECT name FROM nf_training_exercises WHERE public_id = 'tr_ex_global_puxada_frente'").get()!.name, "Puxada frontal pronada");
 });
 
+test("Training Global Library expands Abdômen and Cardio without duplicating reconciled exercises", () => {
+  const sqlite = trainingDatabase();
+  apply(sqlite, "0042_nutriflow_training_global_library.sql");
+  const originalPublicIds = new Set((sqlite.prepare(`SELECT public_id FROM nf_training_exercises
+    WHERE scope = 'global' AND organization_id IS NULL`).all() as { public_id: string }[]).map((exercise) => exercise.public_id));
+
+  apply(sqlite, "0046_nutriflow_training_abdomen_cardio.sql");
+  apply(sqlite, "0046_nutriflow_training_abdomen_cardio.sql");
+
+  const exercises = sqlite.prepare(`SELECT public_id, name, primary_muscle_group FROM nf_training_exercises
+    WHERE scope = 'global' AND organization_id IS NULL ORDER BY public_id`).all() as { public_id: string; name: string; primary_muscle_group: string }[];
+  const normalizedNames = new Set(exercises.map((exercise) => exercise.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim()));
+  assert.equal(exercises.length, 109);
+  assert.equal(new Set(exercises.map((exercise) => exercise.public_id)).size, 109);
+  assert.equal(normalizedNames.size, 109);
+  assert.ok([...originalPublicIds].every((publicId) => exercises.some((exercise) => exercise.public_id === publicId)));
+  assert.equal(exercises.filter((exercise) => exercise.primary_muscle_group === "abdomen").length, 10);
+  assert.equal(exercises.filter((exercise) => exercise.primary_muscle_group === "cardio").length, 3);
+  assert.deepEqual(exercises.filter((exercise) => exercise.primary_muscle_group === "core").map((exercise) => exercise.name).sort(), ["Ab wheel", "Pallof press", "Prancha", "Prancha lateral"]);
+  assert.deepEqual(
+    exercises.filter((exercise) => ["tr_ex_global_crunch-abdominal", "tr_ex_global_crunch-cabo", "tr_ex_global_elevacao-pernas", "tr_ex_global_elevacao-joelhos-suspenso"].includes(exercise.public_id)).map((exercise) => exercise.name).sort(),
+    ["Abdominal crunch", "Abdominal crunch no cabo", "Elevação de joelhos na barra", "Elevação de pernas na barra"],
+  );
+});
+
 test("training library exposes global plus only the requesting organization's private exercises", async () => {
   const database = new CountingDatabase(trainingDatabase());
   database.sqlite.exec("INSERT INTO nf_training_exercises (public_id, organization_id, scope, name, primary_muscle_group, aliases_json, status) VALUES ('tr_ex_org_one', 1, 'organization', 'Remada da OrganizaÃ§Ã£o Um', 'costas', '[\"remada especial\"]', 'active'), ('tr_ex_org_two', 2, 'organization', 'Remada da OrganizaÃ§Ã£o Dois', 'costas', '[]', 'active')");
@@ -250,6 +275,8 @@ test("training library UI requests incremental pages and centralizes canonical f
     '{ label: "Quadríceps", value: "quadriceps" }',
     '{ label: "Posterior", value: "posterior_coxa" }',
     '{ label: "Glúteos", value: "gluteos" }',
+    '{ label: "Abdômen", value: "abdomen" }',
+    '{ label: "Cardio", value: "cardio" }',
   ]) assert.ok(editor.includes(mapping), mapping);
 });
 
