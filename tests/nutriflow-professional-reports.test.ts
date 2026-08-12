@@ -30,10 +30,20 @@ test("relatório físico oficial funciona desde o baseline e limita a evolução
   const input = { patientName: "Paciente Exemplo", nutritionistName: "Ludgero Sangaletti", nutritionistRegistration: "CRN-8 11719", assessments: [future, initial, second], targetAssessmentPublicId: initial.publicId };
   const baselineBytes = await buildClinicalAssessmentReportPdf(input);
   assert.equal(new TextDecoder().decode(baselineBytes.slice(0, 4)), "%PDF");
-  assert.ok((await PDFDocument.load(baselineBytes)).getPageCount() >= 1);
+  assert.equal((await PDFDocument.load(baselineBytes)).getPageCount(), 2);
   assert.deepEqual(reportFormatting.orderedAssessmentHistory(input.assessments, initial.publicId).map((item) => item.publicId), ["a1"]);
   assert.deepEqual(reportFormatting.orderedAssessmentHistory(input.assessments, second.publicId).map((item) => item.publicId), ["a1", "a2"]);
   assert.deepEqual(baselineBytes, await buildClinicalAssessmentReportPdf(input), "o mesmo estado válido deve produzir o mesmo relatório oficial");
+});
+
+test("leitura profissional cobre baseline, recomposição e cenário misto sem diagnóstico automático", () => {
+  const initial = assessment("a1", "2026-04-08T12:00:00.000Z", 86.4, 24.8, 65);
+  const recomposition = assessment("a2", "2026-06-08T12:00:00.000Z", 82.1, 20.6, 65.2);
+  const mixed = assessment("a3", "2026-08-08T12:00:00.000Z", 79.4, 18.8, 62.9);
+  assert.match(reportFormatting.professionalReading([initial]), /ponto de partida/i);
+  assert.match(reportFormatting.professionalReading([initial, recomposition]), /gordura corporal reduziu 4,2 p\.p\./i);
+  assert.match(reportFormatting.professionalReading([initial, mixed]), /acompanhada por redução/i);
+  assert.doesNotMatch(reportFormatting.professionalReading([initial, mixed]), /diagnóst|doença|tratamento/i);
 });
 
 test("relatório distingue a circunferência da coxa da dobra cutânea da coxa", () => {

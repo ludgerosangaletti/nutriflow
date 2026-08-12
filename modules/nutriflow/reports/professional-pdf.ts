@@ -90,6 +90,7 @@ export type ClinicalAssessmentReportInput = Readonly<{
   nutritionistRegistration: string;
   assessments: readonly ClinicalAssessmentReportPoint[];
   targetAssessmentPublicId: string;
+  professionalReading?: string | null;
   logoBytes?: Uint8Array | null;
 }>;
 
@@ -462,6 +463,8 @@ export async function buildPlanReportPdf(input: PlanReportInput) {
 
 const circumferenceLabels: Readonly<Record<string, string>> = Object.freeze({ arm: "Braço", waist: "Cintura", abdomen: "Abdômen", hip: "Quadril", thigh: "Coxa" });
 const skinfoldLabels: Readonly<Record<string, string>> = Object.freeze({ triceps: "Tríceps", subscapular: "Subescapular", suprailiac: "Supra-ilíaca", abdominal: "Abdominal", midaxillary: "Axilar média", pectoral: "Peitoral", thigh: "Coxa" });
+const circumferenceOrder = Object.freeze(["arm", "waist", "abdomen", "hip", "thigh"] as const);
+const skinfoldOrder = Object.freeze(["triceps", "subscapular", "suprailiac", "abdominal", "midaxillary", "pectoral", "thigh"] as const);
 
 type Metric = Readonly<{ label: string; value: number; unit: string }>;
 
@@ -494,187 +497,295 @@ function bodyMetrics(point: ClinicalAssessmentReportPoint): readonly Metric[] {
   ]);
 }
 
-function drawOverviewCards(report: ProfessionalPdf, metrics: readonly Metric[]) {
-  const gap = 10;
-  const width = (CONTENT_WIDTH - gap) / 2;
-  for (let index = 0; index < metrics.length; index += 2) {
-    report.ensure(82);
-    const top = report.y;
-    metrics.slice(index, index + 2).forEach((metric, column) => {
-      const x = MARGIN + column * (width + gap);
-      report.page.drawRectangle({ x, y: top - 69, width, height: 69, color: column === 0 && index === 0 ? PALE_YELLOW : PAPER, borderColor: BORDER, borderWidth: 0.55 });
-      report.page.drawText(metric.label.toUpperCase(), { x: x + 13, y: top - 17, size: 6.8, font: report.fonts.bold, color: MUTED });
-      report.page.drawText(ptNumber(metric.value), { x: x + 13, y: top - 48, size: 23, font: report.fonts.bold, color: INK });
-      const numberWidth = report.fonts.bold.widthOfTextAtSize(ptNumber(metric.value), 23);
-      report.page.drawText(metric.unit, { x: x + 18 + numberWidth, y: top - 46, size: 8.5, font: report.fonts.bold, color: MUTED });
-    });
-    report.y = top - 79;
-  }
-}
-
-function drawChangeCards(report: ProfessionalPdf, metrics: readonly Metric[], previous: ClinicalAssessmentReportPoint, baseline: ClinicalAssessmentReportPoint) {
-  const previousValues = bodyMetrics(previous);
-  const baselineValues = bodyMetrics(baseline);
-  for (const [index, metric] of metrics.entries()) {
-    report.ensure(70);
-    const top = report.y;
-    const prior = previousValues[index];
-    const first = baselineValues[index];
-    const deltaUnit = metric.label === "Gordura corporal" ? "p.p." : metric.unit;
-    report.page.drawRectangle({ x: MARGIN, y: top - 59, width: CONTENT_WIDTH, height: 59, color: PAPER, borderColor: BORDER, borderWidth: 0.55 });
-    report.page.drawText(metric.label.toUpperCase(), { x: MARGIN + 14, y: top - 17, size: 7, font: report.fonts.bold, color: MUTED });
-    report.page.drawText(`${ptNumber(prior.value)} ${metric.unit}`, { x: MARGIN + 14, y: top - 43, size: 12, font: report.fonts.regular, color: MUTED });
-    report.page.drawLine({ start: { x: MARGIN + 112, y: top - 39 }, end: { x: MARGIN + 144, y: top - 39 }, thickness: 1.1, color: INK });
-    report.page.drawLine({ start: { x: MARGIN + 138, y: top - 35 }, end: { x: MARGIN + 144, y: top - 39 }, thickness: 1.1, color: INK });
-    report.page.drawLine({ start: { x: MARGIN + 138, y: top - 43 }, end: { x: MARGIN + 144, y: top - 39 }, thickness: 1.1, color: INK });
-    report.page.drawText(`${ptNumber(metric.value)} ${metric.unit}`, { x: MARGIN + 158, y: top - 46, size: 18, font: report.fonts.bold, color: INK });
-    report.page.drawText(`DESDE A ÚLTIMA: ${changeLabel(prior.value, metric.value, deltaUnit)}`.toUpperCase(), { x: MARGIN + 320, y: top - 29, size: 7.2, font: report.fonts.bold, color: INK });
-    if (previous.publicId !== baseline.publicId) report.page.drawText(`DESDE O INÍCIO: ${changeLabel(first.value, metric.value, deltaUnit)}`.toUpperCase(), { x: MARGIN + 320, y: top - 47, size: 7.2, font: report.fonts.bold, color: MUTED });
-    report.y = top - 68;
-  }
-}
-
-function drawMeasureCards(report: ProfessionalPdf, entries: readonly Readonly<{ key: string; value: number }>[], previous: ClinicalAssessmentReportPoint | null) {
-  const gap = 9;
-  const width = (CONTENT_WIDTH - gap) / 2;
-  for (let index = 0; index < entries.length; index += 2) {
-    report.ensure(62);
-    const top = report.y;
-    entries.slice(index, index + 2).forEach((entry, column) => {
-      const x = MARGIN + column * (width + gap);
-      report.page.drawRectangle({ x, y: top - 50, width, height: 50, color: PAPER, borderColor: BORDER, borderWidth: 0.45 });
-      report.page.drawText((circumferenceLabels[entry.key] ?? entry.key).toUpperCase(), { x: x + 11, y: top - 14, size: 6.7, font: report.fonts.bold, color: MUTED });
-      report.page.drawText(`${ptNumber(entry.value)} cm`, { x: x + 11, y: top - 33, size: 12, font: report.fonts.bold, color: INK });
-      const prior = previous?.circumferencesCm[entry.key];
-      if (prior != null) {
-        const label = changeLabel(Number(prior), entry.value, "cm");
-        const labelWidth = report.fonts.bold.widthOfTextAtSize(label, 7.2);
-        report.page.drawText(label, { x: x + width - 11 - labelWidth, y: top - 31, size: 7.2, font: report.fonts.bold, color: MUTED });
-      } else if (previous) {
-        report.page.drawText("Sem comparação", { x: x + width - 79, y: top - 31, size: 7.2, font: report.fonts.regular, color: MUTED });
-      }
-    });
-    report.y = top - 59;
-  }
-}
-
-function drawSkinfolds(report: ProfessionalPdf, current: ClinicalAssessmentReportPoint) {
-  const entries = Object.entries(current.skinfoldsMm).filter(([, value]) => Number(value) > 0);
-  if (!entries.length) return;
-  const rows = entries.map(([key, value]) => ({ label: skinfoldLabels[key] ?? key, value: `${ptNumber(Number(value))} mm` }));
-  if (current.sumSkinfoldsMm != null) rows.push({ label: "Soma das 7 dobras", value: `${ptNumber(current.sumSkinfoldsMm)} mm` });
-  report.ensure(55 + Math.ceil(rows.length / 2) * 46);
-  report.section("Dobras cutâneas", "Dados do protocolo");
-  const gap = 9;
-  const width = (CONTENT_WIDTH - gap) / 2;
-  for (let index = 0; index < rows.length; index += 2) {
-    report.ensure(46);
-    const top = report.y;
-    rows.slice(index, index + 2).forEach((row, column) => {
-      const x = MARGIN + column * (width + gap);
-      report.page.drawRectangle({ x, y: top - 38, width, height: 38, color: PAPER, borderColor: BORDER, borderWidth: 0.45 });
-      report.page.drawText(row.label.toUpperCase(), { x: x + 10, y: top - 13, size: 6.5, font: report.fonts.bold, color: MUTED });
-      report.page.drawText(row.value, { x: x + 10, y: top - 30, size: 10, font: report.fonts.bold, color: INK });
-    });
-    report.y = top - 46;
-  }
-}
-
 function shortDate(value: string) {
   return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", timeZone: "UTC" }).format(new Date(value));
+}
+
+function metricValue(metric: Metric) {
+  return `${ptNumber(metric.value)}${metric.unit === "%" ? "%" : ` ${metric.unit}`}`;
+}
+
+function drawRight(report: ProfessionalPdf, text: string, right: number, y: number, options: { size?: number; bold?: boolean; color?: ReturnType<typeof rgb> } = {}) {
+  const size = options.size ?? 9;
+  const font = options.bold ? report.fonts.bold : report.fonts.regular;
+  report.page.drawText(safeText(text), { x: right - font.widthOfTextAtSize(safeText(text), size), y, size, font, color: options.color ?? INK });
+}
+
+function drawSectionHeading(report: ProfessionalPdf, title: string, meta: string, y: number) {
+  report.page.drawText(safeText(title), { x: MARGIN, y, size: 14.5, font: report.fonts.bold, color: INK });
+  drawRight(report, meta, PAGE_WIDTH - MARGIN, y + 1, { size: 8.2, color: MUTED });
+  report.page.drawLine({ start: { x: MARGIN, y: y - 8 }, end: { x: PAGE_WIDTH - MARGIN, y: y - 8 }, thickness: 0.55, color: BORDER });
+  return y - 25;
+}
+
+function drawIdentityBar(report: ProfessionalPdf, input: ClinicalAssessmentReportInput, current: ClinicalAssessmentReportPoint, y: number) {
+  const height = 49;
+  const widths = [173, 164, CONTENT_WIDTH - 337];
+  const items = [
+    { label: "Profissional", value: input.nutritionistName },
+    { label: "Registro", value: input.nutritionistRegistration },
+    { label: "Protocolo", value: `${current.protocolCode === "pollock_7" ? "Pollock 7 dobras" : current.protocolCode} v${current.protocolVersion}` },
+  ];
+  report.page.drawRectangle({ x: MARGIN, y: y - height, width: CONTENT_WIDTH, height, color: PAPER, borderColor: BORDER, borderWidth: 0.55 });
+  let x = MARGIN;
+  items.forEach((item, index) => {
+    if (index) report.page.drawLine({ start: { x, y: y - height }, end: { x, y }, thickness: 0.45, color: BORDER });
+    report.page.drawText(item.label.toUpperCase(), { x: x + 11, y: y - 15, size: 6.5, font: report.fonts.bold, color: MUTED });
+    const lines = wrap(report.fonts.bold, item.value, 9.2, widths[index] - 22).slice(0, 2);
+    lines.forEach((line, lineIndex) => report.page.drawText(line, { x: x + 11, y: y - 32 - lineIndex * 10, size: 9.2, font: report.fonts.bold, color: INK }));
+    x += widths[index];
+  });
+  return y - height - 20;
+}
+
+function drawCompositionHero(report: ProfessionalPdf, current: ClinicalAssessmentReportPoint, baseline: ClinicalAssessmentReportPoint, isFirst: boolean, y: number) {
+  const height = 91;
+  report.page.drawRectangle({ x: MARGIN, y: y - height, width: CONTENT_WIDTH, height, color: INK });
+  report.page.drawText("GORDURA CORPORAL", { x: MARGIN + 19, y: y - 24, size: 7.2, font: report.fonts.bold, color: BRAND_YELLOW });
+  const main = ptNumber(current.bodyFatPct);
+  report.page.drawText(main, { x: MARGIN + 19, y: y - 67, size: 34, font: report.fonts.bold, color: rgb(1, 1, 1) });
+  report.page.drawText("%", { x: MARGIN + 25 + report.fonts.bold.widthOfTextAtSize(main, 34), y: y - 62, size: 11, font: report.fonts.bold, color: BORDER });
+  const items = isFirst ? [
+    ["Peso", `${ptNumber(current.weightKg)} kg`],
+    ["Massa gorda", `${ptNumber(current.fatMassKg)} kg`],
+    ["Massa livre de gordura", `${ptNumber(current.leanMassKg)} kg`],
+  ] : [
+    [`No início (${ptDate(baseline.capturedAt)})`, `${ptNumber(baseline.bodyFatPct)}%`],
+    ["Variação de gordura", changeLabel(baseline.bodyFatPct, current.bodyFatPct, "p.p.")],
+    ["Variação de massa livre", changeLabel(baseline.leanMassKg, current.leanMassKg, "kg")],
+  ];
+  const startX = MARGIN + 235;
+  items.forEach(([label, value], index) => {
+    const rowY = y - 24 - index * 23;
+    report.page.drawText(safeText(label), { x: startX, y: rowY, size: 8.4, font: report.fonts.regular, color: BORDER });
+    drawRight(report, value, PAGE_WIDTH - MARGIN - 18, rowY, { size: 9.4, bold: true, color: rgb(1, 1, 1) });
+    if (index < items.length - 1) report.page.drawLine({ start: { x: startX, y: rowY - 7 }, end: { x: PAGE_WIDTH - MARGIN - 18, y: rowY - 7 }, thickness: 0.35, color: rgb(0.24, 0.24, 0.24) });
+  });
+  return y - height - 15;
+}
+
+function comparisonLayout(historyLength: number) {
+  return historyLength >= 3
+    ? Object.freeze({ label: MARGIN, initial: MARGIN + 210, previous: MARGIN + 300, current: MARGIN + 385, delta: PAGE_WIDTH - MARGIN })
+    : Object.freeze({ label: MARGIN, initial: MARGIN + 260, previous: null, current: MARGIN + 380, delta: PAGE_WIDTH - MARGIN });
+}
+
+function drawComparisonTable(report: ProfessionalPdf, history: readonly ClinicalAssessmentReportPoint[], y: number) {
+  const current = history.at(-1)!;
+  const baseline = history[0];
+  const previous = history.length > 1 ? history.at(-2)! : null;
+  const layout = comparisonLayout(history.length);
+  const currentMetrics = bodyMetrics(current);
+  const baselineMetrics = bodyMetrics(baseline);
+  const previousMetrics = previous ? bodyMetrics(previous) : null;
+  const headerY = y;
+  report.page.drawText("INDICADOR", { x: layout.label, y: headerY, size: 6.6, font: report.fonts.bold, color: MUTED });
+  if (history.length > 1) {
+    drawRight(report, "INÍCIO", layout.initial, headerY, { size: 6.6, bold: true, color: MUTED });
+    if (layout.previous) drawRight(report, "ANTERIOR", layout.previous, headerY, { size: 6.6, bold: true, color: MUTED });
+    drawRight(report, "ATUAL", layout.current, headerY, { size: 6.6, bold: true, color: MUTED });
+    drawRight(report, "DESDE O INÍCIO", layout.delta, headerY, { size: 6.6, bold: true, color: MUTED });
+  } else {
+    drawRight(report, "ATUAL", layout.delta, headerY, { size: 6.6, bold: true, color: MUTED });
+  }
+  report.page.drawLine({ start: { x: MARGIN, y: headerY - 7 }, end: { x: PAGE_WIDTH - MARGIN, y: headerY - 7 }, thickness: 0.6, color: BORDER });
+  let rowY = headerY - 26;
+  currentMetrics.forEach((metric, index) => {
+    report.page.drawText(metric.label, { x: layout.label, y: rowY, size: 9.2, font: report.fonts.bold, color: INK });
+    if (history.length > 1) {
+      drawRight(report, metricValue(baselineMetrics[index]), layout.initial, rowY, { size: 8.7, color: MUTED });
+      if (layout.previous && previousMetrics) drawRight(report, metricValue(previousMetrics[index]), layout.previous, rowY, { size: 8.7, color: MUTED });
+      drawRight(report, metricValue(metric), layout.current, rowY, { size: 9.5, bold: true });
+      const unit = metric.label === "Gordura corporal" ? "p.p." : metric.unit;
+      drawRight(report, changeLabel(baselineMetrics[index].value, metric.value, unit), layout.delta, rowY, { size: 8.5, bold: true, color: MUTED });
+    } else {
+      drawRight(report, metricValue(metric), layout.delta, rowY, { size: 9.5, bold: true });
+    }
+    report.page.drawLine({ start: { x: MARGIN, y: rowY - 9 }, end: { x: PAGE_WIDTH - MARGIN, y: rowY - 9 }, thickness: 0.35, color: BORDER });
+    rowY -= 27;
+  });
+  return rowY + 5;
+}
+
+function periodLabel(from: string, to: string) {
+  const days = Math.max(0, Math.round((new Date(to).getTime() - new Date(from).getTime()) / 86_400_000));
+  if (days < 28) return `${days} dias de acompanhamento`;
+  const months = Math.max(1, Math.round(days / 30.4));
+  return `${months} ${months === 1 ? "mês" : "meses"} de acompanhamento`;
+}
+
+function professionalReading(history: readonly ClinicalAssessmentReportPoint[]) {
+  const current = history.at(-1)!;
+  if (history.length === 1) {
+    return "Esta avaliação estabelece o ponto de partida do acompanhamento. Os indicadores de composição corporal, circunferências e dobras registrados aqui servirão como referência para as próximas avaliações, sempre em conjunto com a evolução clínica e a rotina do paciente.";
+  }
+  const baseline = history[0];
+  const previous = history.at(-2)!;
+  const fatDelta = roundedDelta(baseline.bodyFatPct, current.bodyFatPct);
+  const leanDelta = roundedDelta(baseline.leanMassKg, current.leanMassKg);
+  let reading: string;
+  if (fatDelta <= -0.2 && leanDelta >= -0.5) {
+    reading = `Desde o início, a gordura corporal reduziu ${ptNumber(Math.abs(fatDelta))} p.p., enquanto a massa livre de gordura ${leanDelta > 0.5 ? `aumentou ${ptNumber(leanDelta)} kg` : "permaneceu praticamente estável"}.`;
+  } else if (fatDelta <= -0.2 && leanDelta < -0.5) {
+    reading = `Desde o início, a gordura corporal reduziu ${ptNumber(Math.abs(fatDelta))} p.p., acompanhada por redução de ${ptNumber(Math.abs(leanDelta))} kg na massa livre de gordura. Os dois movimentos devem ser avaliados em conjunto no acompanhamento.`;
+  } else if (fatDelta >= 0.2 && leanDelta > 0.5) {
+    reading = `Desde o início, houve aumento de ${ptNumber(fatDelta)} p.p. na gordura corporal e de ${ptNumber(leanDelta)} kg na massa livre de gordura. A composição mudou em mais de uma direção e deve ser interpretada conforme o objetivo clínico.`;
+  } else if (fatDelta >= 0.2) {
+    reading = `Desde o início, a gordura corporal aumentou ${ptNumber(fatDelta)} p.p., enquanto a massa livre de gordura ${leanDelta < -0.5 ? `reduziu ${ptNumber(Math.abs(leanDelta))} kg` : "permaneceu praticamente estável"}.`;
+  } else if (leanDelta > 0.5) {
+    reading = `A gordura corporal permaneceu praticamente estável desde o início, com aumento de ${ptNumber(leanDelta)} kg na massa livre de gordura.`;
+  } else if (leanDelta < -0.5) {
+    reading = `A gordura corporal permaneceu praticamente estável desde o início, com redução de ${ptNumber(Math.abs(leanDelta))} kg na massa livre de gordura.`;
+  } else {
+    reading = "Os principais indicadores de composição corporal permaneceram praticamente estáveis desde o início do acompanhamento.";
+  }
+  const recentFat = roundedDelta(previous.bodyFatPct, current.bodyFatPct);
+  const recentLean = roundedDelta(previous.leanMassKg, current.leanMassKg);
+  const recent = recentFat === 0 && recentLean === 0
+    ? "Na comparação com a avaliação anterior, não houve alteração nos dois indicadores."
+    : `Na comparação mais recente, a gordura corporal ${recentFat === 0 ? "ficou estável" : `${recentFat > 0 ? "aumentou" : "reduziu"} ${ptNumber(Math.abs(recentFat))} p.p.`} e a massa livre ${recentLean === 0 ? "ficou estável" : `${recentLean > 0 ? "aumentou" : "reduziu"} ${ptNumber(Math.abs(recentLean))} kg`}.`;
+  return `${reading} ${recent}`;
+}
+
+function drawProfessionalReading(report: ProfessionalPdf, input: ClinicalAssessmentReportInput, reading: string, y: number) {
+  const lines = wrap(report.fonts.regular, reading, 9.4, CONTENT_WIDTH - 34).slice(0, 7);
+  const height = 54 + lines.length * 12;
+  report.page.drawRectangle({ x: MARGIN, y: y - height, width: CONTENT_WIDTH, height, color: rgb(1, 1, 1), borderColor: INK, borderWidth: 0.8 });
+  report.page.drawCircle({ x: MARGIN + 21, y: y - 22, size: 12, color: INK });
+  report.page.drawText(safeText(input.nutritionistName.slice(0, 1).toUpperCase()), { x: MARGIN + 17.4, y: y - 25.5, size: 9, font: report.fonts.bold, color: BRAND_YELLOW });
+  report.page.drawText("Leitura do profissional", { x: MARGIN + 42, y: y - 19, size: 10.3, font: report.fonts.bold, color: INK });
+  report.page.drawText(`${safeText(input.nutritionistName)} - ${safeText(input.nutritionistRegistration)}`, { x: MARGIN + 42, y: y - 32, size: 7.6, font: report.fonts.regular, color: MUTED });
+  lines.forEach((line, index) => report.page.drawText(line, { x: MARGIN + 17, y: y - 52 - index * 12, size: 9.4, font: report.fonts.regular, color: INK }));
+  return y - height;
 }
 
 function drawLineChart(report: ProfessionalPdf, label: string, values: readonly number[], dates: readonly string[], unit: string, x: number, y: number, width: number, height: number) {
   report.page.drawRectangle({ x, y: y - height, width, height, color: PAPER, borderColor: BORDER, borderWidth: 0.5 });
   report.page.drawText(label, { x: x + 12, y: y - 17, size: 8.2, font: report.fonts.bold, color: INK });
-  const current = `${ptNumber(values.at(-1)!)} ${unit}`;
-  report.page.drawText(current, { x: x + width - 12 - report.fonts.bold.widthOfTextAtSize(current, 8.2), y: y - 17, size: 8.2, font: report.fonts.bold, color: INK });
-  const graphX = x + 16;
-  const graphY = y - height + 32;
-  const graphWidth = width - 32;
-  const graphHeight = height - 61;
+  drawRight(report, `${ptNumber(values.at(-1)!)} ${unit}`, x + width - 12, y - 17, { size: 8.2, bold: true });
+  const graphX = x + 18;
+  const graphY = y - height + 28;
+  const graphWidth = width - 36;
+  const graphHeight = height - 57;
   const min = Math.min(...values);
   const max = Math.max(...values);
   const span = Math.max(max - min, 0.5);
-  const points = values.map((value, index) => ({ x: graphX + index / (values.length - 1) * graphWidth, y: graphY + (value - min) / span * graphHeight }));
-  report.page.drawLine({ start: { x: graphX, y: graphY }, end: { x: graphX + graphWidth, y: graphY }, thickness: 0.45, color: BORDER });
+  const points = values.map((value, index) => ({ x: graphX + index / Math.max(1, values.length - 1) * graphWidth, y: graphY + (value - min) / span * graphHeight, value }));
+  report.page.drawLine({ start: { x: graphX, y: graphY }, end: { x: graphX + graphWidth, y: graphY }, thickness: 0.4, color: BORDER });
+  const labelEvery = Math.max(1, Math.ceil((points.length - 1) / 5));
   points.forEach((point, index) => {
-    if (index) report.page.drawLine({ start: points[index - 1], end: point, thickness: 1.5, color: INK });
-    report.page.drawCircle({ x: point.x, y: point.y, size: 2.7, color: BRAND_YELLOW, borderColor: INK, borderWidth: 0.65 });
+    if (index) report.page.drawLine({ start: points[index - 1], end: point, thickness: 1.45, color: INK });
+    report.page.drawCircle({ x: point.x, y: point.y, size: 2.8, color: index === points.length - 1 ? INK : BRAND_YELLOW, borderColor: INK, borderWidth: 0.65 });
+    if (index === 0 || index === points.length - 1 || index % labelEvery === 0) {
+      const value = ptNumber(point.value);
+      report.page.drawText(value, { x: point.x - report.fonts.bold.widthOfTextAtSize(value, 6.4) / 2, y: point.y + 6, size: 6.4, font: report.fonts.bold, color: MUTED });
+    }
   });
-  const firstDate = shortDate(dates[0]);
-  const lastDate = shortDate(dates.at(-1)!);
-  report.page.drawText(firstDate, { x: graphX, y: y - height + 12, size: 6.8, font: report.fonts.regular, color: MUTED });
-  report.page.drawText(lastDate, { x: graphX + graphWidth - report.fonts.regular.widthOfTextAtSize(lastDate, 6.8), y: y - height + 12, size: 6.8, font: report.fonts.regular, color: MUTED });
+  report.page.drawText(shortDate(dates[0]), { x: graphX, y: y - height + 10, size: 6.2, font: report.fonts.regular, color: MUTED });
+  drawRight(report, shortDate(dates.at(-1)!), graphX + graphWidth, y - height + 10, { size: 6.2, color: MUTED });
+}
+
+function drawCircumferenceTable(report: ProfessionalPdf, history: readonly ClinicalAssessmentReportPoint[], y: number) {
+  const current = history.at(-1)!;
+  const baseline = history[0];
+  const previous = history.length > 1 ? history.at(-2)! : null;
+  const entries = circumferenceOrder.filter((key) => Number(current.circumferencesCm[key]) > 0);
+  if (!entries.length) return y;
+  const layout = comparisonLayout(history.length);
+  report.page.drawText("LOCAL", { x: MARGIN, y, size: 6.6, font: report.fonts.bold, color: MUTED });
+  if (history.length > 1) {
+    drawRight(report, "INÍCIO", layout.initial, y, { size: 6.6, bold: true, color: MUTED });
+    if (layout.previous) drawRight(report, "ANTERIOR", layout.previous, y, { size: 6.6, bold: true, color: MUTED });
+    drawRight(report, "ATUAL", layout.current, y, { size: 6.6, bold: true, color: MUTED });
+    drawRight(report, "DESDE O INÍCIO", layout.delta, y, { size: 6.6, bold: true, color: MUTED });
+  } else drawRight(report, "ATUAL", layout.delta, y, { size: 6.6, bold: true, color: MUTED });
+  report.page.drawLine({ start: { x: MARGIN, y: y - 7 }, end: { x: PAGE_WIDTH - MARGIN, y: y - 7 }, thickness: 0.55, color: BORDER });
+  let rowY = y - 25;
+  entries.forEach((key) => {
+    const currentValue = current.circumferencesCm[key];
+    report.page.drawText(circumferenceLabels[key], { x: MARGIN, y: rowY, size: 9, font: report.fonts.bold, color: INK });
+    if (history.length > 1) {
+      const firstValue = baseline.circumferencesCm[key];
+      const previousValue = previous?.circumferencesCm[key];
+      drawRight(report, firstValue == null ? "-" : ptNumber(firstValue), layout.initial, rowY, { size: 8.7, color: MUTED });
+      if (layout.previous) drawRight(report, previousValue == null ? "-" : ptNumber(previousValue), layout.previous, rowY, { size: 8.7, color: MUTED });
+      drawRight(report, ptNumber(currentValue), layout.current, rowY, { size: 9.3, bold: true });
+      drawRight(report, firstValue == null ? "-" : changeLabel(firstValue, currentValue, "cm"), layout.delta, rowY, { size: 8.3, bold: true, color: MUTED });
+    } else drawRight(report, `${ptNumber(currentValue)} cm`, layout.delta, rowY, { size: 9.3, bold: true });
+    report.page.drawLine({ start: { x: MARGIN, y: rowY - 8 }, end: { x: PAGE_WIDTH - MARGIN, y: rowY - 8 }, thickness: 0.35, color: BORDER });
+    rowY -= 24;
+  });
+  return rowY + 3;
+}
+
+function drawSkinfoldGrid(report: ProfessionalPdf, current: ClinicalAssessmentReportPoint, y: number) {
+  const entries = skinfoldOrder.filter((key) => Number(current.skinfoldsMm[key]) > 0).map((key) => ({ label: skinfoldLabels[key], value: current.skinfoldsMm[key] }));
+  if (current.sumSkinfoldsMm != null) entries.push({ label: "Soma das 7", value: current.sumSkinfoldsMm });
+  const columns = 4;
+  const gap = 7;
+  const width = (CONTENT_WIDTH - gap * (columns - 1)) / columns;
+  entries.forEach((entry, index) => {
+    const row = Math.floor(index / columns);
+    const column = index % columns;
+    const x = MARGIN + column * (width + gap);
+    const top = y - row * 50;
+    report.page.drawRectangle({ x, y: top - 42, width, height: 42, color: entry.label === "Soma das 7" ? PAPER : rgb(1, 1, 1), borderColor: BORDER, borderWidth: 0.5 });
+    report.page.drawText(entry.label.toUpperCase(), { x: x + 9, y: top - 14, size: 6.1, font: report.fonts.bold, color: MUTED });
+    report.page.drawText(`${ptNumber(entry.value)} mm`, { x: x + 9, y: top - 32, size: 9.8, font: report.fonts.bold, color: INK });
+  });
+  return y - Math.ceil(entries.length / columns) * 50;
 }
 
 export async function buildClinicalAssessmentReportPdf(input: ClinicalAssessmentReportInput) {
   const history = orderedAssessmentHistory(input.assessments, input.targetAssessmentPublicId);
   const current = history.at(-1)!;
   const baseline = history[0];
-  const previous = history.length > 1 ? history.at(-2)! : null;
-  const reportTitle = history.length === 1 ? "Relatório de Avaliação Física" : "Relatório de Evolução Física";
-  const report = await ProfessionalPdf.create({ reportName: reportTitle, versionLabel: `Avaliação ${current.publicId.slice(-8)}`, issuedAt: current.capturedAt, logoBytes: input.logoBytes });
-  report.label(history.length === 1 ? "Seu ponto de partida" : "Sua evolução até esta avaliação", { color: rgb(0.55, 0.5, 0) });
-  report.move(7);
-  report.text(reportTitle, { size: 29, lineHeight: 32, bold: true });
-  report.text(input.patientName, { size: 15, lineHeight: 20, color: MUTED });
+  const isFirst = history.length === 1;
+  const reportTitle = isFirst ? "Sua avaliação física" : "Sua evolução física";
+  const report = await ProfessionalPdf.create({ reportName: isFirst ? "Relatório de Avaliação Física" : "Relatório de Evolução Física", versionLabel: `Avaliação ${ptDate(current.capturedAt)}`, issuedAt: current.capturedAt, logoBytes: input.logoBytes });
+
+  report.label(isFirst ? "Seu ponto de partida" : periodLabel(baseline.capturedAt, current.capturedAt), { color: MUTED });
+  report.move(22);
+  report.text(reportTitle, { size: 29, lineHeight: 31, bold: true });
+  report.text(`${input.patientName} - avaliação de ${ptDate(current.capturedAt)}`, { size: 11.5, lineHeight: 16, color: MUTED });
   report.move(10);
-  report.infoGrid([
-    { label: "Paciente", value: input.patientName },
-    { label: "Profissional", value: `${input.nutritionistName} - ${input.nutritionistRegistration}` },
-    { label: "Data da avaliação", value: ptDate(current.capturedAt) },
-    { label: "Protocolo", value: `${current.protocolCode === "pollock_7" ? "Pollock 7 dobras" : current.protocolCode} - versão ${current.protocolVersion}` },
-  ]);
-  report.move(9);
+  report.y = drawIdentityBar(report, input, current, report.y);
+  report.y = drawSectionHeading(report, isFirst ? "Composição corporal" : "O que mudou desde o início", isFirst ? ptDate(current.capturedAt) : `${ptDate(baseline.capturedAt)} a ${ptDate(current.capturedAt)}`, report.y);
+  report.y = drawCompositionHero(report, current, baseline, isFirst, report.y);
+  report.y = drawComparisonTable(report, history, report.y);
+  report.page.drawText("As variações mostram somente a direção matemática. A interpretação clínica está na leitura abaixo.", { x: MARGIN, y: report.y, size: 7.4, font: report.fonts.regular, color: MUTED });
+  report.y -= 17;
+  drawProfessionalReading(report, input, input.professionalReading?.trim() || professionalReading(history), report.y);
 
-  report.section("Visão geral", history.length === 1 ? "Como estou agora" : "Momento atual");
-  drawOverviewCards(report, bodyMetrics(current));
-
-  if (previous) {
-    report.ensure(44 + bodyMetrics(current).length * 68);
-    report.section("Composição corporal", history.length > 2 ? "Atual, anterior e início" : "Desde a primeira avaliação");
-    drawChangeCards(report, bodyMetrics(current), previous, baseline);
-    report.text("As diferenças indicam somente a direção matemática da mudança, sem julgamento clínico automático.", { size: 8.2, lineHeight: 11.5, color: MUTED });
-    report.move(7);
-  } else {
-    report.ensure(44 + 3 * 57);
-    report.section("Composição corporal", "Baseline físico");
-    report.infoGrid([
-      { label: "Peso", value: `${ptNumber(current.weightKg)} kg` },
-      { label: "Altura", value: `${ptNumber(current.heightCm)} cm` },
-      { label: "Gordura corporal", value: `${ptNumber(current.bodyFatPct)}%` },
-      { label: "Massa gorda", value: `${ptNumber(current.fatMassKg)} kg` },
-      { label: "Massa livre de gordura", value: `${ptNumber(current.leanMassKg)} kg` },
-      { label: "Protocolo", value: current.protocolCode === "pollock_7" ? "Pollock 7 dobras" : current.protocolCode },
-    ]);
-  }
-
-  const circumferences = Object.entries(current.circumferencesCm).filter(([, value]) => Number(value) > 0).map(([key, value]) => ({ key, value: Number(value) }));
-  if (circumferences.length) {
-    report.section("Circunferências", `Medidas ${current.measurementSide === "left" ? "do lado esquerdo" : current.measurementSide === "right" ? "do lado direito" : "registradas"}`);
-    drawMeasureCards(report, circumferences, previous);
-    report.move(4);
-    report.text("A medida de coxa exibida nesta seção utiliza exclusivamente a circunferência registrada, distinta da dobra cutânea da coxa.", { size: 8.2, lineHeight: 11.5, color: MUTED });
-    report.move(8);
-  }
-
-  drawSkinfolds(report, current);
-
-  if (history.length >= 3) {
-    report.section("Linha de evolução", "Histórico até esta avaliação");
+  report.addPage();
+  if (history.length > 1) {
+    report.y = drawSectionHeading(report, "Linha de evolução", `${history.length} avaliações até ${ptDate(current.capturedAt)}`, report.y);
     const dates = history.map((point) => point.capturedAt);
-    const graphHeight = 126;
-    const graphWidth = (CONTENT_WIDTH - 10) / 2;
-    report.ensure(graphHeight * 2 + 12);
-    let chartTop = report.y;
-    drawLineChart(report, "Peso corporal", history.map((point) => point.weightKg), dates, "kg", MARGIN, chartTop, graphWidth, graphHeight);
-    drawLineChart(report, "Gordura corporal", history.map((point) => point.bodyFatPct), dates, "%", MARGIN + graphWidth + 10, chartTop, graphWidth, graphHeight);
-    chartTop -= graphHeight + 10;
-    drawLineChart(report, "Massa gorda", history.map((point) => point.fatMassKg), dates, "kg", MARGIN, chartTop, graphWidth, graphHeight);
-    drawLineChart(report, "Massa livre de gordura", history.map((point) => point.leanMassKg), dates, "kg", MARGIN + graphWidth + 10, chartTop, graphWidth, graphHeight);
-    report.y = chartTop - graphHeight - 18;
+    const chartHeight = 105;
+    const chartWidth = (CONTENT_WIDTH - 9) / 2;
+    const top = report.y;
+    drawLineChart(report, "Peso corporal", history.map((point) => point.weightKg), dates, "kg", MARGIN, top, chartWidth, chartHeight);
+    drawLineChart(report, "Gordura corporal", history.map((point) => point.bodyFatPct), dates, "%", MARGIN + chartWidth + 9, top, chartWidth, chartHeight);
+    drawLineChart(report, "Massa gorda", history.map((point) => point.fatMassKg), dates, "kg", MARGIN, top - chartHeight - 9, chartWidth, chartHeight);
+    drawLineChart(report, "Massa livre de gordura", history.map((point) => point.leanMassKg), dates, "kg", MARGIN + chartWidth + 9, top - chartHeight - 9, chartWidth, chartHeight);
+    report.y = top - chartHeight * 2 - 25;
   }
+
+  const side = current.measurementSide === "left" ? "lado esquerdo - centímetros" : current.measurementSide === "right" ? "lado direito - centímetros" : "centímetros";
+  if (circumferenceOrder.some((key) => Number(current.circumferencesCm[key]) > 0)) {
+    report.y = drawSectionHeading(report, "Circunferências", side, report.y);
+    report.y = drawCircumferenceTable(report, history, report.y);
+    report.page.drawText("Coxa nesta seção é circunferência; não é a dobra cutânea da coxa.", { x: MARGIN, y: report.y, size: 7.3, font: report.fonts.regular, color: MUTED });
+    report.y -= 22;
+  }
+
+  if (skinfoldOrder.some((key) => Number(current.skinfoldsMm[key]) > 0)) {
+    report.y = drawSectionHeading(report, "Dobras cutâneas", `milímetros - ${current.protocolCode === "pollock_7" ? "Pollock 7 dobras" : current.protocolCode}`, report.y);
+    report.y = drawSkinfoldGrid(report, current, report.y);
+  }
+  const methodText = `Documento gerado pelo NutriFlow com os resultados estruturados da consulta. ${current.protocolCode === "pollock_7" ? "Pollock 7 dobras" : current.protocolCode}, versão ${current.protocolVersion}. Não há recálculo ou classificação clínica automática neste relatório.`;
+  const methodLines = wrap(report.fonts.regular, methodText, 7.2, CONTENT_WIDTH);
+  methodLines.forEach((line, index) => report.page.drawText(line, { x: MARGIN, y: 66 - index * 9, size: 7.2, font: report.fonts.regular, color: MUTED }));
 
   return report.finalize();
 }
@@ -691,4 +802,4 @@ export async function buildClinicalEvolutionReportPdf(input: ClinicalEvolutionRe
   });
 }
 
-export const reportFormatting = Object.freeze({ ptDate, ptNumber, quantity, objectiveFrom, roundedDelta, changeLabel, orderedAssessmentHistory });
+export const reportFormatting = Object.freeze({ ptDate, ptNumber, quantity, objectiveFrom, roundedDelta, changeLabel, orderedAssessmentHistory, professionalReading });
