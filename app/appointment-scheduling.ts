@@ -14,6 +14,10 @@ export function normalizeBrazilPhone(value: string) {
   return digits ? `55${digits}` : "";
 }
 
+export function isValidBrazilPhone(value: string) {
+  return /^55\d{10,11}$/.test(normalizeBrazilPhone(value));
+}
+
 function brazilPhoneComparisonKey(value: string) {
   const normalized = normalizeBrazilPhone(value);
   const national = normalized.startsWith("55") ? normalized.slice(2) : normalized;

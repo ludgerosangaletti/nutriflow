@@ -6,6 +6,17 @@ import {
   sendActivationWhatsApp,
   validActivationPath,
 } from "../app/whatsapp-activation.ts";
+import {
+  isValidBrazilPhone,
+  normalizeBrazilPhone,
+} from "../app/appointment-scheduling.ts";
+
+test("valida WhatsApp brasileiro com DDD sem aceitar dígitos excedentes", () => {
+  assert.equal(isValidBrazilPhone("(42) 99988-9176"), true);
+  assert.equal(isValidBrazilPhone("+55 42 99988-9176"), true);
+  assert.equal(normalizeBrazilPhone("419888933999"), "55419888933999");
+  assert.equal(isValidBrazilPhone("419888933999"), false);
+});
 
 test("normaliza telefone brasileiro e valida somente caminhos de ativação", () => {
   assert.equal(normalizeActivationRecipient("(42) 99988-9176"), "5542999889176");

@@ -10,6 +10,7 @@ import { calculateAccessPeriod } from "../../../access";
 import { getAdminSession } from "../../../supabase/server";
 import {
   formatAppointment,
+  isValidBrazilPhone,
   normalizeBrazilPhone,
 } from "../../../appointment-scheduling";
 import {
@@ -198,14 +199,29 @@ export async function POST(request: Request) {
     .trim()
     .slice(0, 180);
 
-  if (
-    !validEmail(email) || name.length < 3 ||
-    !/^55\d{10,11}$/.test(whatsapp) ||
-    body.whatsappOptIn !== true ||
-    !allowedPlans.includes(plan) ||
-    Number.isNaN(startsAt.getTime())
-  ) {
-    return Response.json({ error: "Preencha os dados obrigatórios." }, { status: 400 });
+  if (!validEmail(email)) {
+    return Response.json({ error: "Informe um e-mail válido." }, { status: 400 });
+  }
+  if (name.length < 3) {
+    return Response.json({ error: "Informe o nome do paciente." }, { status: 400 });
+  }
+  if (!isValidBrazilPhone(String(body.whatsapp || ""))) {
+    return Response.json(
+      { error: "Informe um WhatsApp brasileiro válido com DDD e 10 ou 11 dígitos." },
+      { status: 400 },
+    );
+  }
+  if (body.whatsappOptIn !== true) {
+    return Response.json(
+      { error: "Confirme a autorização para mensagens transacionais no WhatsApp." },
+      { status: 400 },
+    );
+  }
+  if (!allowedPlans.includes(plan)) {
+    return Response.json({ error: "Selecione um plano válido." }, { status: 400 });
+  }
+  if (Number.isNaN(startsAt.getTime())) {
+    return Response.json({ error: "Informe o início da vigência." }, { status: 400 });
   }
   if (nextAppointmentAt && Number.isNaN(new Date(nextAppointmentAt).getTime())) {
     return Response.json({ error: "Data da próxima consulta inválida." }, { status: 400 });

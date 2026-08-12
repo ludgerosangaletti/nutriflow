@@ -1,6 +1,10 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import { isValidBrazilPhone } from "../../appointment-scheduling";
+
+const invalidWhatsappMessage =
+  "Informe um WhatsApp brasileiro válido com DDD e 10 ou 11 dígitos.";
 
 export default function InPersonInviteForm() {
   const today = new Date().toISOString().slice(0, 10);
@@ -10,9 +14,16 @@ export default function InPersonInviteForm() {
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const formElement = event.currentTarget;
-    setSaving(true);
     setMessage("");
     const form = new FormData(formElement);
+    const whatsapp = String(form.get("whatsapp") || "");
+    if (!isValidBrazilPhone(whatsapp)) {
+      setMessage(invalidWhatsappMessage);
+      const whatsappField = formElement.elements.namedItem("whatsapp");
+      if (whatsappField instanceof HTMLInputElement) whatsappField.focus();
+      return;
+    }
+    setSaving(true);
     try {
       const response = await fetch("/api/admin/pacientes-presenciais", {
         method: "POST",
@@ -20,7 +31,7 @@ export default function InPersonInviteForm() {
         body: JSON.stringify({
           name: form.get("name"),
           email: form.get("email"),
-          whatsapp: form.get("whatsapp"),
+          whatsapp,
           whatsappOptIn: form.get("whatsappOptIn") === "on",
           plan: form.get("plan"),
           startsAt: `${form.get("startsAt")}T12:00:00Z`,
@@ -62,10 +73,12 @@ export default function InPersonInviteForm() {
           <input
             autoComplete="tel"
             inputMode="tel"
+            maxLength={19}
             name="whatsapp"
             placeholder="(42) 99999-9999"
             required
           />
+          <small>Use DDD + número, com 10 ou 11 dígitos.</small>
         </label>
         <label>
           Plano
