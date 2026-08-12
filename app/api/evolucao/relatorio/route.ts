@@ -1,9 +1,9 @@
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { getDb } from "../../../../db";
 import { clients, nfClinicalAssessments } from "../../../../db/schema";
-import { buildClinicalEvolutionReportPdf } from "../../../../modules/nutriflow/reports/professional-pdf.ts";
+import { buildClinicalAssessmentReportPdf } from "../../../../modules/nutriflow/reports/professional-pdf.ts";
 import { hasActiveAccess } from "../../../access";
-import { assessmentPoint, loadAssessmentPhotos, loadReportLogo, NUTRITIONIST, pdfResponse } from "../../../nutriflow/reporting";
+import { assessmentPoint, loadReportLogo, NUTRITIONIST, pdfResponse } from "../../../nutriflow/reporting";
 import { getPatientUser } from "../../../supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -14,15 +14,11 @@ export async function GET(request: Request) {
   const db = getDb();
   const [client] = await db.select().from(clients).where(eq(clients.authUserId, user.id)).limit(1);
   if (!client || !hasActiveAccess(client)) return new Response("Acompanhamento indisponível", { status: 403 });
-  const rows = await db.select().from(nfClinicalAssessments).where(eq(nfClinicalAssessments.clientId, client.id)).orderBy(asc(nfClinicalAssessments.capturedAt));
-  if (rows.length < 2) return new Response("O comparativo requer pelo menos duas avaliações", { status: 404 });
-  const initial = assessmentPoint(rows[0]);
-  const current = assessmentPoint(rows.at(-1)!);
-  const [initialPhotos, currentPhotos, logoBytes] = await Promise.all([
-    loadAssessmentPhotos(client.email, initial.capturedAt),
-    loadAssessmentPhotos(client.email, current.capturedAt),
-    loadReportLogo(request),
-  ]);
-  const bytes = await buildClinicalEvolutionReportPdf({ patientName: client.name, nutritionistName: NUTRITIONIST.name, nutritionistRegistration: NUTRITIONIST.registration, initial, current, trajectory: rows.map(assessmentPoint), initialPhotos, currentPhotos, logoBytes });
-  return pdfResponse(bytes, `evolucao-clinica-${initial.capturedAt.slice(0, 10)}-${current.capturedAt.slice(0, 10)}.pdf`);
+  const rows = await db.select().from(nfClinicalAssessments).where(and(eq(nfClinicalAssessments.clientId, client.id), eq(nfClinicalAssessments.organizationId, client.organizationId))).orderBy(asc(nfClinicalAssessments.capturedAt), asc(nfClinicalAssessments.id));
+  if (!rows.length) return new Response("Nenhuma avaliação disponível", { status: 404 });
+  const requested = new URL(request.url).searchParams.get("assessment")?.trim();
+  const target = requested ? rows.find((row) => row.publicId === requested) : rows.at(-1);
+  if (!target) return new Response("Avaliação não encontrada", { status: 404 });
+  const bytes = await buildClinicalAssessmentReportPdf({ patientName: client.name, nutritionistName: NUTRITIONIST.name, nutritionistRegistration: NUTRITIONIST.registration, assessments: rows.map(assessmentPoint), targetAssessmentPublicId: target.publicId, logoBytes: await loadReportLogo(request) });
+  return pdfResponse(bytes, `avaliacao-fisica-${target.capturedAt.slice(0, 10)}.pdf`);
 }

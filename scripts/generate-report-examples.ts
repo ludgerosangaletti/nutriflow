@@ -1,6 +1,6 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import type { PatientPortalPlanV1 } from "../modules/nutriflow/contracts/v1/patient-portal.ts";
-import { buildClinicalEvolutionReportPdf, buildPlanReportPdf } from "../modules/nutriflow/reports/professional-pdf.ts";
+import { buildClinicalAssessmentReportPdf, buildPlanReportPdf, type ClinicalAssessmentReportPoint } from "../modules/nutriflow/reports/professional-pdf.ts";
 
 const output = new URL("../output/pdf/", import.meta.url);
 await mkdir(output, { recursive: true });
@@ -12,8 +12,20 @@ const plan: PatientPortalPlanV1 = Object.freeze({ publicationPublicId: "pub_exam
   { publicId: "lunch", title: "Almoço", scheduledTime: "12:30", instructions: "Tempere a salada com limão, ervas e azeite na quantidade orientada.", nutritionComplete: true, macros: Object.freeze({ energyKcal: 690, protein: 52, carbohydrate: 74, fat: 20, fiber: 11 }), items: Object.freeze([]), substitutions: Object.freeze([]), options: Object.freeze([{ publicId: "lunch_1", label: "Opção 1", sortOrder: 0, items: Object.freeze([{ publicId: "rice", kind: "food", displayName: "Arroz branco cozido", quantityMilli: 120_000, unit: gram, preparation: null, notes: null, recipe: null }, { publicId: "beans", kind: "food", displayName: "Feijão carioca", quantityMilli: 100_000, unit: gram, preparation: null, notes: null, recipe: null }, { publicId: "chicken", kind: "food", displayName: "Peito de frango", quantityMilli: 150_000, unit: gram, preparation: "grelhado", notes: null, recipe: null }, { publicId: "salad", kind: "manual", displayName: "Salada variada", quantityMilli: 1_000, unit, preparation: "à vontade", notes: null, recipe: null }]), substitutions: Object.freeze([{ publicId: "protein_swap", mealItemPublicId: "chicken", title: "Trocar a proteína", notes: null, options: Object.freeze([{ publicId: "tilapia", displayName: "Tilápia grelhada", quantityMilli: 170_000, unit: gram, notes: null }, { publicId: "beef", displayName: "Patinho grelhado", quantityMilli: 140_000, unit: gram, notes: null }]) }]) }]) },
 ]) }]) });
 
-const initial = Object.freeze({ publicId: "assess_initial", capturedAt: "2026-06-08T12:00:00.000Z", protocolCode: "pollock_7", protocolVersion: "1.0.0", weightKg: 86.4, heightCm: 172, bmi: 29.2, bodyFatPct: 24.8, fatMassKg: 21.4, leanMassKg: 65.0, circumferencesCm: Object.freeze({ arm: 37, waist: 92, abdomen: 96, hip: 103, thigh: 61 }) });
-const current = Object.freeze({ publicId: "assess_current", capturedAt: "2026-08-08T12:00:00.000Z", protocolCode: "pollock_7", protocolVersion: "1.0.0", weightKg: 82.1, heightCm: 172, bmi: 27.8, bodyFatPct: 20.6, fatMassKg: 16.9, leanMassKg: 65.2, circumferencesCm: Object.freeze({ arm: 37.5, waist: 87, abdomen: 90, hip: 100, thigh: 60 }) });
+const point = (value: Omit<ClinicalAssessmentReportPoint, "protocolCode" | "protocolVersion" | "measurementSide" | "sumSkinfoldsMm" | "skinfoldsMm">): ClinicalAssessmentReportPoint => Object.freeze({
+  ...value,
+  protocolCode: "pollock_7",
+  protocolVersion: "1.0.0",
+  measurementSide: "right",
+  sumSkinfoldsMm: 126.5,
+  skinfoldsMm: Object.freeze({ triceps: 16, subscapular: 19, suprailiac: 17.5, abdominal: 23, midaxillary: 18, pectoral: 14, thigh: 19 }),
+});
+const initial = point({ publicId: "assess_demo_initial", capturedAt: "2026-04-08T12:00:00.000Z", weightKg: 86.4, heightCm: 172, bmi: 29.2, bodyFatPct: 24.8, fatMassKg: 21.4, leanMassKg: 65.0, circumferencesCm: Object.freeze({ arm: 37, waist: 92, abdomen: 96, thigh: 61 }) });
+const second = point({ publicId: "assess_demo_second", capturedAt: "2026-06-08T12:00:00.000Z", weightKg: 84.0, heightCm: 172, bmi: 28.4, bodyFatPct: 22.7, fatMassKg: 19.1, leanMassKg: 64.9, circumferencesCm: Object.freeze({ arm: 37.2, waist: 89.5, abdomen: 93, hip: 101.5, thigh: 60.5 }) });
+const third = point({ publicId: "assess_demo_third", capturedAt: "2026-08-08T12:00:00.000Z", weightKg: 82.1, heightCm: 172, bmi: 27.8, bodyFatPct: 20.6, fatMassKg: 16.9, leanMassKg: 65.2, circumferencesCm: Object.freeze({ arm: 37.2, waist: 87, abdomen: 90, hip: 100, thigh: 60 }) });
 
 await writeFile(new URL("nutriflow-plano-alimentar-exemplo.pdf", output), await buildPlanReportPdf({ patientName: "Paciente Exemplo", nutritionistName: "Ludgero Sangaletti", nutritionistRegistration: "CRN-8 11719", validFrom: "2026-08-08", validUntil: "2026-10-08", plan, logoBytes }));
-await writeFile(new URL("nutriflow-evolucao-clinica-exemplo.pdf", output), await buildClinicalEvolutionReportPdf({ patientName: "Paciente Exemplo", nutritionistName: "Ludgero Sangaletti", nutritionistRegistration: "CRN-8 11719", initial, current, trajectory: [initial, current], logoBytes }));
+const reportBase = { patientName: "Paciente Exemplo", nutritionistName: "Ludgero Sangaletti", nutritionistRegistration: "CRN-8 11719", assessments: [initial, second, third], logoBytes } as const;
+await writeFile(new URL("nutriflow-avaliacao-fisica-cenario-a.pdf", output), await buildClinicalAssessmentReportPdf({ ...reportBase, targetAssessmentPublicId: initial.publicId }));
+await writeFile(new URL("nutriflow-avaliacao-fisica-cenario-b.pdf", output), await buildClinicalAssessmentReportPdf({ ...reportBase, targetAssessmentPublicId: second.publicId }));
+await writeFile(new URL("nutriflow-avaliacao-fisica-cenario-c.pdf", output), await buildClinicalAssessmentReportPdf({ ...reportBase, targetAssessmentPublicId: third.publicId }));

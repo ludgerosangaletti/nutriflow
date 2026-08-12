@@ -1,10 +1,10 @@
 import { env } from "cloudflare:workers";
 import type { PatientPortalPlanV1 } from "../../modules/nutriflow/contracts/v1/patient-portal.ts";
 import type {
-  ClinicalAssessmentReportPoint,
   ClinicalReportPhoto,
   ReportRecipeSnapshot,
 } from "../../modules/nutriflow/reports/professional-pdf.ts";
+import { clinicalAssessmentPoint } from "../../modules/nutriflow/reports/professional-pdf.ts";
 
 export const NUTRITIONIST = Object.freeze({
   name: "Ludgero Sangaletti",
@@ -66,38 +66,7 @@ export function pdfResponse(bytes: Uint8Array, filename: string) {
   });
 }
 
-export function assessmentPoint(row: Readonly<{
-  publicId: string;
-  protocolCode: string;
-  protocolVersion: string;
-  capturedAt: string;
-  weightKg: string;
-  heightCm: string;
-  bmi: string;
-  bodyFatPct: string;
-  fatMassKg: string;
-  leanMassKg: string;
-  snapshotJson: string;
-}>): ClinicalAssessmentReportPoint {
-  let circumferencesCm: Record<string, number> = {};
-  try {
-    const snapshot = JSON.parse(row.snapshotJson) as { input?: { circumferencesCm?: Record<string, number> } };
-    circumferencesCm = Object.fromEntries(Object.entries(snapshot.input?.circumferencesCm ?? {}).filter(([, value]) => Number(value) > 0).map(([key, value]) => [key, Number(value)]));
-  } catch { /* valores escalares imutáveis da própria linha permanecem disponíveis */ }
-  return Object.freeze({
-    publicId: row.publicId,
-    capturedAt: row.capturedAt,
-    protocolCode: row.protocolCode,
-    protocolVersion: row.protocolVersion,
-    weightKg: Number(row.weightKg),
-    heightCm: Number(row.heightCm),
-    bmi: Number(row.bmi),
-    bodyFatPct: Number(row.bodyFatPct),
-    fatMassKg: Number(row.fatMassKg),
-    leanMassKg: Number(row.leanMassKg),
-    circumferencesCm: Object.freeze(circumferencesCm),
-  });
-}
+export const assessmentPoint = clinicalAssessmentPoint;
 
 export async function loadAssessmentPhotos(clientEmail: string, capturedAt: string): Promise<readonly ClinicalReportPhoto[]> {
   const period = capturedAt.slice(0, 7);

@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 import { PDFDocument } from "pdf-lib";
 import type { PatientPortalPlanV1 } from "../modules/nutriflow/contracts/v1/patient-portal.ts";
-import { buildClinicalEvolutionReportPdf, buildPlanReportPdf, reportFormatting } from "../modules/nutriflow/reports/professional-pdf.ts";
+import { buildClinicalAssessmentReportPdf, buildPlanReportPdf, clinicalAssessmentPoint, reportFormatting } from "../modules/nutriflow/reports/professional-pdf.ts";
 
 const unit = Object.freeze({ publicId: "unit_g", code: "g", label: "g" });
 const plan: PatientPortalPlanV1 = Object.freeze({
@@ -10,7 +11,7 @@ const plan: PatientPortalPlanV1 = Object.freeze({
   days: Object.freeze([{ publicId: "strategy_1", label: "Estratégia para dias de treino", dayIndex: null, meals: Object.freeze([{ publicId: "meal_1", title: "Café da manhã", scheduledTime: "07:30", instructions: "Ajuste o horário conforme sua rotina.", nutritionComplete: true, macros: Object.freeze({ energyKcal: 420, protein: 28, carbohydrate: 48, fat: 14, fiber: 7 }), items: Object.freeze([]), substitutions: Object.freeze([]), options: Object.freeze([{ publicId: "option_1", label: "Opção 1", sortOrder: 0, items: Object.freeze([{ publicId: "item_1", kind: "food", displayName: "Pão integral", quantityMilli: 50000, unit, preparation: "tostado", notes: null, recipe: null }]), substitutions: Object.freeze([{ publicId: "sub_1", mealItemPublicId: "item_1", title: "Trocar o carboidrato", notes: null, options: Object.freeze([{ publicId: "sub_item_1", displayName: "Tapioca", quantityMilli: 60000, unit, notes: null }]) }]) }]) }]) }]),
 });
 
-const assessment = (id: string, capturedAt: string, weightKg: number, bodyFatPct: number, leanMassKg: number) => Object.freeze({ publicId: id, capturedAt, protocolCode: "pollock_7", protocolVersion: "1.0.0", weightKg, heightCm: 172, bmi: weightKg / (1.72 ** 2), bodyFatPct, fatMassKg: weightKg * bodyFatPct / 100, leanMassKg, circumferencesCm: Object.freeze({ arm: 36, waist: id === "a1" ? 92 : 87, abdomen: id === "a1" ? 96 : 90, hip: 101, thigh: 59 }) });
+const assessment = (id: string, capturedAt: string, weightKg: number, bodyFatPct: number, leanMassKg: number) => Object.freeze({ publicId: id, capturedAt, protocolCode: "pollock_7", protocolVersion: "1.0.0", weightKg, heightCm: 172, bmi: weightKg / (1.72 ** 2), bodyFatPct, fatMassKg: weightKg * bodyFatPct / 100, leanMassKg, sumSkinfoldsMm: 112, skinfoldsMm: Object.freeze({ triceps: 14, subscapular: 17, suprailiac: 15, abdominal: 20, midaxillary: 16, pectoral: 13, thigh: 17 }), circumferencesCm: Object.freeze({ arm: 36, waist: id === "a1" ? 92 : 87, abdomen: id === "a1" ? 96 : 90, hip: 101, thigh: 59 }), measurementSide: "right" as const });
 
 test("plano profissional gera um PDF A4 válido a partir do snapshot publicado", async () => {
   const input = { patientName: "Paciente Exemplo", nutritionistName: "Ludgero Sangaletti", nutritionistRegistration: "CRN-8 11719", validFrom: "2026-08-08", validUntil: "2026-09-08", plan };
@@ -22,12 +23,32 @@ test("plano profissional gera um PDF A4 válido a partir do snapshot publicado",
   assert.deepEqual(bytes, await buildPlanReportPdf(input), "o mesmo snapshot deve reproduzir o mesmo documento oficial");
 });
 
-test("comparativo clínico gera um PDF válido sem recalcular snapshots", async () => {
+test("relatório físico oficial funciona desde o baseline e limita a evolução ao alvo", async () => {
   const initial = assessment("a1", "2026-06-08T12:00:00.000Z", 86.4, 24.8, 60.4);
-  const current = assessment("a2", "2026-08-08T12:00:00.000Z", 82.1, 20.6, 61.3);
-  const bytes = await buildClinicalEvolutionReportPdf({ patientName: "Paciente Exemplo", nutritionistName: "Ludgero Sangaletti", nutritionistRegistration: "CRN-8 11719", initial, current, trajectory: [initial, current] });
-  assert.equal(new TextDecoder().decode(bytes.slice(0, 4)), "%PDF");
-  const document = await PDFDocument.load(bytes);
-  assert.ok(document.getPageCount() >= 2);
-  assert.match(reportFormatting.executiveSummary(initial, current), /reduziu/);
+  const second = assessment("a2", "2026-08-08T12:00:00.000Z", 82.1, 20.6, 61.3);
+  const future = assessment("a3", "2026-10-08T12:00:00.000Z", 80.9, 19.2, 61.5);
+  const input = { patientName: "Paciente Exemplo", nutritionistName: "Ludgero Sangaletti", nutritionistRegistration: "CRN-8 11719", assessments: [future, initial, second], targetAssessmentPublicId: initial.publicId };
+  const baselineBytes = await buildClinicalAssessmentReportPdf(input);
+  assert.equal(new TextDecoder().decode(baselineBytes.slice(0, 4)), "%PDF");
+  assert.ok((await PDFDocument.load(baselineBytes)).getPageCount() >= 1);
+  assert.deepEqual(reportFormatting.orderedAssessmentHistory(input.assessments, initial.publicId).map((item) => item.publicId), ["a1"]);
+  assert.deepEqual(reportFormatting.orderedAssessmentHistory(input.assessments, second.publicId).map((item) => item.publicId), ["a1", "a2"]);
+  assert.deepEqual(baselineBytes, await buildClinicalAssessmentReportPdf(input), "o mesmo estado válido deve produzir o mesmo relatório oficial");
+});
+
+test("relatório distingue a circunferência da coxa da dobra cutânea da coxa", () => {
+  const snapshot = { input: { circumferencesCm: { thigh: 59 }, skinfoldsMm: { thigh: 17 }, measurementSide: "right" }, result: { sumSkinfoldsMm: 112 } };
+  const point = clinicalAssessmentPoint({ publicId: "a1", protocolCode: "pollock_7", protocolVersion: "1.0.0", capturedAt: "2026-08-08T12:00:00.000Z", weightKg: "82", heightCm: "172", bmi: "27.7", bodyFatPct: "20", fatMassKg: "16.4", leanMassKg: "65.6", snapshotJson: JSON.stringify(snapshot) });
+  assert.equal(point.circumferencesCm.thigh, 59);
+  assert.equal(point.skinfoldsMm.thigh, 17);
+});
+
+test("downloads administrativo e paciente aplicam alvo, organização e acesso vigente", () => {
+  const adminRoute = readFileSync(new URL("../app/api/admin/clinical-assessments/report/route.ts", import.meta.url), "utf8");
+  const patientRoute = readFileSync(new URL("../app/api/evolucao/relatorio/route.ts", import.meta.url), "utf8");
+  assert.match(adminRoute, /eq\(clients\.organizationId, context\.organizationId\)/);
+  assert.match(adminRoute, /eq\(nfClinicalAssessments\.organizationId, context\.organizationId\)/);
+  assert.match(patientRoute, /hasActiveAccess\(client\)/);
+  assert.match(patientRoute, /eq\(nfClinicalAssessments\.organizationId, client\.organizationId\)/);
+  assert.match(patientRoute, /searchParams\.get\("assessment"\)/);
 });
