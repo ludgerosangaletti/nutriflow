@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-type Status = "checking" | "unsupported" | "disabled" | "intro" | "subscribing" | "subscribed" | "unsubscribing" | "denied" | "error";
+type Status = "checking" | "unsupported" | "install_required" | "disabled" | "intro" | "subscribing" | "subscribed" | "unsubscribing" | "denied" | "error";
 
 function urlBase64ToUint8Array(base64String: string) {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
@@ -16,12 +16,34 @@ async function currentSubscription() {
   return registration.pushManager.getSubscription();
 }
 
+function isIosBrowser() {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+}
+
+function isStandaloneApp() {
+  return window.matchMedia("(display-mode: standalone)").matches ||
+    Boolean((navigator as Navigator & { standalone?: boolean }).standalone);
+}
+
+async function getVapidPublicKey() {
+  const response = await fetch("/api/push/public-key", { cache: "no-store" });
+  if (!response.ok) throw new Error("VAPID_NOT_CONFIGURED");
+  const body = await response.json() as { publicKey?: unknown };
+  if (typeof body.publicKey !== "string" || !body.publicKey) throw new Error("VAPID_NOT_CONFIGURED");
+  return body.publicKey;
+}
+
 export function NotificationOptIn() {
   const [status, setStatus] = useState<Status>("checking");
 
   useEffect(() => {
     let active = true;
     async function inspect() {
+      if (isIosBrowser() && !isStandaloneApp()) {
+        if (active) setStatus("install_required");
+        return;
+      }
       if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) {
         if (active) setStatus("unsupported");
         return;
@@ -42,6 +64,10 @@ export function NotificationOptIn() {
   }, []);
 
   async function handleSubscribe() {
+    if (isIosBrowser() && !isStandaloneApp()) {
+      setStatus("install_required");
+      return;
+    }
     setStatus("subscribing");
     try {
       const permission = await Notification.requestPermission();
@@ -50,8 +76,7 @@ export function NotificationOptIn() {
         return;
       }
       const registration = await navigator.serviceWorker.ready;
-      const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-      if (!vapidPublicKey) throw new Error("VAPID_NOT_CONFIGURED");
+      const vapidPublicKey = await getVapidPublicKey();
       const existing = await registration.pushManager.getSubscription();
       const subscription = existing || await registration.pushManager.subscribe({
         userVisibleOnly: true,
@@ -66,7 +91,7 @@ export function NotificationOptIn() {
       setStatus("subscribed");
     } catch (error) {
       console.error("NF_PUSH_SUBSCRIBE_FAILED", error instanceof Error ? error.message : "unknown");
-      setStatus("error");
+      setStatus(error instanceof DOMException && error.name === "NotAllowedError" ? "denied" : "error");
     }
   }
 
@@ -107,6 +132,7 @@ export function NotificationOptIn() {
             {status === "subscribing" ? "Ativando notificações…" : null}
             {status === "disabled" || status === "intro" ? "Desativadas neste aparelho. A preferência pode ser alterada quando quiser." : null}
             {status === "denied" ? "Bloqueadas pelo navegador. Libere as notificações nas configurações do site ou do celular e volte aqui." : null}
+            {status === "install_required" ? "No iPhone, as notificações funcionam pelo aplicativo instalado. Toque em Compartilhar, escolha Adicionar à Tela de Início e depois abra o NutriFlow pelo novo ícone." : null}
             {status === "unsupported" ? "Este navegador não oferece notificações. No iPhone, instale o NutriFlow na Tela de Início e abra pelo ícone." : null}
             {status === "error" ? "Não foi possível atualizar agora. Tente novamente." : null}
           </p>
