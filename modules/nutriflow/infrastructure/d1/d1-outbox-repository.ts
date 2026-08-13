@@ -36,7 +36,7 @@ export class D1OutboxRepository implements OutboxRepository {
   async claimNext(input: Parameters<OutboxRepository["claimNext"]>[0]) {
     const row = await this.database
       .prepare(
-        "UPDATE nf_outbox_events SET status = 'processing', attempts = attempts + 1, processing_started_at = ?, lease_token = ?, last_error = NULL WHERE id = (SELECT id FROM nf_outbox_events WHERE ((status IN ('pending', 'retry') AND available_at <= ?) OR (status = 'processing' AND processing_started_at < ?)) ORDER BY available_at, id LIMIT 1) RETURNING event_id, event_type, event_version, aggregate_type, aggregate_public_id, aggregate_version, actor_auth_user_id, correlation_id, causation_id, occurred_at, payload_json, metadata_json, attempts",
+        "UPDATE nf_outbox_events SET status = 'processing', attempts = attempts + 1, processing_started_at = ?, lease_token = ?, last_error = NULL WHERE id = (SELECT id FROM nf_outbox_events WHERE ((status IN ('pending', 'retry') AND available_at <= ?) OR (status = 'processing' AND processing_started_at < ?)) AND json_valid(payload_json) AND json_type(payload_json) = 'object' AND json_valid(metadata_json) AND json_type(metadata_json) = 'object' AND json_type(metadata_json, '$.organizationPublicId') = 'text' AND json_type(metadata_json, '$.environment') = 'text' AND json_type(metadata_json, '$.source') = 'text' ORDER BY available_at, id LIMIT 1) RETURNING event_id, event_type, event_version, aggregate_type, aggregate_public_id, aggregate_version, actor_auth_user_id, correlation_id, causation_id, occurred_at, payload_json, metadata_json, attempts",
       )
       .bind(input.now, input.leaseToken, input.now, input.staleBefore)
       .first<OutboxRow>();

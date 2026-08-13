@@ -212,6 +212,27 @@ test("outbox delivery is leased and each consumer is idempotent", async () => {
   assert.equal(handled, 1);
 });
 
+test("outbox skips malformed legacy rows without changing or retrying them", async () => {
+  const { database, sqlite } = setup();
+  sqlite.exec(
+    `INSERT INTO nf_outbox_events (event_id, organization_id, event_type, event_version, aggregate_type, aggregate_public_id, aggregate_version, actor_auth_user_id, correlation_id, occurred_at, payload_json, metadata_json, status, attempts, available_at)
+     VALUES
+       ('evt_invalid_01', 1, 'energy-expenditure.calculated', 1, 'energy-expenditure-calculation', 'energy_01', 1, 'auth_01', 'corr_invalid_01', '2026-07-31T11:59:00.000Z', '{"publicId":"energy_01"}', '{"source":"admin-clinical-calculator"}', 'pending', 0, '2026-07-31T11:59:00.000Z'),
+       ('evt_valid_01', 1, 'plan.draft.created', 1, 'food-plan', 'plan_valid_01', 1, 'auth_01', 'corr_valid_01', '2026-07-31T12:00:00.000Z', '{"planPublicId":"plan_valid_01"}', '{"organizationPublicId":"org_01","environment":"test","source":"test"}', 'pending', 0, '2026-07-31T12:00:00.000Z')`,
+  );
+
+  const claimed = await new D1OutboxRepository(database).claimNext({
+    now: "2026-07-31T12:00:01.000Z",
+    staleBefore: "2026-07-31T11:55:01.000Z",
+    leaseToken: "outbox_valid_lease",
+  });
+
+  assert.equal(claimed?.event.eventId, "evt_valid_01");
+  const malformed = sqlite.prepare("SELECT status, attempts FROM nf_outbox_events WHERE event_id = 'evt_invalid_01'").get();
+  assert.equal(malformed?.status, "pending");
+  assert.equal(malformed?.attempts, 0);
+});
+
 test("outbox schedules retry and isolates permanent failure in dead letter", async () => {
   const { database, sqlite } = setup();
   sqlite.exec(
