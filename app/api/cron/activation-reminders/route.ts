@@ -68,7 +68,7 @@ export async function POST(request: Request) {
   });
   const results: Array<{
     email: string;
-    status: "sent" | "skipped" | "failed" | "not_configured";
+    status: "accepted" | "skipped" | "failed" | "not_configured";
     error?: string;
   }> = [];
 
@@ -83,7 +83,7 @@ export async function POST(request: Request) {
       ? (now.getTime() - new Date(existing.updatedAt).getTime()) / 3_600_000
       : Infinity;
     if (
-      existing?.status === "sent" ||
+      ["accepted", "sent", "delivered", "read"].includes(existing?.status || "") ||
       (existing && hoursSinceAttempt < RETRY_AFTER_HOURS) ||
       (existing?.attemptCount || 0) >= MAX_FAILED_ATTEMPTS
     ) {
@@ -115,7 +115,7 @@ export async function POST(request: Request) {
           providerId: delivery.providerId || null,
           attemptCount,
           error: delivery.error || null,
-          sentAt: delivery.status === "sent" ? nowIso : null,
+          sentAt: null,
           createdAt: nowIso,
           updatedAt: nowIso,
         })
@@ -126,7 +126,7 @@ export async function POST(request: Request) {
             providerId: delivery.providerId || null,
             attemptCount,
             error: delivery.error || null,
-            sentAt: delivery.status === "sent" ? nowIso : null,
+            sentAt: null,
             updatedAt: nowIso,
           },
         });
@@ -163,7 +163,7 @@ export async function POST(request: Request) {
     ok: true,
     checkedAt: nowIso,
     duePatients: dueClients.length,
-    sent: results.filter((result) => result.status === "sent").length,
+    accepted: results.filter((result) => result.status === "accepted").length,
     skipped: results.filter((result) => result.status === "skipped").length,
     failed: results.filter((result) => result.status === "failed").length,
     notConfigured: results.filter((result) => result.status === "not_configured").length,

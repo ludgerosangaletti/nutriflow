@@ -14,6 +14,22 @@ export function normalizeBrazilPhone(value: string) {
   return digits ? `55${digits}` : "";
 }
 
+/**
+ * Keeps the patient-facing E.164 number intact while adapting the outbound
+ * recipient to the canonical identifier used by this Meta/WhatsApp account.
+ * Brazilian mobile numbers may still be represented by Meta without the
+ * ninth digit after the area code.
+ */
+export function normalizeMetaBrazilRecipient(value: string) {
+  const normalized = normalizeBrazilPhone(value);
+  if (!/^55\d{10,11}$/.test(normalized)) return normalized;
+  const national = normalized.slice(2);
+  if (national.length === 11 && national[2] === "9") {
+    return `55${national.slice(0, 2)}${national.slice(3)}`;
+  }
+  return normalized;
+}
+
 export function isValidBrazilPhone(value: string) {
   return /^55\d{10,11}$/.test(normalizeBrazilPhone(value));
 }

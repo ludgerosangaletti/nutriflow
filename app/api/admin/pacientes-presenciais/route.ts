@@ -163,7 +163,7 @@ async function deliverActivationWhatsApp(input: {
     providerId: result.providerId || null,
     attemptCount: 1,
     error: result.error || null,
-    sentAt: result.status === "sent" ? now : null,
+    sentAt: null,
     createdAt: now,
     updatedAt: now,
   });
@@ -283,8 +283,8 @@ export async function POST(request: Request) {
     return Response.json({
       ok: true,
       warning:
-        whatsappResult.status === "sent"
-          ? undefined
+        whatsappResult.status === "accepted"
+          ? "O prontuário e o convite por e-mail foram criados. A Meta aceitou o WhatsApp e a confirmação de entrega está pendente."
           : "O prontuário e o convite por e-mail foram criados. O WhatsApp de ativação ainda não foi entregue.",
       patient: {
         email,

@@ -8,6 +8,7 @@ import { eq } from "drizzle-orm";
 import { getDb } from "../../../../db";
 import {
   appointmentChangeRequests,
+  appointmentReminders,
   clients,
   patientActivationMessages,
   whatsappWebhookEvents,
@@ -366,7 +367,16 @@ type WhatsAppWebhook = {
   entry?: Array<{
     changes?: Array<{
       value?: {
-        statuses?: Array<{ id?: string; status?: string }>;
+        statuses?: Array<{
+          id?: string;
+          status?: string;
+          errors?: Array<{
+            code?: number;
+            title?: string;
+            message?: string;
+            error_data?: { details?: string };
+          }>;
+        }>;
         contacts?: Array<{
           wa_id?: string;
           profile?: { name?: string };
@@ -2159,7 +2169,30 @@ export async function POST(request: Request) {
   const statuses = payload.entry?.flatMap((entry) => entry.changes?.flatMap((change) => change.value?.statuses || []) || []) || [];
   for (const status of statuses) {
     if (!status.id || !["sent", "delivered", "read", "failed"].includes(status.status || "")) continue;
-    await getDb().update(patientActivationMessages).set({ status: status.status, updatedAt: new Date().toISOString() }).where(eq(patientActivationMessages.providerId, status.id));
+    const updatedAt = new Date().toISOString();
+    const trackedStatus = status.status === "sent" ? "accepted" : status.status!;
+    const failure = status.errors?.[0];
+    const error = trackedStatus === "failed"
+      ? String(
+          failure?.error_data?.details ||
+          failure?.message ||
+          failure?.title ||
+          (failure?.code ? `META_${failure.code}` : "META_DELIVERY_FAILED"),
+        ).slice(0, 500)
+      : null;
+    const confirmedAt = ["delivered", "read"].includes(trackedStatus) ? updatedAt : undefined;
+    await getDb().update(patientActivationMessages).set({
+      status: trackedStatus,
+      error,
+      ...(confirmedAt ? { sentAt: confirmedAt } : {}),
+      updatedAt,
+    }).where(eq(patientActivationMessages.providerId, status.id));
+    await getDb().update(appointmentReminders).set({
+      whatsappStatus: trackedStatus,
+      ...(trackedStatus === "failed" ? { error } : {}),
+      ...(confirmedAt ? { sentAt: confirmedAt } : {}),
+      updatedAt,
+    }).where(eq(appointmentReminders.whatsappProviderId, status.id));
   }
 
   const messages =

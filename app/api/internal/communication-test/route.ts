@@ -103,10 +103,10 @@ export async function POST(request: Request) {
         status: result.status,
         providerId: result.providerId || null,
         error: result.error || null,
-        sentAt: result.status === "sent" ? now : null,
+        sentAt: null,
         updatedAt: now,
       }).where(eq(patientActivationMessages.deliveryKey, key));
-      return Response.json({ ok: result.status === "sent", channel, duplicate: false, status: result.status, providerId: result.providerId || null, error: result.error || null }, { status: result.status === "sent" ? 202 : 502 });
+      return Response.json({ ok: result.status === "accepted", channel, duplicate: false, status: result.status, providerId: result.providerId || null, error: result.error || null }, { status: result.status === "accepted" ? 202 : 502 });
     }
 
     const latest = [...subscriptions].sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))[0];

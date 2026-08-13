@@ -1,7 +1,9 @@
+import { normalizeMetaBrazilRecipient } from "./appointment-scheduling.ts";
+
 export const ACTIVATION_TEMPLATE_LANGUAGE = "pt_BR";
 
 export type ActivationWhatsAppStatus =
-  | "sent"
+  | "accepted"
   | "failed"
   | "not_configured";
 
@@ -25,9 +27,7 @@ function firstName(value: string) {
 }
 
 export function normalizeActivationRecipient(value: string) {
-  const digits = value.replace(/\D/g, "");
-  if (!digits) return "";
-  return digits.startsWith("55") || digits.length >= 12 ? digits : `55${digits}`;
+  return normalizeMetaBrazilRecipient(value);
 }
 
 export function validActivationPath(value: string) {
@@ -111,7 +111,7 @@ export async function sendActivationWhatsApp(
       };
     }
     return {
-      status: "sent",
+      status: "accepted",
       providerId: result.messages?.[0]?.id || null,
       error: null,
     };

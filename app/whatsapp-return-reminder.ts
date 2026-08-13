@@ -1,5 +1,7 @@
+import { normalizeMetaBrazilRecipient } from "./appointment-scheduling.ts";
+
 export type ReturnReminderWhatsAppResult = Readonly<{
-  status: "sent" | "failed" | "not_configured";
+  status: "accepted" | "failed" | "not_configured";
   providerId?: string | null;
   error?: string | null;
 }>;
@@ -13,14 +15,8 @@ type ReturnReminderWhatsAppInput = Readonly<{
   appointmentAt: string;
 }>;
 
-function normalizeRecipient(value: string) {
-  const digits = value.replace(/\D/g, "");
-  if (!digits) return "";
-  return digits.startsWith("55") || digits.length >= 12 ? digits : `55${digits}`;
-}
-
 export function returnReminderTemplatePayload(input: ReturnReminderWhatsAppInput) {
-  const recipient = normalizeRecipient(input.recipient);
+  const recipient = normalizeMetaBrazilRecipient(input.recipient);
   const appointmentDate = new Date(input.appointmentAt);
   if (!recipient || Number.isNaN(appointmentDate.getTime())) {
     throw new Error("Destinatário ou data do lembrete inválidos.");
@@ -85,7 +81,7 @@ export async function sendReturnReminderWhatsApp(
         error: String(result.error?.message || `A Meta recusou o envio (${response.status}).`).slice(0, 500),
       };
     }
-    return { status: "sent", providerId: result.messages?.[0]?.id || null, error: null };
+    return { status: "accepted", providerId: result.messages?.[0]?.id || null, error: null };
   } catch (error) {
     return { status: "failed", error: error instanceof Error ? error.message.slice(0, 500) : "Falha de rede." };
   }

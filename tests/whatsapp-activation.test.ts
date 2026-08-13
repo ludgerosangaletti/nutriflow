@@ -9,6 +9,7 @@ import {
 import {
   isValidBrazilPhone,
   normalizeBrazilPhone,
+  normalizeMetaBrazilRecipient,
 } from "../app/appointment-scheduling.ts";
 
 test("valida WhatsApp brasileiro com DDD sem aceitar dígitos excedentes", () => {
@@ -19,8 +20,10 @@ test("valida WhatsApp brasileiro com DDD sem aceitar dígitos excedentes", () =>
 });
 
 test("normaliza telefone brasileiro e valida somente caminhos de ativação", () => {
-  assert.equal(normalizeActivationRecipient("(42) 99988-9176"), "5542999889176");
-  assert.equal(normalizeActivationRecipient("+55 42 99988-9176"), "5542999889176");
+  assert.equal(normalizeBrazilPhone("(42) 99988-9176"), "5542999889176");
+  assert.equal(normalizeMetaBrazilRecipient("(42) 99988-9176"), "554299889176");
+  assert.equal(normalizeActivationRecipient("+55 42 99988-9176"), "554299889176");
+  assert.equal(normalizeActivationRecipient("(42) 3333-4455"), "554233334455");
   assert.equal(validActivationPath("/ativar-conta?token_hash=abc_123&type=magiclink"), true);
   assert.equal(validActivationPath("https://outro-site.test/token"), false);
 });
@@ -34,7 +37,7 @@ test("monta template utilitário com primeiro nome e botão dinâmico", () => {
     patientName: "Maria da Silva",
     activationPath: "/ativar-conta?token_hash=abc_123&type=invite",
   });
-  assert.equal(payload.to, "5542999889176");
+  assert.equal(payload.to, "554299889176");
   assert.equal(payload.template.components[0].parameters[0].text, "Maria");
   assert.equal(
     payload.template.components[1].parameters[0].text,
@@ -72,5 +75,5 @@ test("registra o identificador devolvido pela Meta", async () => {
     async () =>
       Response.json({ messages: [{ id: "wamid.123" }] }, { status: 200 }),
   );
-  assert.deepEqual(result, { status: "sent", providerId: "wamid.123", error: null });
+  assert.deepEqual(result, { status: "accepted", providerId: "wamid.123", error: null });
 });

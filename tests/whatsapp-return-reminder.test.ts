@@ -13,7 +13,7 @@ const input = {
 
 test("modelo de retorno normaliza o destino e usa exatamente duas variáveis", () => {
   const payload = returnReminderTemplatePayload(input);
-  assert.equal(payload.to, "5542988674554");
+  assert.equal(payload.to, "554288674554");
   assert.equal(payload.template.name, "lembrete_retorno_presencial");
   assert.deepEqual(payload.template.components[0].parameters.map((parameter) => parameter.text), ["Ludgero", "14/08/2026, 12:00"]);
 });
@@ -25,5 +25,5 @@ test("envio de retorno registra somente o identificador aceito pela Meta", async
     return Response.json({ messages: [{ id: "wamid.controlled" }] }, { status: 200 });
   });
   assert.equal(calls, 1);
-  assert.deepEqual(result, { status: "sent", providerId: "wamid.controlled", error: null });
+  assert.deepEqual(result, { status: "accepted", providerId: "wamid.controlled", error: null });
 });
