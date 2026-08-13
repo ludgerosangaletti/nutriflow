@@ -6,7 +6,7 @@ import { hasActiveAccess } from "../../../access";
 import { getPatientUser, isAdminEmail } from "../../../supabase/server";
 
 export async function GET(
-  _request: Request,
+  request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
   const user = await getPatientUser();
@@ -39,11 +39,12 @@ export async function GET(
   const object = await env.BUCKET.get(document.objectKey);
   if (!object) return new Response("Arquivo não encontrado.", { status: 404 });
   const fallbackName = document.originalName.replace(/[^\w.-]+/g, "_");
+  const disposition = new URL(request.url).searchParams.get("mode") === "inline" ? "inline" : "attachment";
   return new Response(object.body, {
     headers: {
       "cache-control": "private, no-store",
       "content-type": "application/pdf",
-      "content-disposition": `attachment; filename="${fallbackName}"; filename*=UTF-8''${encodeURIComponent(document.originalName)}`,
+      "content-disposition": `${disposition}; filename="${fallbackName}"; filename*=UTF-8''${encodeURIComponent(document.originalName)}`,
       "x-content-type-options": "nosniff",
     },
   });

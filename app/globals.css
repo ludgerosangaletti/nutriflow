@@ -8561,7 +8561,67 @@ button:disabled {
   .nf-patient-plan-empty { grid-template-columns: 1fr; padding: 24px 20px; }
   .nf-patient-plan-empty > span { width: 62px; height: 62px; border-radius: 17px; font-size: 2rem; }
   .nf-weight-trend { grid-template-columns: 1fr 100px; }
-  .nf-weight-trend svg { width: 100px; }
+.nf-weight-trend svg { width: 100px; }
+}
+
+/* Documentos - lista compacta, filtros e visualização protegida no app */
+.nf-documents-page { width: 100%; max-width: 760px !important; min-height: auto; margin: 0 auto; padding: 0; }
+.nf-documents { width: 100%; color: var(--ink); }
+.nf-documents-heading { margin: 2px 0 18px; }
+.nf-documents-heading .nf-eyebrow { margin: 0; }
+.nf-documents-heading h2 { margin: 6px 0; font-family: var(--font-geist-sans), Arial, sans-serif; font-size: clamp(25px, 6vw, 32px); font-weight: 800; line-height: 1.12; letter-spacing: -.035em; }
+.nf-documents-heading > p:last-child { margin: 0; color: #6b6b68; font-size: 14px; line-height: 1.5; }
+.nf-document-filters { display: flex; gap: 7px; overflow-x: auto; padding: 0 0 14px; scrollbar-width: none; }
+.nf-document-filters::-webkit-scrollbar { display: none; }
+.nf-document-filters button { flex: 0 0 auto; min-height: 36px; display: inline-flex; align-items: center; gap: 7px; border: 1px solid var(--line); border-radius: 999px; padding: 7px 14px; background: var(--paper); color: var(--ink); font: 650 12.5px/1 var(--font-geist-sans), Arial, sans-serif; cursor: pointer; }
+.nf-document-filters button[aria-pressed="true"] { border-color: var(--ink); background: var(--ink); color: #fff; }
+.nf-document-filters button span { font-family: var(--font-geist-mono), monospace; font-size: 11px; opacity: .58; }
+.nf-document-filters button[aria-pressed="true"] span { opacity: .72; }
+.nf-documents-filter-empty { padding: 28px 0; color: #6b6b68; text-align: center; }
+.nf-document-month > .nf-eyebrow { margin: 18px 0 9px; }
+.nf-document-row { display: flex; align-items: center; width: 100%; margin: 0 0 8px; border: 1px solid var(--line); border-radius: 17px; background: var(--paper); overflow: hidden; }
+.nf-document-row.is-new { border-color: var(--ink); }
+.nf-document-open { min-width: 0; flex: 1; display: flex; align-items: flex-start; gap: 12px; border: 0; padding: 13px 8px 13px 14px; background: transparent; color: inherit; text-align: left; cursor: pointer; }
+.nf-document-kind { width: 40px; height: 44px; flex: 0 0 auto; display: grid; place-items: center; border-radius: 9px; background: var(--cream-deep); color: var(--ink); }
+.nf-document-kind.is-dark { background: var(--ink); color: var(--lime); }
+.nf-document-copy { min-width: 0; flex: 1; padding-top: 1px; }
+.nf-document-title { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; color: var(--ink); font-size: 14.5px; font-weight: 750; line-height: 1.3; letter-spacing: -.01em; }
+.nf-document-title b { flex: 0 0 auto; border-radius: 5px; padding: 2px 6px; background: var(--lime); color: var(--ink); font-size: 9px; font-weight: 900; letter-spacing: .05em; text-transform: uppercase; }
+.nf-document-meta { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 4px; color: #6b6b68; font-size: 12px; line-height: 1.35; }
+.nf-document-meta i { font-style: normal; opacity: .6; }
+.nf-document-download { width: 40px; height: 40px; flex: 0 0 auto; display: grid; place-items: center; margin-right: 12px; border: 1px solid var(--line); border-radius: 11px; background: transparent; color: var(--ink); cursor: pointer; }
+.nf-document-versions { margin: -4px 0 10px 52px; border-left: 2px solid var(--line); padding-left: 12px; }
+.nf-document-versions-toggle,.nf-document-version { width: 100%; min-height: 38px; display: flex; align-items: center; justify-content: space-between; gap: 12px; border: 0; padding: 7px 0; background: transparent; color: #6b6b68; font: 500 12.5px/1.35 var(--font-geist-sans), Arial, sans-serif; text-align: left; cursor: pointer; }
+.nf-document-versions-toggle strong { color: inherit; }
+.nf-document-version b { flex: 0 0 auto; border-radius: 5px; padding: 2px 6px; background: var(--cream-deep); color: #6b6b68; font-size: 9px; letter-spacing: .05em; text-transform: uppercase; }
+body.nf-document-viewer-open { overflow: hidden; }
+.nf-document-viewer { position: fixed; inset: 0; z-index: 100; display: flex; flex-direction: column; background: var(--ink); color: #fff; }
+.nf-document-viewer > header { display: flex; align-items: center; gap: 10px; padding: calc(var(--nf-safe-top, 0px) + 12px) max(14px, var(--nf-safe-right, 0px)) 12px max(14px, var(--nf-safe-left, 0px)); }
+.nf-document-viewer > header button { width: 40px; height: 40px; flex: 0 0 auto; display: grid; place-items: center; border: 0; background: transparent; color: #fff; cursor: pointer; }
+.nf-document-viewer > header div { min-width: 0; flex: 1; }
+.nf-document-viewer > header strong,.nf-document-viewer > header span { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nf-document-viewer > header strong { font-size: 14px; }
+.nf-document-viewer > header span { margin-top: 2px; color: rgba(255,255,255,.62); font-size: 11px; }
+.nf-document-frame { min-height: 0; flex: 1; background: #3a3a38; overflow: hidden; }
+.nf-document-frame iframe { width: 100%; height: 100%; border: 0; background: #fff; }
+.nf-document-viewer > footer { display: flex; gap: 9px; padding: 12px max(14px, var(--nf-safe-right, 0px)) calc(var(--nf-safe-bottom, 0px) + 14px) max(14px, var(--nf-safe-left, 0px)); }
+.nf-document-viewer > footer button { min-height: 46px; flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 7px; border: 0; border-radius: 13px; font: 750 14px/1 var(--font-geist-sans), Arial, sans-serif; cursor: pointer; }
+.nf-document-viewer > footer .is-secondary { background: rgba(255,255,255,.12); color: #fff; }
+.nf-document-viewer > footer .is-primary { background: var(--lime); color: var(--ink); }
+.nf-documents-empty-content { padding: 34px 20px; text-align: center; }
+.nf-documents-empty-content > span { width: 58px; height: 58px; display: grid; place-items: center; margin: 0 auto 16px; border-radius: 18px; background: var(--cream-deep); color: #6b6b68; }
+.nf-documents-empty-content > h3 { margin: 0 0 8px; font-size: 18px; letter-spacing: -.02em; }
+.nf-documents-empty-content > p { max-width: 280px; margin: 0 auto; color: #6b6b68; font-size: 14px; line-height: 1.5; }
+.nf-documents-empty-content > div { display: flex; align-items: flex-start; gap: 10px; max-width: 430px; margin: 20px auto 0; border: 1px solid var(--line); border-radius: 16px; padding: 13px 15px; background: var(--paper); text-align: left; }
+.nf-documents-empty-content > div b { width: 28px; height: 28px; flex: 0 0 auto; display: grid; place-items: center; border-radius: 50%; background: var(--ink); color: var(--lime); font-size: 12px; }
+.nf-documents-empty-content > div p { margin: 0; color: var(--ink-soft); font-size: 12.5px; line-height: 1.5; }
+
+@media (max-width: 480px) {
+  .nf-document-open { padding-left: 11px; gap: 10px; }
+  .nf-document-kind { width: 38px; height: 42px; }
+  .nf-document-download { width: 38px; height: 38px; margin-right: 9px; }
+  .nf-document-meta { gap: 5px; font-size: 11.5px; }
+  .nf-document-versions { margin-left: 48px; }
 }
 /* Patient app UX refresh — plan-first, guided check-in and visual progress */
 .nf-experience-shell #conteudo { width: 100%; }

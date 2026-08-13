@@ -1,116 +1,40 @@
-import { desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq } from "drizzle-orm";
 import Link from "next/link";
 import { getDb } from "../../db";
-import { clients, patientDocuments } from "../../db/schema";
+import { clients, nfClinicalAssessments, patientDocuments } from "../../db/schema";
 import { hasActiveAccess } from "../access";
+import { PatientShell } from "../patient-experience/shell/PatientShell";
 import { requirePatient } from "../supabase/server";
-import { NotificationOptIn } from "../notification-opt-in";
-import { InstallPrompt } from "../install-prompt";
+import { buildPatientDocumentItems } from "./document-model";
+import DocumentsScreen from "./documents-screen";
 
 export const dynamic = "force-dynamic";
-
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat("pt-BR", {
-    dateStyle: "long",
-    timeZone: "America/Sao_Paulo",
-  }).format(new Date(value));
-}
 
 export default async function DocumentsPage() {
   const user = await requirePatient("/documentos");
   const db = getDb();
-  const [client] = await db
-    .select()
-    .from(clients)
-    .where(eq(clients.authUserId, user.id))
-    .limit(1);
+  const [client] = await db.select().from(clients).where(eq(clients.authUserId, user.id)).limit(1);
 
   if (!client || !hasActiveAccess(client)) {
-    return (
-      <main className="portal-shell">
-        <section className="empty-state">
-          <p className="section-kicker">Documentos</p>
-          <h1>Materiais indisponíveis.</h1>
-          <p>Aguarde a confirmação do pagamento ou renove seu plano.</p>
-          <Link className="button button-dark" href="/area-cliente">Voltar</Link>
-        </section>
-      </main>
-    );
+    return <PatientShell><main className="portal-shell"><section className="empty-state">
+      <p className="section-kicker">Documentos</p><h1>Materiais indisponíveis.</h1>
+      <p>Aguarde a confirmação do pagamento ou renove seu plano.</p>
+      <Link className="button button-dark" href="/area-cliente">Voltar</Link>
+    </section></main></PatientShell>;
   }
 
-  const documents = await db
-    .select()
-    .from(patientDocuments)
-    .where(eq(patientDocuments.clientEmail, client.email))
-    .orderBy(desc(patientDocuments.publishedAt));
-  const current = documents.filter((document) => document.isCurrent);
-  const archived = documents.filter((document) => !document.isCurrent);
+  const [storedDocuments, assessments] = await Promise.all([
+    db.select().from(patientDocuments).where(eq(patientDocuments.clientEmail, client.email)).orderBy(desc(patientDocuments.publishedAt), desc(patientDocuments.id)),
+    client.organizationId == null
+      ? Promise.resolve([])
+      : db.select({ publicId: nfClinicalAssessments.publicId, capturedAt: nfClinicalAssessments.capturedAt })
+        .from(nfClinicalAssessments)
+        .where(and(eq(nfClinicalAssessments.clientId, client.id), eq(nfClinicalAssessments.organizationId, client.organizationId)))
+        .orderBy(asc(nfClinicalAssessments.capturedAt), asc(nfClinicalAssessments.id)),
+  ]);
+  const documents = buildPatientDocumentItems({ storedDocuments, assessments });
 
-  return (
-    <main className="portal-shell documents-page">
-      <header className="portal-header">
-        <Link className="portal-brand" href="/area-cliente">← Área do paciente</Link>
-        <form action="/auth/sair" method="post">
-          <button className="auth-signout" type="submit">Sair</button>
-        </form>
-      </header>
-      <section className="documents-heading">
-        <p className="section-kicker">Seus documentos</p>
-        <h1>
-          {client.modality === "in_person"
-            ? "Protocolos e avaliações."
-            : "Protocolo e materiais."}
-        </h1>
-        <p>
-          {client.modality === "in_person"
-            ? "Acesse os arquivos disponibilizados após seus atendimentos presenciais. Sempre use a versão marcada como atual."
-            : "Este é o canal oficial dos documentos da sua consultoria. Sempre use a versão marcada como atual."}
-        </p>
-      </section>
-      <section className="patient-document-card" aria-label="Notificações e acesso rápido"><InstallPrompt /><NotificationOptIn /></section>
-
-      <section className="current-documents">
-        <h2>Disponíveis agora</h2>
-        <div className="patient-document-grid">
-          {current.map((document) => (
-            <article className="patient-document-card" key={document.id}>
-              <span>
-                {document.documentType === "protocol"
-                  ? "Protocolo alimentar"
-                  : document.documentType === "physical_assessment"
-                    ? "Bioimpedância"
-                  : "Material auxiliar"}
-              </span>
-              <strong>{document.title}</strong>
-              <p>Versão {document.version} · Publicado em {formatDate(document.publishedAt)}</p>
-              <a className="button button-dark" href={`/api/documentos/${document.id}`}>
-                Baixar PDF
-              </a>
-            </article>
-          ))}
-          {!current.length ? (
-            <article className="patient-document-empty">
-              <strong>Seus materiais estão em elaboração.</strong>
-              <p>Você será avisado assim que um documento for publicado.</p>
-            </article>
-          ) : null}
-        </div>
-      </section>
-
-      {archived.length ? (
-        <section className="archived-documents">
-          <h2>Versões anteriores</h2>
-          {archived.map((document) => (
-            <article key={document.id}>
-              <div>
-                <strong>{document.title}</strong>
-                <span>Versão {document.version} · {formatDate(document.publishedAt)}</span>
-              </div>
-              <a href={`/api/documentos/${document.id}`}>Baixar versão arquivada</a>
-            </article>
-          ))}
-        </section>
-      ) : null}
-    </main>
-  );
+  return <PatientShell><main className="portal-shell nf-documents-page">
+    <DocumentsScreen documents={documents} inPerson={client.modality === "in_person"} nutritionistName="Ludgero" />
+  </main></PatientShell>;
 }
