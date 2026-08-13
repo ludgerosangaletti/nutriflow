@@ -22,11 +22,21 @@ test("API informa precisamente qual dado do cadastro presencial é inválido", (
     "Informe um e-mail válido.",
     "Informe o nome do paciente.",
     "Informe um WhatsApp brasileiro válido com DDD e 10 ou 11 dígitos.",
-    "Confirme a autorização para mensagens transacionais no WhatsApp.",
     "Selecione um plano válido.",
     "Informe o início da vigência.",
   ]) {
     assert.match(route, new RegExp(message.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   }
   assert.doesNotMatch(route, /error: "Preencha os dados obrigatórios\."/);
+});
+
+test("opt-in do WhatsApp é opcional, explícito e auditável", () => {
+  assert.doesNotMatch(form, /name="whatsappOptIn" required/);
+  assert.match(form, /Paciente autorizou o contato pelo WhatsApp/);
+  assert.match(form, /enviar somente por e-mail/);
+  assert.match(route, /whatsappActivationOptInPhone: whatsappOptIn \? whatsapp : null/);
+  assert.match(route, /whatsappActivationOptInVersion: whatsappOptIn/);
+  assert.match(route, /whatsappActivationOptInText: whatsappOptIn/);
+  assert.match(route, /whatsappActivationOptInRecordedBy: whatsappOptIn \? admin\.user\.id : null/);
+  assert.match(route, /status: "not_authorized" as const/);
 });

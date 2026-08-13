@@ -21,6 +21,11 @@ import {
 } from "../../../google-calendar";
 import { sendActivationWhatsApp } from "../../../whatsapp-activation";
 import { resolveNutriFlowAdminContext } from "../../../nutriflow/server";
+import {
+  WHATSAPP_ACTIVATION_CONSENT_SOURCE,
+  WHATSAPP_ACTIVATION_CONSENT_TEXT,
+  WHATSAPP_ACTIVATION_CONSENT_VERSION,
+} from "../../../whatsapp-activation-consent";
 
 const allowedPlans = ["mensal", "trimestral", "semestral"];
 
@@ -211,12 +216,6 @@ export async function POST(request: Request) {
       { status: 400 },
     );
   }
-  if (body.whatsappOptIn !== true) {
-    return Response.json(
-      { error: "Confirme a autorização para mensagens transacionais no WhatsApp." },
-      { status: 400 },
-    );
-  }
   if (!allowedPlans.includes(plan)) {
     return Response.json({ error: "Selecione um plano válido." }, { status: 400 });
   }
@@ -241,13 +240,28 @@ export async function POST(request: Request) {
   }
 
   const now = new Date().toISOString();
+  const whatsappOptIn = body.whatsappOptIn === true;
   const access = calculateAccessPeriod(plan, startsAt);
   await db.insert(clients).values({
     organizationId: nutriFlowContext.organizationId,
     email,
     name,
     whatsapp,
-    whatsappActivationOptInAt: now,
+    whatsappActivationOptInAt: whatsappOptIn ? now : null,
+    whatsappActivationOptInPhone: whatsappOptIn ? whatsapp : null,
+    whatsappActivationOptInSource: whatsappOptIn
+      ? WHATSAPP_ACTIVATION_CONSENT_SOURCE
+      : null,
+    whatsappActivationOptInVersion: whatsappOptIn
+      ? WHATSAPP_ACTIVATION_CONSENT_VERSION
+      : null,
+    whatsappActivationOptInText: whatsappOptIn
+      ? WHATSAPP_ACTIVATION_CONSENT_TEXT
+      : null,
+    whatsappActivationOptInRecordedBy: whatsappOptIn ? admin.user.id : null,
+    whatsappActivationOptInRecordedByEmail: whatsappOptIn
+      ? admin.user.email?.toLowerCase() || null
+      : null,
     modality: "in_person",
     plan,
     paymentStatus: "approved",
@@ -264,13 +278,15 @@ export async function POST(request: Request) {
 
   try {
     const result = await sendInvite(admin.session.access_token, { email });
-    const whatsappResult = await deliverActivationWhatsApp({
-      email,
-      name,
-      whatsapp,
-      activationPath: result.activationPath!,
-      kind: "initial",
-    });
+    const whatsappResult = whatsappOptIn
+      ? await deliverActivationWhatsApp({
+          email,
+          name,
+          whatsapp,
+          activationPath: result.activationPath!,
+          kind: "initial",
+        })
+      : { status: "not_authorized" as const };
     await db
       .update(clients)
       .set({
@@ -285,6 +301,8 @@ export async function POST(request: Request) {
       warning:
         whatsappResult.status === "accepted"
           ? "O prontuário e o convite por e-mail foram criados. A Meta aceitou o WhatsApp e a confirmação de entrega está pendente."
+          : whatsappResult.status === "not_authorized"
+            ? "O prontuário e o convite por e-mail foram criados. O WhatsApp não foi enviado porque o paciente não autorizou esse canal."
           : "O prontuário e o convite por e-mail foram criados. O WhatsApp de ativação ainda não foi entregue.",
       patient: {
         email,

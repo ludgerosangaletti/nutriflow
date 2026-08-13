@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import { isValidBrazilPhone } from "../../appointment-scheduling";
+import { WHATSAPP_ACTIVATION_CONSENT_TEXT } from "../../whatsapp-activation-consent";
 
 const invalidWhatsappMessage =
   "Informe um WhatsApp brasileiro válido com DDD e 10 ou 11 dígitos.";
@@ -10,6 +11,7 @@ export default function InPersonInviteForm() {
   const today = new Date().toISOString().slice(0, 10);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
+  const [whatsappOptIn, setWhatsappOptIn] = useState(false);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -105,13 +107,27 @@ export default function InPersonInviteForm() {
           />
         </label>
         <label className="invite-location-field invite-whatsapp-consent">
-          <input name="whatsappOptIn" required type="checkbox" />
-          Confirmo que o paciente autorizou mensagens transacionais no WhatsApp
-          sobre ativação da conta e acompanhamento presencial.
+          <input
+            checked={whatsappOptIn}
+            name="whatsappOptIn"
+            onChange={(event) => setWhatsappOptIn(event.target.checked)}
+            type="checkbox"
+          />
+          <span>
+            <strong>Paciente autorizou o contato pelo WhatsApp</strong>
+            <small>
+              Pergunte ao paciente e marque somente após a resposta afirmativa:
+              “{WHATSAPP_ACTIVATION_CONSENT_TEXT}”
+            </small>
+          </span>
         </label>
       </div>
       <button className="admin-action" disabled={saving}>
-        {saving ? "Criando prontuário..." : "Criar prontuário e enviar convite"}
+        {saving
+          ? "Criando prontuário..."
+          : whatsappOptIn
+            ? "Criar prontuário e enviar por e-mail + WhatsApp"
+            : "Criar prontuário e enviar somente por e-mail"}
       </button>
       {message ? <p role="status">{message}</p> : null}
     </form>

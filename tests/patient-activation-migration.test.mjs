@@ -14,9 +14,20 @@ test("migration 0030 adiciona opt-in e trilha idempotente de entregas", () => {
   const database = new DatabaseSync(":memory:");
   database.exec("CREATE TABLE clients (id INTEGER PRIMARY KEY, email TEXT NOT NULL);");
   apply(database, "0030_patient_activation_whatsapp.sql");
+  apply(database, "0048_patient_whatsapp_activation_consent.sql");
 
   const columns = database.prepare("PRAGMA table_info(clients)").all();
   assert.equal(columns.some((column) => column.name === "whatsapp_activation_opt_in_at"), true);
+  for (const name of [
+    "whatsapp_activation_opt_in_phone",
+    "whatsapp_activation_opt_in_source",
+    "whatsapp_activation_opt_in_version",
+    "whatsapp_activation_opt_in_text",
+    "whatsapp_activation_opt_in_recorded_by",
+    "whatsapp_activation_opt_in_recorded_by_email",
+  ]) {
+    assert.equal(columns.some((column) => column.name === name), true);
+  }
   database.prepare(`INSERT INTO patient_activation_messages
     (client_email, delivery_key, kind, status)
     VALUES (?, ?, ?, ?)`)

@@ -5274,6 +5274,24 @@ button:disabled {
   width: 18px;
 }
 
+.in-person-invite-form .invite-whatsapp-consent span {
+  display: grid;
+  gap: 4px;
+}
+
+.in-person-invite-form .invite-whatsapp-consent strong {
+  color: #fff;
+  font-size: 11px;
+}
+
+.in-person-invite-form .invite-whatsapp-consent small {
+  color: #c9c9c1;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0;
+  line-height: 1.55;
+}
+
 .in-person-invite-form .admin-action {
   background: #ffea00;
   color: #111;
