@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type TouchEvent } from "react";
 import type { PatientPortalItemV1, PatientPortalMealV1, PatientPortalSubstitutionV1, PatientPortalUnitV1, PatientPortalV1 } from "../../modules/nutriflow/contracts/v1/patient-portal.ts";
 import type { ReportRecipeSnapshot } from "../../modules/nutriflow/reports/professional-pdf.ts";
 
@@ -116,18 +116,23 @@ function SwapSheet({ state, selected, onSelect, onClose }: { state: SwapSheetSta
 
 function MealCard({ meal, optionIndex, current, swaps, recipes, onChangeOption, onOpenSwap, onUndoSwap, onOpenRecipe }: { meal: PatientPortalMealV1; optionIndex: number; current: boolean; swaps: Readonly<Record<string, SelectedSwap>>; recipes: Readonly<Record<string, ReportRecipeSnapshot>>; onChangeOption: (index: number) => void; onOpenSwap: (item: PatientPortalItemV1, groups: readonly PatientPortalSubstitutionV1[]) => void; onUndoSwap: (itemPublicId: string) => void; onOpenRecipe: (recipe: RecipeContent) => void }) {
   const options = optionsFor(meal);
-  const option = options[Math.min(optionIndex, options.length - 1)]!;
+  const multi = options.length > 1;
+  const railRef = useRef<HTMLDivElement | null>(null);
+  const drag = useRef({ x: 0, y: 0, dx: 0, width: 0, lock: null as "x" | "y" | null });
+  const goTo = useCallback((target: number) => onChangeOption(Math.max(0, Math.min(target, options.length - 1))), [onChangeOption, options.length]);
+  function touchStart(x: number, y: number) { const rail = railRef.current; if (!rail || !multi) return; drag.current = { x, y, dx: 0, width: rail.offsetWidth, lock: null }; rail.style.transition = "none"; }
+  function touchMove(x: number, y: number, event: TouchEvent<HTMLDivElement>) { const rail = railRef.current; const state = drag.current; if (!rail || !state.width || !multi) return; const dx = x - state.x; const dy = y - state.y; if (!state.lock) { if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return; state.lock = Math.abs(dx) > Math.abs(dy) * 1.3 ? "x" : "y"; } if (state.lock !== "x") return; if (event.cancelable) event.preventDefault(); state.dx = dx; const minimum = -(options.length - 1) * state.width; let offset = -optionIndex * state.width + dx; if (offset > 0) offset *= .3; if (offset < minimum) offset = minimum + (offset - minimum) * .3; rail.style.transform = `translateX(${offset}px)`; }
+  function touchEnd() { const rail = railRef.current; const state = drag.current; if (!rail) return; rail.style.transition = ""; let target = optionIndex; if (state.lock === "x" && state.width) { if (state.dx < -state.width * .22) target += 1; else if (state.dx > state.width * .22) target -= 1; } goTo(target); }
   return <article className={`nf-meal-card-v5${current ? " is-current" : ""}`}>
     <header><div><span>{current ? "Agora · " : ""}{meal.scheduledTime || "Horário flexível"}</span><h2>{meal.title}</h2></div></header>
-    {options.length > 1 ? <div className="nf-plan-option-control"><div role="tablist" aria-label={`Opções para ${meal.title}`}>{options.map((candidate, index) => <button key={candidate.publicId} type="button" role="tab" aria-selected={index === optionIndex} onClick={() => onChangeOption(index)}>{candidate.label}</button>)}</div><p>Escolha <strong>uma</strong> das opções - elas se equivalem.</p></div> : null}
-    <div className="nf-food-list-v5">{option.items.map((item, index) => {
-      const groups = groupsFor(item, option, index);
-      const swap = swaps[item.publicId];
-      const detail = swap ? `No lugar de ${item.displayName}` : [item.preparation, item.notes].filter(Boolean).join(" · ");
-      const recipe = recipeFor(item, recipes);
-      return <div className="nf-food-row-v5" key={item.publicId}><div><strong>{swap?.displayName ?? item.displayName}{swap ? <small className="nf-swap-applied">Trocado</small> : null}</strong>{detail ? <p>{detail}</p> : null}{groups.length || recipe || swap ? <div className="nf-food-actions-v5">{groups.length ? <button type="button" onClick={() => onOpenSwap(item, groups)}>{swap ? "Trocar de novo" : groups[0].title || "Trocar este alimento"}</button> : null}{swap ? <button type="button" onClick={() => onUndoSwap(item.publicId)}>Desfazer</button> : null}{recipe && !swap ? <button type="button" onClick={() => onOpenRecipe(recipe)}>Ver receita</button> : null}</div> : null}</div><b>{swap ? quantity(swap.quantityMilli, swap.unit) : quantity(item.quantityMilli, item.unit)}</b></div>;
-    })}</div>
-    {meal.instructions ? <aside className="nf-meal-guidance-v5"><span>Orientação desta refeição</span><p>{meal.instructions}</p></aside> : null}
+    {multi ? <p className="nf-plan-swipe-note">Escolha <strong>uma</strong> das opções - elas se equivalem. Deslize para trocar.</p> : null}
+    <div className="nf-plan-option-viewport-v5"><div ref={railRef} className="nf-plan-option-rail-v5" role="group" aria-label={`${meal.title}${multi ? `, ${options[optionIndex]?.label}` : ""}`} tabIndex={multi ? 0 : -1} onKeyDown={(event) => { if (event.key === "ArrowRight") { goTo(optionIndex + 1); event.preventDefault(); } if (event.key === "ArrowLeft") { goTo(optionIndex - 1); event.preventDefault(); } }} onTouchStart={(event) => touchStart(event.touches[0].clientX, event.touches[0].clientY)} onTouchMove={(event) => touchMove(event.touches[0].clientX, event.touches[0].clientY, event)} onTouchEnd={touchEnd} style={{ transform: `translateX(-${optionIndex * 100}%)` }}>
+      {options.map((option, optionPosition) => <section className="nf-plan-option-slide-v5" key={option.publicId} aria-hidden={optionPosition !== optionIndex}>{option.items.map((item, index) => {
+        const groups = groupsFor(item, option, index); const swap = swaps[item.publicId]; const detail = swap ? `No lugar de ${item.displayName}` : [item.preparation, item.notes].filter(Boolean).join(" · "); const recipe = recipeFor(item, recipes); const inactive = optionPosition !== optionIndex;
+        return <div className="nf-food-row-v5" key={item.publicId}><div><strong>{swap?.displayName ?? item.displayName}{swap ? <small className="nf-swap-applied">Trocado</small> : null}</strong>{detail ? <p>{detail}</p> : null}{groups.length || recipe || swap ? <div className="nf-food-actions-v5">{groups.length ? <button type="button" tabIndex={inactive ? -1 : 0} onClick={() => onOpenSwap(item, groups)}>{swap ? "Trocar de novo" : groups[0].title || "Trocar este alimento"}</button> : null}{swap ? <button type="button" tabIndex={inactive ? -1 : 0} onClick={() => onUndoSwap(item.publicId)}>Desfazer</button> : null}{recipe && !swap ? <button type="button" tabIndex={inactive ? -1 : 0} onClick={() => onOpenRecipe(recipe)}>Ver receita</button> : null}</div> : null}</div><b>{swap ? quantity(swap.quantityMilli, swap.unit) : quantity(item.quantityMilli, item.unit)}</b></div>;
+      })}{meal.instructions ? <aside className="nf-meal-guidance-v5"><span>Orientação desta refeição</span><p>{meal.instructions}</p></aside> : null}</section>)}
+    </div></div>
+    {multi ? <div className="nf-plan-swipe-status"><span>{options[optionIndex]?.label}</span><i aria-hidden="true">{options.map((option, index) => <b className={index === optionIndex ? "is-active" : ""} key={option.publicId} />)}</i><small>{optionIndex + 1} de {options.length}</small></div> : null}
   </article>;
 }
 

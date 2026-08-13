@@ -6,8 +6,13 @@ const viewer = readFileSync(new URL("../app/plano-alimentar/patient-plan-viewer.
 const pdf = readFileSync(new URL("../modules/nutriflow/reports/professional-pdf.ts", import.meta.url), "utf8");
 const route = readFileSync(new URL("../app/api/nutriflow/v1/plan-pdf/route.ts", import.meta.url), "utf8");
 
-test("nova leitura do plano mantém alternativas explícitas e não inventa preparo", () => {
+test("nova leitura do plano restaura o gesto entre alternativas e não inventa preparo", () => {
   assert.match(viewer, /Escolha <strong>uma<\/strong> das opções/);
+  assert.match(viewer, /onTouchStart=/);
+  assert.match(viewer, /onTouchMove=/);
+  assert.match(viewer, /onTouchEnd=/);
+  assert.match(viewer, /nf-plan-option-rail-v5/);
+  assert.doesNotMatch(viewer, /nf-plan-option-control/);
   assert.match(viewer, /item\.preparation, item\.notes/);
   assert.doesNotMatch(viewer, /Conforme orientação do plano/);
   assert.match(viewer, /RecipeScreen/);
