@@ -71,8 +71,19 @@ test("editor recalculates catalog macros proportionally and totals the selected 
   assert.equal(item.macros?.energyKcal, 192);
   assert.equal(item.macros?.protein, 3.75);
   const summary = calculateEditorMacroSummary(draft.content.meals, {});
-  assert.deepEqual(summary.totals, { energyKcal: 192, protein: 3.75, carbohydrate: 42.15, fat: 0.3 });
+  assert.deepEqual(summary.totals, { energyKcal: 192, protein: 3.75, carbohydrate: 42.15, fat: 0.3, fiber: 2.4 });
   assert.equal(summary.complete, true);
+});
+
+test("editor never presents a partial nutrient total as definitive", () => {
+  let draft = addMeal(addDay(emptyDraft(), "day_macro_partial"), "day_macro_partial", "meal_macro_partial");
+  draft = addCatalogItem(draft, "meal_macro_partial", {
+    apiVersion: "v1", publicId: "food_macro_partial", revisionPublicId: "foodrev_macro_partial", revisionNumber: 1, name: "Alimento incompleto", categoryCode: "miscellaneous", aliases: [], referenceQuantityMilli: 100000, referenceUnit: { publicId: "unit_gram", code: "g", label: "grama" }, scope: "global",
+    nutrients: { energyKcal: 100, protein: 2, carbohydrate: null, fat: 1, fiber: null },
+  }, "item_macro_partial");
+  const summary = calculateEditorMacroSummary(draft.content.meals, {});
+  assert.deepEqual(summary.totals, { energyKcal: null, protein: null, carbohydrate: null, fat: null, fiber: null });
+  assert.equal(summary.complete, false);
 });
 
 test("editor state duplicates and reorders items and meals without identifier collisions", () => {

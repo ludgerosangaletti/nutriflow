@@ -17,10 +17,11 @@ export default async function NutriFlowEditorPage({ params }: { params: Promise<
   if (!client) notFound();
   const context = await resolveNutriFlowAdminContext(user.id);
   if (!context || !(await canUseNutriFlowEditor(context, client.id))) notFound();
-  const [catalogEnabled, recipesEnabled, mealTemplatesEnabled] = await Promise.all([
+  const [catalogEnabled, recipesEnabled, mealTemplatesEnabled, nutritionTotalsEnabled] = await Promise.all([
     canUseNutriFlowFeature(context, client.id, NUTRIFLOW_FEATURE_FLAGS.GLOBAL_CATALOG),
     canUseNutriFlowFeature(context, client.id, NUTRIFLOW_FEATURE_FLAGS.RECIPES),
     canUseNutriFlowFeature(context, client.id, NUTRIFLOW_FEATURE_FLAGS.MEAL_TEMPLATES),
+    canUseNutriFlowFeature(context, client.id, NUTRIFLOW_FEATURE_FLAGS.NUTRITION_TOTALS),
   ]);
-  return <main className="portal-shell nutriflow-page"><header className="portal-header"><Link className="portal-brand" href={`/admin/clientes/${encodeURIComponent(client.email)}`}>← Prontuário de {client.name}</Link><span>NutriFlow · rascunho</span></header><NutriFlowEditor clientId={client.id} patientName={client.name} tools={{ catalogEnabled, recipesEnabled, mealTemplatesEnabled }} /></main>;
+  return <main className="portal-shell nutriflow-page"><header className="portal-header"><Link className="portal-brand" href={`/admin/clientes/${encodeURIComponent(client.email)}`}>← Prontuário de {client.name}</Link><span>NutriFlow · rascunho</span></header><NutriFlowEditor clientId={client.id} patientName={client.name} tools={{ catalogEnabled, recipesEnabled, mealTemplatesEnabled, nutritionTotalsEnabled }} /></main>;
 }

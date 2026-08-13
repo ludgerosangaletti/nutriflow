@@ -22,6 +22,7 @@ type MealOption = NonNullable<FoodPlanMealV1["options"]>[number];
 type ItemMacros = NonNullable<FoodPlanMealV1["items"][number]["macros"]>;
 
 const MACRO_KEYS = Object.freeze(["energyKcal", "protein", "carbohydrate", "fat"] as const);
+const NUTRITION_TOTAL_KEYS = Object.freeze([...MACRO_KEYS, "fiber"] as const);
 
 function scaleItemMacros(macros: ItemMacros | null | undefined, previousQuantityMilli: number, nextQuantityMilli: number) {
   if (!macros || previousQuantityMilli <= 0 || nextQuantityMilli <= 0) return macros ?? null;
@@ -32,7 +33,7 @@ function scaleItemMacros(macros: ItemMacros | null | undefined, previousQuantity
 }
 
 export type EditorMacroSummary = Readonly<{
-  totals: Readonly<Record<(typeof MACRO_KEYS)[number], number | null>>;
+  totals: Readonly<Record<(typeof NUTRITION_TOTAL_KEYS)[number], number | null>>;
   itemCount: number;
   completeItemCount: number;
   complete: boolean;
@@ -46,13 +47,14 @@ export function calculateEditorMacroSummary(meals: readonly FoodPlanMealV1[], se
     return selected?.items ?? [];
   });
   const completeItemCount = items.filter((item) => MACRO_KEYS.every((key) => item.macros?.[key] != null)).length;
-  const totals = Object.freeze(Object.fromEntries(MACRO_KEYS.map((key) => [
+  const complete = items.length > 0 && completeItemCount === items.length;
+  const totals = Object.freeze(Object.fromEntries(NUTRITION_TOTAL_KEYS.map((key) => [
     key,
-    items.some((item) => item.macros?.[key] != null)
+    complete && items.every((item) => item.macros?.[key] != null)
       ? items.reduce((sum, item) => sum + Number(item.macros?.[key] ?? 0), 0)
       : null,
   ]))) as EditorMacroSummary["totals"];
-  return Object.freeze({ totals, itemCount: items.length, completeItemCount, complete: items.length > 0 && completeItemCount === items.length });
+  return Object.freeze({ totals, itemCount: items.length, completeItemCount, complete });
 }
 
 export function mealOptions(meal: FoodPlanMealV1): readonly MealOption[] {

@@ -12,7 +12,8 @@ type IdentifierKind = "event" | "audit" | "publication";
 
 function totalMacros(items: readonly { macros?: { energyKcal?: number | null; protein?: number | null; carbohydrate?: number | null; fat?: number | null; fiber?: number | null } | null }[]) {
   const keys = ["energyKcal", "protein", "carbohydrate", "fat", "fiber"] as const;
-  return Object.freeze(Object.fromEntries(keys.map((key) => [key, items.some((item) => item.macros?.[key] != null) ? items.reduce((sum, item) => sum + Number(item.macros?.[key] ?? 0), 0) : null])));
+  const complete = items.length > 0 && items.every((item) => item.macros?.energyKcal != null && item.macros?.protein != null && item.macros?.carbohydrate != null && item.macros?.fat != null);
+  return Object.freeze(Object.fromEntries(keys.map((key) => [key, complete && items.every((item) => item.macros?.[key] != null) ? items.reduce((sum, item) => sum + Number(item.macros?.[key] ?? 0), 0) : null])));
 }
 
 type ContractMeal = NonNullable<Awaited<ReturnType<FoodPlanReadRepository["findDraftByVersion"]>>>["content"]["meals"][number];

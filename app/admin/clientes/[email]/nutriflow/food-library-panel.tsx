@@ -103,7 +103,7 @@ export default function FoodLibraryPanel({ clientId, targetMealTitle, onInsert }
       {state === "loading" ? Array.from({ length: 4 }, (_, index) => <span className="nutriflow-library-skeleton" key={index} />) : null}
       {state === "error" ? <button className="nutriflow-library-error" type="button" onClick={() => { cache.current.delete(cacheKey); setRetryVersion((value) => value + 1); }}>{message} Tentar novamente.</button> : null}
       {state === "ready" && results.length === 0 ? <p className="nutriflow-library-empty">Nenhum alimento encontrado. Você ainda pode adicioná-lo manualmente.</p> : null}
-      {state === "ready" ? results.map((item, index) => <button className={index === activeIndex ? "is-active" : ""} disabled={!targetMealTitle} key={`${item.publicId}:${item.revisionNumber}`} type="button" onMouseEnter={() => setActiveIndex(index)} onClick={() => insert(item)}><span><strong>{item.name}</strong><small>{categoryLabels[item.categoryCode ?? ""] ?? "Alimento"} · {reference(item)} {item.source === "taco" ? <em>TACO</em> : null}</small></span><b aria-hidden="true">＋</b></button>) : null}
+      {state === "ready" ? results.map((item, index) => <button className={index === activeIndex ? "is-active" : ""} disabled={!targetMealTitle} key={`${item.publicId}:${item.revisionNumber}`} type="button" onMouseEnter={() => setActiveIndex(index)} onClick={() => insert(item)}><span><strong>{item.name}</strong><small>{categoryLabels[item.categoryCode ?? ""] ?? "Alimento"} · {reference(item)} {item.source === "taco" ? <em>TACO</em> : item.source === "tbca" ? <em>TBCA</em> : null}</small></span><b aria-hidden="true">＋</b></button>) : null}
     </div>
     <footer><span>Pesquisa por nome e sinônimos</span><span>↑↓ + Enter</span></footer>
   </section>;

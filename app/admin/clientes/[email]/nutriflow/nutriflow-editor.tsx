@@ -44,7 +44,7 @@ import {
 
 type ApiEnvelope = { data?: FoodPlanDraftV1; errorCode?: string; message?: string };
 type PublicationEnvelope = { data?: PublishedFoodPlanV1; errorCode?: string; message?: string };
-type EditorTools = Readonly<{ catalogEnabled: boolean; recipesEnabled: boolean; mealTemplatesEnabled: boolean }>;
+type EditorTools = Readonly<{ catalogEnabled: boolean; recipesEnabled: boolean; mealTemplatesEnabled: boolean; nutritionTotalsEnabled: boolean }>;
 
 function formatSavedAt(value: string | null) {
   if (!value) return "Ainda não sincronizado";
@@ -345,7 +345,9 @@ export default function NutriFlowEditor({ clientId, patientName, tools }: { clie
   const activeMeal = meals.find((meal) => meal.publicId === activeMealId) ?? null;
   const totalOptionItems = draft.content.meals.reduce((total, meal) => total + mealOptions(meal).reduce((mealTotal, option) => mealTotal + option.items.length, 0), 0);
   const allMealOptionsReady = draft.content.meals.length > 0 && draft.content.meals.every((meal) => mealOptions(meal).every((option) => option.items.length > 0));
-  const macroSummary = calculateEditorMacroSummary(meals, selectedMealOptionIds);
+  const macroSummary = tools.nutritionTotalsEnabled
+    ? calculateEditorMacroSummary(meals, selectedMealOptionIds)
+    : { totals: { energyKcal: null, protein: null, carbohydrate: null, fat: null, fiber: null }, itemCount: 0, completeItemCount: 0, complete: false };
   const syncDetail = syncState === "saved" ? formatSavedAt(lastSavedAt) : syncState === "saving" ? "Gravação atômica em andamento" : syncState === "dirty" ? "Autosave em menos de 1 segundo" : "Autosave protegido por revisão";
 
   return <div className="nutriflow-editor">

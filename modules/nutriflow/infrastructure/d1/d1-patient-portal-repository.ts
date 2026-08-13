@@ -87,7 +87,8 @@ function substitution(group: PublishedFoodPlanSnapshotV1["meals"][number]["subst
 
 function sumMacros(meals: readonly { macros?: PatientPortalMealV1["macros"] }[]) {
   const keys = ["energyKcal", "protein", "carbohydrate", "fat", "fiber"] as const;
-  return Object.freeze(Object.fromEntries(keys.map((key) => [key, meals.some((meal) => meal.macros?.[key] != null) ? meals.reduce((sum, meal) => sum + Number(meal.macros?.[key] ?? 0), 0) : null])));
+  const complete = meals.length > 0 && meals.every((meal) => meal.macros?.energyKcal != null && meal.macros?.protein != null && meal.macros?.carbohydrate != null && meal.macros?.fat != null);
+  return Object.freeze(Object.fromEntries(keys.map((key) => [key, complete && meals.every((meal) => meal.macros?.[key] != null) ? meals.reduce((sum, meal) => sum + Number(meal.macros?.[key] ?? 0), 0) : null])));
 }
 
 function planFrom(row: PublicationRow, snapshot: PublishedFoodPlanSnapshotV1): PatientPortalPlanV1 {
@@ -125,7 +126,7 @@ function planFrom(row: PublicationRow, snapshot: PublishedFoodPlanSnapshotV1): P
           macros: (meal as typeof meal & { macros?: PatientPortalMealV1["macros"] }).macros ?? null,
           nutritionComplete: meal.items.length > 0 && meal.items.every((item) => {
             const macros = (item as typeof item & { macros?: PatientPortalItemV1["macros"] }).macros;
-            return macros?.energyKcal != null;
+            return macros?.energyKcal != null && macros.protein != null && macros.carbohydrate != null && macros.fat != null;
           }),
         });})),
     }));

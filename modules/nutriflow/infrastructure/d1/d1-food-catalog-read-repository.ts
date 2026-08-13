@@ -3,7 +3,7 @@ import type { FoodCatalogItemV1, FoodCatalogSearchResultV1 } from "../../contrac
 import type { FoodCatalogReadRepository } from "../../application/ports/food-catalog-repository.ts";
 import type { D1OperationDatabaseLike } from "./d1-operation-database.ts";
 
-type FoodRow = Readonly<{ public_id: string; revision_public_id: string; revision_number: number; name: string; category_code: string | null; aliases_json: string; reference_quantity_milli: number; unit_public_id: string; unit_code: string; unit_label: string; scope: "global" | "organization"; source: string; energy_kcal: number | null; protein: number | null; carbohydrate: number | null; lipids: number | null; fiber: number | null }>;
+type FoodRow = Readonly<{ public_id: string; revision_public_id: string; revision_number: number; name: string; category_code: string | null; aliases_json: string; reference_quantity_milli: number; unit_public_id: string; unit_code: string; unit_label: string; scope: "global" | "organization"; source: string; revision_source: string | null; energy_kcal: number | null; protein: number | null; carbohydrate: number | null; lipids: number | null; fiber: number | null }>;
 
 function escapeLike(value: string) { return value.replace(/[\\%_]/g, (character) => `\\${character}`); }
 function parseAliases(value: string): readonly string[] {
@@ -27,7 +27,7 @@ export class D1FoodCatalogReadRepository implements FoodCatalogReadRepository {
               revision.name, revision.category_code, revision.aliases_json,
               COALESCE(revision.reference_quantity_milli, 100000) AS reference_quantity_milli,
               unit.public_id AS unit_public_id, unit.code AS unit_code, unit.label AS unit_label,
-              food.scope, food.source,
+              food.scope, food.source, json_extract(revision.source_metadata_json, '$.sourceCode') AS revision_source,
               energy_row.amount_scaled / 1000.0 AS energy_kcal,
               protein_row.amount_scaled / 1000.0 AS protein,
               carbohydrate_row.amount_scaled / 1000.0 AS carbohydrate,
@@ -64,7 +64,7 @@ export class D1FoodCatalogReadRepository implements FoodCatalogReadRepository {
       referenceQuantityMilli: row.reference_quantity_milli,
       referenceUnit: Object.freeze({ publicId: row.unit_public_id, code: row.unit_code, label: row.unit_label }),
       scope: row.scope,
-      source: row.source,
+      source: row.revision_source ?? row.source,
       nutrients: Object.freeze({ energyKcal: row.energy_kcal, protein: row.protein, carbohydrate: row.carbohydrate, fat: row.lipids, fiber: row.fiber }),
     })));
     return Object.freeze({ apiVersion: NUTRIFLOW_API_VERSION, query: input.query.query, items, hasMore: result.results.length > requestedLimit });
