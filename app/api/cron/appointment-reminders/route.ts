@@ -3,6 +3,7 @@ import { env } from "cloudflare:workers";
 import { getDb } from "../../../../db";
 import { appointmentReminders, clients } from "../../../../db/schema";
 import { hasActiveAccess } from "../../../access";
+import { sendReturnReminderWhatsApp } from "../../../whatsapp-return-reminder";
 
 const MIN_HOURS_BEFORE = 48;
 const MAX_HOURS_BEFORE = 96;
@@ -14,69 +15,6 @@ function safeEqual(received: string, expected: string) {
     difference |= received.charCodeAt(index) ^ expected.charCodeAt(index);
   }
   return difference === 0;
-}
-
-async function sendWhatsAppReminder(client: {
-  whatsapp: string;
-  name: string;
-  nextAppointmentAt: string;
-}) {
-  const accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
-  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
-  const templateName = process.env.WHATSAPP_RETURN_TEMPLATE_NAME;
-  if (!accessToken || !phoneNumberId || !templateName || !client.whatsapp) {
-    return { status: "not_configured" as const };
-  }
-
-  const appointment = new Intl.DateTimeFormat("pt-BR", {
-    dateStyle: "short",
-    timeStyle: "short",
-    timeZone: "America/Sao_Paulo",
-  }).format(new Date(client.nextAppointmentAt));
-  const firstName = client.name.trim().split(/\s+/)[0] || "Paciente";
-  const recipient = client.whatsapp.replace(/\D/g, "");
-  const response = await fetch(
-    `https://graph.facebook.com/v23.0/${phoneNumberId}/messages`,
-    {
-      method: "POST",
-      headers: {
-        authorization: `Bearer ${accessToken}`,
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({
-        messaging_product: "whatsapp",
-        recipient_type: "individual",
-        to:
-          recipient.length >= 12 || recipient.startsWith("55")
-            ? recipient
-            : `55${recipient}`,
-        type: "template",
-        template: {
-          name: templateName,
-          language: { code: "pt_BR" },
-          components: [
-            {
-              type: "body",
-              parameters: [
-                { type: "text", text: firstName },
-                { type: "text", text: appointment },
-              ],
-            },
-          ],
-        },
-      }),
-    },
-  );
-  const payload = (await response.json().catch(() => ({}))) as {
-    messages?: Array<{ id?: string }>;
-  };
-  if (!response.ok) {
-    return { status: "failed" as const };
-  }
-  return {
-    status: "sent" as const,
-    id: payload.messages?.[0]?.id || null,
-  };
 }
 
 export async function POST(request: Request) {
@@ -227,10 +165,13 @@ export async function POST(request: Request) {
       };
       if (!response.ok) throw new Error(payload.error || "O envio foi recusado.");
 
-      const whatsapp = await sendWhatsAppReminder({
-        whatsapp: client.whatsapp,
-        name: client.name,
-        nextAppointmentAt: appointmentAt,
+      const whatsapp = await sendReturnReminderWhatsApp({
+        accessToken: process.env.WHATSAPP_ACCESS_TOKEN,
+        phoneNumberId: process.env.WHATSAPP_PHONE_NUMBER_ID,
+        templateName: process.env.WHATSAPP_RETURN_TEMPLATE_NAME,
+        recipient: client.whatsapp,
+        patientName: client.name,
+        appointmentAt,
       });
       const sentAt = new Date().toISOString();
       await db
@@ -242,7 +183,7 @@ export async function POST(request: Request) {
           patientProviderId: payload.patientId || null,
           adminProviderId: payload.adminId || null,
           whatsappStatus: whatsapp.status,
-          whatsappProviderId: whatsapp.id || null,
+          whatsappProviderId: whatsapp.providerId || null,
           sentAt,
           updatedAt: sentAt,
         })
@@ -256,7 +197,7 @@ export async function POST(request: Request) {
             patientProviderId: payload.patientId || null,
             adminProviderId: payload.adminId || null,
             whatsappStatus: whatsapp.status,
-            whatsappProviderId: whatsapp.id || null,
+            whatsappProviderId: whatsapp.providerId || null,
             error: null,
             sentAt,
             updatedAt: sentAt,
