@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { TrainingPatientAccessStateV1 } from "../../modules/nutriflow/contracts/v1/training.ts";
 import type { TrainingAnamnesisStatusV1 } from "../../modules/nutriflow/contracts/v1/training-anamnesis.ts";
 import { QuickAccess } from "./QuickAccess";
+import { NotificationOptIn } from "../notification-opt-in";
 
 type Action = { eyebrow: string; title: string; description: string; href: string | null; button: string | null };
 
@@ -52,6 +53,7 @@ export function PatientHomeExperience({
       </section>
 
       <QuickAccess training={training} trainingAnamnesis={trainingAnamnesis} structuredPlanEnabled={Boolean(structuredPlanEnabled)} documentsCount={documentsCount} checkInDone={checkInDone} checkInAvailable={checkInAvailable} photosCount={photosCount} />
+      <NotificationOptIn />
       {currentProtocol ? <Link className="nf-home-adjustments" href="/ajustes">Solicitar ajuste ou falar com Ludgero <span>→</span></Link> : null}
     </main>
   );

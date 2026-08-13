@@ -8140,6 +8140,21 @@ button:disabled {
 }
 
 /* NutriFlow Sprint 5 — experiência do paciente, isolada pela feature flag. */
+.nf-notification-settings { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:16px; align-items:center; margin-top:18px; border:1px solid #deddd5; border-radius:20px; background:#fff; padding:18px; box-shadow:0 12px 35px rgba(17,17,15,.04); }
+.nf-notification-settings__copy { display:flex; gap:13px; align-items:flex-start; min-width:0; }
+.nf-notification-settings__status { flex:0 0 auto; width:11px; height:11px; margin-top:5px; border-radius:50%; background:#aaa8a0; box-shadow:0 0 0 5px #efeee9; }
+.nf-notification-settings__status.is-enabled { background:#168848; box-shadow:0 0 0 5px #e1f2e7; }
+.nf-notification-settings .nf-eyebrow { margin:0 0 4px; color:#77746d; }
+.nf-notification-settings h3 { margin:0; font-size:1rem; letter-spacing:-.02em; }
+.nf-notification-settings__copy p:last-child { max-width:570px; margin:5px 0 0; color:#68665f; font-size:.78rem; line-height:1.45; }
+.nf-notification-settings button { min-height:44px; border-radius:11px; padding:10px 14px; font:inherit; font-size:.78rem; font-weight:850; cursor:pointer; }
+.nf-notification-settings button:disabled { cursor:wait; opacity:.58; }
+.nf-notification-settings__primary { border:0; background:#ffe600; color:#11110f; }
+.nf-notification-settings__secondary { border:1px solid #d3d1c9; background:#fff; color:#282721; }
+.nf-notification-settings__confirm { grid-column:1/-1; border-top:1px solid #eceae3; padding-top:14px; }
+.nf-notification-settings__confirm > p { margin:0; color:#57554e; font-size:.78rem; line-height:1.5; }
+.nf-notification-settings__confirm > div { display:flex; justify-content:flex-end; gap:8px; margin-top:12px; }
+@media(max-width:600px){.nf-notification-settings{grid-template-columns:1fr;align-items:stretch;border-radius:17px;padding:16px}.nf-notification-settings>button{width:100%}.nf-notification-settings__confirm>div{display:grid;grid-template-columns:1fr 1fr}.nf-notification-settings__confirm button{width:100%}}
 .nutriflow-patient-page { min-height: 100svh; background: radial-gradient(circle at 92% 4%, rgba(255,230,0,.15), transparent 30%), #f5f5f1; }
 .nf-patient-dashboard { width: min(1180px, calc(100% - 40px)); margin: 0 auto; padding: 26px 0 80px; }
 .nf-patient-hero { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(280px, .65fr); gap: 24px; align-items: end; padding: 46px 0 34px; }

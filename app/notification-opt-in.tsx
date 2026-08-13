@@ -2,53 +2,43 @@
 
 import { useEffect, useState } from "react";
 
-type Status =
-  | "idle"
-  | "unsupported"
-  | "intro"
-  | "subscribing"
-  | "subscribed"
-  | "denied"
-  | "error";
+type Status = "checking" | "unsupported" | "disabled" | "intro" | "subscribing" | "subscribed" | "unsubscribing" | "denied" | "error";
 
 function urlBase64ToUint8Array(base64String: string) {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
   const rawData = atob(base64);
-  const outputArray = new Uint8Array(rawData.length);
-  for (let i = 0; i < rawData.length; i += 1) {
-    outputArray[i] = rawData.charCodeAt(i);
-  }
-  return outputArray;
+  return Uint8Array.from(rawData, (character) => character.charCodeAt(0));
 }
 
-/**
- * Opt-in de notificações push do paciente.
- *
- * v3: cores e raios trocados pelos valores REAIS do site (extraídos ao vivo
- * de ludgerosangaletti.com.br, ver docs/IDENTIDADE_VISUAL_REAL.md do
- * Experience Pack) — creme #f5f5f2, preto #0a0a0a, lime #ffea00, radius 24px
- * nos cards e 10px nos botões, igual ao CTA real da home. O botão "Ativar"
- * usa texto preto sobre lime (nunca branco — o site real nunca usa lime com
- * texto claro em cima).
- *
- * v2 (mantida): a permissão nativa do navegador nunca é pedida no primeiro
- * toque. Primeiro mostramos contexto curto ("por que" e "para quê"), e só
- * então o botão "Ativar" dispara Notification.requestPermission() — a
- * permissão de notificação é um recurso escasso, se negada sem contexto o
- * navegador não deixa pedir de novo.
- */
+async function currentSubscription() {
+  const registration = await navigator.serviceWorker.ready;
+  return registration.pushManager.getSubscription();
+}
+
 export function NotificationOptIn() {
-  const [status, setStatus] = useState<Status>("idle");
+  const [status, setStatus] = useState<Status>("checking");
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
-      setStatus("unsupported");
-      return;
+    let active = true;
+    async function inspect() {
+      if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) {
+        if (active) setStatus("unsupported");
+        return;
+      }
+      if (Notification.permission === "denied") {
+        if (active) setStatus("denied");
+        return;
+      }
+      try {
+        const subscription = await currentSubscription();
+        if (active) setStatus(subscription ? "subscribed" : "disabled");
+      } catch {
+        if (active) setStatus("error");
+      }
     }
-    if (Notification.permission === "denied") setStatus("denied");
-    if (Notification.permission === "granted") setStatus("subscribed");
+    void inspect();
+    return () => { active = false; };
   }, []);
 
   async function handleSubscribe() {
@@ -56,113 +46,86 @@ export function NotificationOptIn() {
     try {
       const permission = await Notification.requestPermission();
       if (permission !== "granted") {
-        setStatus("denied");
+        setStatus(permission === "denied" ? "denied" : "disabled");
         return;
       }
-
       const registration = await navigator.serviceWorker.ready;
       const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-      if (!vapidPublicKey) {
-        console.error("NEXT_PUBLIC_VAPID_PUBLIC_KEY não configurada.");
-        setStatus("error");
-        return;
-      }
-
-      const subscription = await registration.pushManager.subscribe({
+      if (!vapidPublicKey) throw new Error("VAPID_NOT_CONFIGURED");
+      const existing = await registration.pushManager.getSubscription();
+      const subscription = existing || await registration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
       });
-
       const response = await fetch("/api/push/subscribe", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify(subscription.toJSON()),
       });
-
-      if (!response.ok) throw new Error("Falha ao salvar inscrição");
+      if (!response.ok) throw new Error("SUBSCRIPTION_SAVE_FAILED");
       setStatus("subscribed");
     } catch (error) {
-      console.error("Erro ao ativar notificações:", error);
+      console.error("NF_PUSH_SUBSCRIBE_FAILED", error instanceof Error ? error.message : "unknown");
       setStatus("error");
     }
   }
 
-  if (status === "unsupported") return null;
-
-  if (status === "subscribed") {
-    return (
-      <p className="text-sm text-[#242424]">
-        Notificações ativadas neste dispositivo.
-      </p>
-    );
+  async function handleUnsubscribe() {
+    setStatus("unsubscribing");
+    try {
+      const subscription = await currentSubscription();
+      if (subscription) {
+        const response = await fetch("/api/push/unsubscribe", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ endpoint: subscription.endpoint }),
+        });
+        if (!response.ok) throw new Error("SUBSCRIPTION_REMOVE_FAILED");
+        await subscription.unsubscribe();
+      }
+      setStatus("disabled");
+    } catch (error) {
+      console.error("NF_PUSH_UNSUBSCRIBE_FAILED", error instanceof Error ? error.message : "unknown");
+      setStatus("error");
+    }
   }
 
-  if (status === "denied") {
-    return (
-      <p className="text-sm text-[#242424]">
-        As notificações estão bloqueadas para este site no seu navegador. Para
-        ativar, libere a permissão de notificações nas configurações do
-        navegador.
-      </p>
-    );
-  }
-
-  if (status === "error") {
-    return (
-      <div className="flex items-center gap-3">
-        <p className="text-sm text-[#242424]">
-          Não foi possível ativar as notificações agora.
-        </p>
-        <button
-          type="button"
-          onClick={() => setStatus("intro")}
-          className="text-sm font-medium underline underline-offset-2 text-[#0a0a0a]"
-        >
-          Tentar de novo
-        </button>
-      </div>
-    );
-  }
-
-  if (status === "intro" || status === "subscribing") {
-    return (
-      <div className="rounded-[24px] border border-black/[0.14] bg-[#f5f5f2] p-4">
-        <p className="text-sm font-bold text-[#0a0a0a]">
-          Receber avisos do seu nutricionista
-        </p>
-        <p className="mt-1 text-sm text-[#242424]">
-          Ative para ser avisado quando um novo plano for publicado ou sua
-          consulta estiver próxima — mesmo com o site fechado.
-        </p>
-        <div className="mt-3 flex gap-2">
-          <button
-            type="button"
-            onClick={() => setStatus("idle")}
-            className="rounded-[10px] px-3 py-2 text-sm text-[#242424]"
-            disabled={status === "subscribing"}
-          >
-            Agora não
-          </button>
-          <button
-            type="button"
-            onClick={handleSubscribe}
-            disabled={status === "subscribing"}
-            className="rounded-[10px] bg-[#ffea00] px-3 py-2 text-sm font-bold text-[#0a0a0a] disabled:opacity-60"
-          >
-            {status === "subscribing" ? "Ativando..." : "Ativar"}
-          </button>
-        </div>
-      </div>
-    );
-  }
+  const enabled = status === "subscribed" || status === "unsubscribing";
+  const busy = status === "checking" || status === "subscribing" || status === "unsubscribing";
 
   return (
-    <button
-      type="button"
-      onClick={() => setStatus("intro")}
-      className="rounded-[10px] border border-black/[0.14] px-3 py-2 text-sm font-medium text-[#0a0a0a]"
-    >
-      Ativar notificações
-    </button>
+    <section className="nf-notification-settings" aria-labelledby="notification-settings-title">
+      <div className="nf-notification-settings__copy">
+        <span className={`nf-notification-settings__status ${enabled ? "is-enabled" : ""}`} aria-hidden="true" />
+        <div>
+          <p className="nf-eyebrow">Preferências</p>
+          <h3 id="notification-settings-title">Notificações deste dispositivo</h3>
+          <p aria-live="polite">
+            {status === "checking" ? "Verificando a configuração deste aparelho…" : null}
+            {status === "subscribed" ? "Ativadas. Você poderá receber avisos importantes do acompanhamento." : null}
+            {status === "unsubscribing" ? "Desativando notificações…" : null}
+            {status === "subscribing" ? "Ativando notificações…" : null}
+            {status === "disabled" || status === "intro" ? "Desativadas neste aparelho. A preferência pode ser alterada quando quiser." : null}
+            {status === "denied" ? "Bloqueadas pelo navegador. Libere as notificações nas configurações do site ou do celular e volte aqui." : null}
+            {status === "unsupported" ? "Este navegador não oferece notificações. No iPhone, instale o NutriFlow na Tela de Início e abra pelo ícone." : null}
+            {status === "error" ? "Não foi possível atualizar agora. Tente novamente." : null}
+          </p>
+        </div>
+      </div>
+
+      {status === "intro" ? (
+        <div className="nf-notification-settings__confirm">
+          <p>O celular solicitará sua permissão. O NutriFlow enviará apenas avisos relacionados ao seu acompanhamento.</p>
+          <div>
+            <button type="button" className="nf-notification-settings__secondary" onClick={() => setStatus("disabled")}>Agora não</button>
+            <button type="button" className="nf-notification-settings__primary" onClick={handleSubscribe}>Continuar</button>
+          </div>
+        </div>
+      ) : null}
+
+      {status === "disabled" || status === "error" ? <button type="button" className="nf-notification-settings__primary" onClick={() => setStatus("intro")}>Ativar notificações</button> : null}
+      {status === "subscribed" ? <button type="button" className="nf-notification-settings__secondary" onClick={handleUnsubscribe}>Desativar</button> : null}
+      {busy ? <button type="button" className="nf-notification-settings__secondary" disabled>{status === "unsubscribing" ? "Desativando…" : status === "subscribing" ? "Ativando…" : "Verificando…"}</button> : null}
+    </section>
   );
 }
