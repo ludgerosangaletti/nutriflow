@@ -15,10 +15,14 @@ export async function GET(request: Request) {
   if (!context || !(await canUseNutriFlowPatientPortal(context))) return new Response("Plano indisponível", { status: 404 });
   const portal = await createNutriFlowPatientRuntime().getPortal.execute({ actor: context.actor, organizationId: context.organizationId, organizationPublicId: context.organizationPublicId, patientName: context.patientName, modality: context.modality });
   if (!portal.plan) return new Response("Nenhum plano publicado", { status: 404 });
+  const strategyPublicId = new URL(request.url).searchParams.get("strategy");
+  const selectedDays = strategyPublicId ? portal.plan.days.filter((day) => day.publicId === strategyPublicId) : portal.plan.days;
+  if (!selectedDays.length) return new Response("Estratégia indisponível", { status: 404 });
+  const plan = strategyPublicId ? Object.freeze({ ...portal.plan, days: Object.freeze(selectedDays) }) : portal.plan;
   const [client] = await getDb().select().from(clients).where(eq(clients.id, context.actor.clientId)).limit(1);
   if (!client) return new Response("Paciente não encontrado", { status: 404 });
   const [recipes, logoBytes] = await Promise.all([
-    loadRecipeSnapshots(portal.plan, context.organizationId),
+    loadRecipeSnapshots(plan, context.organizationId),
     loadReportLogo(request),
   ]);
   const bytes = await buildPlanReportPdf({
@@ -27,7 +31,7 @@ export async function GET(request: Request) {
     nutritionistRegistration: NUTRITIONIST.registration,
     validFrom: client.accessStartedAt,
     validUntil: client.accessExpiresAt,
-    plan: portal.plan,
+    plan,
     recipes,
     logoBytes,
   });

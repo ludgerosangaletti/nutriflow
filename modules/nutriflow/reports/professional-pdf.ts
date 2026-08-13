@@ -354,43 +354,65 @@ class ProfessionalPdf {
   }
 }
 
+function printablePlanMacros(plan: PatientPortalPlanV1) {
+  const meals = plan.days.flatMap((day) => day.meals);
+  const selections = meals.map((meal) => meal.options.length === 1 ? meal.options[0].items : null);
+  if (!selections.length || selections.some((items) => items == null || items.some((item) => item.macros?.energyKcal == null || item.macros?.protein == null || item.macros?.carbohydrate == null || item.macros?.fat == null))) return null;
+  const items = selections.flatMap((selection) => selection ?? []);
+  return Object.freeze({
+    energyKcal: Math.round(items.reduce((sum, item) => sum + Number(item.macros?.energyKcal), 0)),
+    protein: Math.round(items.reduce((sum, item) => sum + Number(item.macros?.protein), 0)),
+    carbohydrate: Math.round(items.reduce((sum, item) => sum + Number(item.macros?.carbohydrate), 0)),
+    fat: Math.round(items.reduce((sum, item) => sum + Number(item.macros?.fat), 0)),
+  });
+}
+
 function macrosEnergy(plan: PatientPortalPlanV1) {
-  const value = plan.macros?.energyKcal;
-  return value == null ? "Em atualização" : `${Math.round(value)} kcal`;
+  const macros = printablePlanMacros(plan);
+  return macros ? `${macros.energyKcal} kcal - P ${macros.protein} g - C ${macros.carbohydrate} g - G ${macros.fat} g` : "Cálculo nutricional em revisão";
 }
 
 export async function buildPlanReportPdf(input: PlanReportInput) {
   const report = await ProfessionalPdf.create({ reportName: "Plano alimentar", versionLabel: `Plano v${input.plan.versionNumber}`, issuedAt: input.plan.publishedAt, logoBytes: input.logoBytes });
   report.label("Prescrição nutricional", { color: rgb(0.55, 0.5, 0) });
-  report.move(7);
-  report.text("Plano alimentar", { size: 31, lineHeight: 34, bold: true });
-  report.text(input.patientName, { size: 15, lineHeight: 20, color: MUTED });
-  report.move(10);
+  report.move(12);
+  report.text("Plano alimentar", { size: 24, lineHeight: 27, bold: true });
+  report.text(input.patientName, { size: 13, lineHeight: 17, color: MUTED });
+  report.move(6);
   report.infoGrid([
     { label: "Paciente", value: input.patientName },
     { label: "Nutricionista", value: `${input.nutritionistName} - ${input.nutritionistRegistration}` },
     { label: "Publicação", value: `${ptDate(input.plan.publishedAt)} - versão ${input.plan.versionNumber}` },
     { label: "Vigência", value: input.validFrom || input.validUntil ? `${ptDate(input.validFrom)} a ${ptDate(input.validUntil)}` : "Conforme período de acompanhamento" },
-    { label: "Objetivo atual", value: objectiveFrom(input.plan) },
-    { label: "Valor energético total", value: macrosEnergy(input.plan) },
   ]);
-  report.move(10);
+  report.move(3);
+  report.label("Objetivo atual");
+  report.text(objectiveFrom(input.plan), { size: 9.2, lineHeight: 12, color: MUTED });
+  report.text(printablePlanMacros(input.plan) ? `Valor energético total: ${macrosEnergy(input.plan)}` : "Cálculo nutricional em revisão", { size: 8, lineHeight: 10, color: MUTED });
+  report.move(4);
 
   for (const strategy of input.plan.days) {
-    report.section(strategy.label, "Estratégia alimentar");
+    const firstMeal = strategy.meals[0];
+    const firstOptions = firstMeal ? (firstMeal.options.length ? firstMeal.options : [{ items: firstMeal.items, substitutions: firstMeal.substitutions }]) : [];
+    const firstEstimate = firstOptions.reduce((total, option) => total + option.items.length * 34 + option.substitutions.reduce((sum, group) => sum + 24 + group.options.length * 12, 0), 0);
+    report.ensure(125);
+    report.label("Estratégia alimentar");
+    report.text(strategy.label, { size: 17, lineHeight: 20, bold: true });
+    report.move(7);
     for (const meal of strategy.meals) {
       const options = meal.options.length ? meal.options : [{ publicId: `${meal.publicId}_option_1`, label: "Opção 1", sortOrder: 0, items: meal.items, substitutions: meal.substitutions }];
       const mealEstimate = 72 + options.reduce((total, option) => total + option.items.length * 34 + option.substitutions.reduce((sum, group) => sum + 24 + group.options.length * 12, 0), 0);
-      report.ensure(Math.min(mealEstimate, 580));
+      report.ensure(Math.min(mealEstimate, 150));
       report.label(meal.scheduledTime || "Horário flexível");
       report.text(meal.title, { size: 15, lineHeight: 18, bold: true });
       report.move(4);
       for (const option of options) {
         if (options.length > 1) {
-          report.ensure(30);
+          report.ensure(42);
           report.page.drawRectangle({ x: MARGIN, y: report.y - 4, width: 7, height: 7, color: BRAND_YELLOW });
           report.text(option.label, { x: MARGIN + 14, width: CONTENT_WIDTH - 14, size: 10, lineHeight: 14, bold: true });
-          report.move(2);
+          report.text("Escolha uma das opções - elas se equivalem.", { x: MARGIN + 14, width: CONTENT_WIDTH - 14, size: 7.8, lineHeight: 10, color: MUTED });
+          report.move(3);
         }
         for (const [itemIndex, item] of option.items.entries()) {
           const substitutions = groupsForItem(option.substitutions, item, itemIndex, option.items.length);
@@ -404,7 +426,7 @@ export async function buildPlanReportPdf(input: PlanReportInput) {
           nameLines.forEach((line, index) => report.page.drawText(line, { x: MARGIN, y: top - index * 12, size: 9.6, font: report.fonts.bold, color: INK }));
           const qty = quantity(item.quantityMilli, item.unit);
           report.page.drawText(qty, { x: MARGIN + 204, y: top, size: 9, font: report.fonts.bold, color: INK });
-          const prepLines = wrap(report.fonts.regular, preparation || "Conforme orientação do plano", 8, 225);
+          const prepLines = preparation ? wrap(report.fonts.regular, preparation, 8, 225) : [];
           prepLines.forEach((line, index) => report.page.drawText(line, { x: MARGIN + 286, y: top - index * 10, size: 8, font: report.fonts.regular, color: MUTED }));
           report.y = top - Math.max(nameLines.length * 12, prepLines.length * 10, 16) - 6;
           for (const group of substitutions) {

@@ -5,6 +5,7 @@ import {
   createNutriFlowPatientRuntime,
   resolveNutriFlowPatientContext,
 } from "../nutriflow/server";
+import { loadRecipeSnapshots } from "../nutriflow/reporting";
 import PatientPlanViewer from "./patient-plan-viewer";
 import { PatientShell } from "../patient-experience/shell/PatientShell";
 
@@ -23,6 +24,7 @@ export default async function StructuredFoodPlanPage() {
     patientName: context.patientName,
     modality: context.modality,
   });
+  const recipes = portal.plan ? await loadRecipeSnapshots(portal.plan, context.organizationId) : {};
 
   return (
     <PatientShell><main className="portal-shell nutriflow-patient-page nf-experience-page">
@@ -30,7 +32,7 @@ export default async function StructuredFoodPlanPage() {
         <Link className="portal-brand" href="/area-cliente">← Área do Paciente</Link>
         <form action="/auth/sair" method="post"><button className="auth-signout" type="submit">Sair</button></form>
       </header>
-      <PatientPlanViewer portal={portal} />
+      <PatientPlanViewer portal={portal} recipes={recipes} validUntil={context.actor.entitlementEndsAt} />
     </main></PatientShell>
   );
 }
