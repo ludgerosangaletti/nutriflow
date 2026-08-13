@@ -2,6 +2,7 @@ import { NUTRIFLOW_API_VERSION, NUTRIFLOW_ERROR_CODES } from "../../contracts/v1
 import { emptyTrainingAnamnesisAnswers, type TrainingAnamnesisStatusV1, type TrainingAnamnesisV1, type TrainingAnamnesisAnswersV1 } from "../../contracts/v1/training-anamnesis.ts";
 import { parseTrainingAnamnesisAnswersV1 } from "../../contracts/v1/training-anamnesis-validation.ts";
 import { NutriFlowApplicationError } from "../../application/errors/nutriflow-application-error.ts";
+import { TRAINING_ANAMNESIS_SUBMITTED } from "../../domain/notifications/workflow-events.ts";
 import type { D1PreparedStatementLike } from "./d1-unit-of-work.ts";
 
 type Statement = Omit<D1PreparedStatementLike, "bind"> & {
@@ -13,7 +14,7 @@ type Row = Readonly<{
   public_id: string; status: "draft" | "submitted"; answers_json: string; submitted_answers_json: string | null;
   revision: number; updated_at: string; submitted_at: string | null;
 }>;
-type ScopeRow = Readonly<{ id: number; entitlement_status: string | null }>;
+type ScopeRow = Readonly<{ id: number; entitlement_status: string | null; organization_public_id: string }>;
 
 function parse(value: string | null, complete = false) {
   if (!value) return emptyTrainingAnamnesisAnswers();
@@ -37,15 +38,17 @@ export class D1TrainingAnamnesisRepository {
   ) { this.database = database; this.generatePublicId = generatePublicId; this.now = now; }
 
   private async assertScope(organizationId: number, clientId: number, entitlementRequired: boolean) {
-    const row = await this.database.prepare(`SELECT client.id, entitlement.status AS entitlement_status
+    const row = await this.database.prepare(`SELECT client.id, entitlement.status AS entitlement_status, organization.public_id AS organization_public_id
       FROM clients AS client
+      INNER JOIN nf_organizations AS organization ON organization.id = ?
       LEFT JOIN nf_training_entitlements AS entitlement
         ON entitlement.organization_id = ? AND entitlement.client_id = client.id
       WHERE client.id = ? AND (client.organization_id = ? OR EXISTS (
         SELECT 1 FROM nf_plans AS plan WHERE plan.client_id = client.id AND plan.organization_id = ?
-      )) LIMIT 1`).bind(organizationId, clientId, organizationId, organizationId).first<ScopeRow>();
+      )) LIMIT 1`).bind(organizationId, organizationId, clientId, organizationId, organizationId).first<ScopeRow>();
     if (!row) throw new NutriFlowApplicationError(NUTRIFLOW_ERROR_CODES.FORBIDDEN, "Acesso não autorizado.", 403);
     if (entitlementRequired && row.entitlement_status !== "active") throw new NutriFlowApplicationError(NUTRIFLOW_ERROR_CODES.FORBIDDEN, "A anamnese pertence ao NutriFlow Training contratado.", 403);
+    return row;
   }
 
   private async row(organizationId: number, clientId: number) {
@@ -73,7 +76,7 @@ export class D1TrainingAnamnesisRepository {
   }
 
   async saveForPatient(input: Readonly<{ organizationId: number; clientId: number; actorAuthUserId: string; answers: TrainingAnamnesisAnswersV1; submit: boolean; correlationId: string }>): Promise<TrainingAnamnesisV1> {
-    await this.assertScope(input.organizationId, input.clientId, true);
+    const scope = await this.assertScope(input.organizationId, input.clientId, true);
     const answers = parseTrainingAnamnesisAnswersV1(input.answers, input.submit);
     const current = await this.row(input.organizationId, input.clientId);
     const timestamp = this.now().toISOString();
@@ -104,6 +107,12 @@ export class D1TrainingAnamnesisRepository {
         (public_id, organization_id, actor_auth_user_id, actor_role, action, entity_type, entity_public_id, correlation_id, before_json, after_json, occurred_at)
         VALUES (?, ?, ?, 'patient', 'training.anamnesis.submitted', 'training-anamnesis', ?, ?, NULL, ?, ?)`)
         .bind(this.generatePublicId("audit"), input.organizationId, input.actorAuthUserId, publicId, input.correlationId, JSON.stringify({ clientId: input.clientId, revision: nextRevision }), timestamp));
+      if (current?.status !== "submitted") {
+        statements.push(this.database.prepare(`INSERT INTO nf_outbox_events
+          (event_id, organization_id, event_type, event_version, aggregate_type, aggregate_public_id, aggregate_version, actor_auth_user_id, correlation_id, causation_id, occurred_at, payload_json, metadata_json, status, attempts, available_at)
+          VALUES (?, ?, ?, 1, 'training-anamnesis', ?, ?, ?, ?, NULL, ?, ?, ?, 'pending', 0, ?)`)
+          .bind(this.generatePublicId("event"), input.organizationId, TRAINING_ANAMNESIS_SUBMITTED, publicId, nextRevision, input.actorAuthUserId, input.correlationId, timestamp, JSON.stringify({ clientId: input.clientId, anamnesisPublicId: publicId, revision: nextRevision }), JSON.stringify({ organizationPublicId: scope.organization_public_id, environment: process.env.NODE_ENV === "production" ? "production" : "development", source: "patient-training-anamnesis", actorRole: "patient" }), timestamp));
+      }
     }
     await this.database.batch(statements);
     return this.getEditableForPatient({ organizationId: input.organizationId, clientId: input.clientId });

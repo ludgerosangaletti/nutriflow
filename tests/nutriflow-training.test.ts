@@ -607,6 +607,7 @@ test("Training draft supports ordered exercises, validates prescriptions and pub
   const published = await repository.publish({ organizationId: 1, clientId: 10, actorAuthUserId: "auth_admin", actorRole: "admin", routinePublicId: saved.draft!.routinePublicId, routineVersionPublicId: saved.draft!.publicId, expectedRevision: saved.draft!.revision, correlationId: "corr_publish" });
   assert.equal(published.publication?.content.days[0]?.muscleGroups[0]?.exercises[0]?.exercise.name, "Crucifixo");
   assert.equal(database.sqlite.prepare("SELECT count(*) AS total FROM nf_training_publications WHERE status = 'active'").get().total, 1);
+  assert.equal(database.sqlite.prepare("SELECT count(*) AS total FROM nf_outbox_events WHERE event_type = 'nutriflow.training-routine-published.v1'").get().total, 1);
   assert.throws(() => database.sqlite.exec("UPDATE nf_training_routine_versions SET snapshot_json = '{}' WHERE state = 'published'"), /NF_PUBLICATION_IMMUTABLE/);
 
   await repository.configureEntitlement({ organizationId: 1, actorAuthUserId: "auth_admin", actorRole: "admin", command: { apiVersion: "v1", clientId: 10, active: false, reason: "Pausa", correlationId: "corr_revoke" } });

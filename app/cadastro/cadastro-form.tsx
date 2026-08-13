@@ -4,6 +4,7 @@ import { FormEvent, useState } from "react";
 import type { PlanId } from "../plans";
 import { signupErrorMessage, withAuthTimeout } from "../supabase/auth-timeout";
 import { createClient } from "../supabase/client";
+import { WHATSAPP_ACTIVATION_CONSENT_TEXT, WHATSAPP_ACTIVATION_CONSENT_VERSION } from "../whatsapp-activation-consent";
 
 export default function CadastroForm({
   plan,
@@ -15,6 +16,7 @@ export default function CadastroForm({
   const [whatsapp, setWhatsapp] = useState("");
   const [password, setPassword] = useState("");
   const [accepted, setAccepted] = useState(false);
+  const [whatsappOptIn, setWhatsappOptIn] = useState(false);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [slow, setSlow] = useState(false);
@@ -42,6 +44,10 @@ export default function CadastroForm({
               plan,
               privacy_policy_version: "2026-07-28",
               privacy_accepted_at: new Date().toISOString(),
+              whatsapp_operational_opt_in: whatsappOptIn,
+              whatsapp_operational_opt_in_at: whatsappOptIn ? new Date().toISOString() : null,
+              whatsapp_operational_opt_in_version: whatsappOptIn ? WHATSAPP_ACTIVATION_CONSENT_VERSION : null,
+              whatsapp_operational_opt_in_text: whatsappOptIn ? WHATSAPP_ACTIVATION_CONSENT_TEXT : null,
             },
           },
         }),
@@ -128,6 +134,12 @@ export default function CadastroForm({
           e os <a href="/termos-de-uso" target="_blank">Termos de Uso</a>. Autorizo
           o tratamento destes dados para cadastro, identificação da compra e
           prestação da consultoria nutricional.
+        </span>
+      </label>
+      <label className="signup-consent">
+        <input type="checkbox" checked={whatsappOptIn} onChange={(event) => setWhatsappOptIn(event.target.checked)} />
+        <span>
+          Autorizo avisos operacionais pelo WhatsApp, incluindo a confirmação de que minha dieta ou meu treino estão disponíveis no aplicativo. Posso cancelar essa autorização a qualquer momento.
         </span>
       </label>
       {error ? <p className="form-error">{error}</p> : null}

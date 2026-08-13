@@ -1,4 +1,6 @@
 export const ACTIVATION_TEMPLATE_NAME = "ativacao_conta_presencial_v1";
+export const PLAN_READY_TEMPLATE_NAME = "plano_disponivel_v1";
+export const TRAINING_READY_TEMPLATE_NAME = "treino_disponivel_v1";
 
 export type MetaTemplateSummary = {
   id: string | null;
@@ -37,6 +39,22 @@ export function activationTemplateDefinition() {
     ],
   } as const;
 }
+
+function contentReadyTemplateDefinition(input: Readonly<{ name: string; content: string; button: string; path: string }>) {
+  return {
+    name: input.name,
+    language: "pt_BR",
+    category: "UTILITY",
+    allow_category_change: true,
+    components: [
+      { type: "BODY", text: `Olá, {{1}}! ${input.content} já está disponível no NutriFlow.`, example: { body_text: [["Maria"]] } },
+      { type: "BUTTONS", buttons: [{ type: "URL", text: input.button, url: `https://ludgerosangaletti.com.br${input.path}` }] },
+    ],
+  } as const;
+}
+
+export const planReadyTemplateDefinition = () => contentReadyTemplateDefinition({ name: PLAN_READY_TEMPLATE_NAME, content: "Seu plano alimentar", button: "Acessar meu plano", path: "/plano-alimentar" });
+export const trainingReadyTemplateDefinition = () => contentReadyTemplateDefinition({ name: TRAINING_READY_TEMPLATE_NAME, content: "Seu treino", button: "Acessar meu treino", path: "/treino" });
 
 export function templateSummaries(value: unknown): MetaTemplateSummary[] {
   if (!value || typeof value !== "object") return [];

@@ -1,7 +1,11 @@
 import { env } from "cloudflare:workers";
 import {
   ACTIVATION_TEMPLATE_NAME,
+  PLAN_READY_TEMPLATE_NAME,
+  TRAINING_READY_TEMPLATE_NAME,
   activationTemplateDefinition,
+  planReadyTemplateDefinition,
+  trainingReadyTemplateDefinition,
   templateSummaries,
 } from "../../../meta-templates";
 
@@ -48,7 +52,7 @@ export async function POST(request: Request) {
 
   const body = (await request.json().catch(() => ({}))) as { action?: string };
   const action = String(body.action || "inspect");
-  if (!["inspect", "inspect_and_submit_activation"].includes(action)) {
+  if (!["inspect", "inspect_and_submit_activation", "inspect_and_submit_operational"].includes(action)) {
     return Response.json({ error: "Ação inválida." }, { status: 400 });
   }
 
@@ -112,12 +116,32 @@ export async function POST(request: Request) {
       );
     }
 
+    const operationalDefinitions = [planReadyTemplateDefinition(), trainingReadyTemplateDefinition()];
+    const submittedOperational: string[] = [];
+    if (action === "inspect_and_submit_operational") {
+      for (const definition of operationalDefinitions) {
+        if (templates.some((template) => template.name === definition.name && template.language === "pt_BR")) continue;
+        const response = await fetch(`https://graph.facebook.com/${apiVersion}/${businessAccountId}/message_templates`, {
+          method: "POST", headers: { authorization: `Bearer ${accessToken}`, "content-type": "application/json" }, body: JSON.stringify(definition),
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) return Response.json({ ok: false, action, error: metaError(payload), templates, submittedOperational }, { status: 502 });
+        submittedOperational.push(definition.name);
+      }
+      templates = await listTemplates({ accessToken, apiVersion, businessAccountId });
+    }
+    const planReady = templates.find((template) => template.name === PLAN_READY_TEMPLATE_NAME && template.language === "pt_BR") || null;
+    const trainingReady = templates.find((template) => template.name === TRAINING_READY_TEMPLATE_NAME && template.language === "pt_BR") || null;
+
     return Response.json({
       ok: true,
       action,
       submitted,
       activation: activation || null,
       activationReady: activation?.status === "APPROVED",
+      operational: { plan: planReady, training: trainingReady },
+      operationalReady: planReady?.status === "APPROVED" && trainingReady?.status === "APPROVED",
+      submittedOperational,
       templates,
     });
   } catch (error) {

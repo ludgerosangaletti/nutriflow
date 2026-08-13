@@ -11,6 +11,7 @@ import type {
 import { parseTrainingAnamnesisAnswersV1 } from "../../contracts/v1/training-anamnesis-validation.ts";
 import type { TrainingAnamnesisV1 } from "../../contracts/v1/training-anamnesis.ts";
 import { NutriFlowApplicationError } from "../../application/errors/nutriflow-application-error.ts";
+import { TRAINING_ROUTINE_PUBLISHED } from "../../domain/notifications/workflow-events.ts";
 import type { D1PreparedStatementLike } from "./d1-unit-of-work.ts";
 
 type D1ReadStatement = Omit<D1PreparedStatementLike, "bind"> & {
@@ -30,6 +31,7 @@ type PublicationRow = Readonly<{ public_id: string; routine_public_id: string; r
 type RoutineRow = Readonly<{ id: number; public_id: string }>;
 type VersionNumberRow = Readonly<{ next_version: number }>;
 type AnamnesisRow = Readonly<{ public_id: string; status: "submitted"; submitted_answers_json: string; revision: number; updated_at: string; submitted_at: string }>;
+type OrganizationRow = Readonly<{ public_id: string }>;
 
 function parseContent(value: string | null): TrainingRoutineContentV1 {
   if (!value) return Object.freeze({ schemaVersion: 1, days: Object.freeze([]) });
@@ -205,6 +207,9 @@ export class D1TrainingEditorRepository {
     const contentJson = JSON.stringify(content);
     const contentHash = await this.hashJson(content);
     const publicationPublicId = this.generatePublicId("training_publication");
+    const eventId = this.generatePublicId("event");
+    const organization = await this.database.prepare("SELECT public_id FROM nf_organizations WHERE id = ? LIMIT 1").bind(input.organizationId).first<OrganizationRow>();
+    if (!organization) throw new NutriFlowApplicationError(NUTRIFLOW_ERROR_CODES.FORBIDDEN, "Organização não encontrada.", 403);
     const finalRevision = input.expectedRevision + 1;
     const scope = [input.routineVersionPublicId, input.routinePublicId, input.organizationId, input.clientId, finalRevision] as const;
     const publishedVersion = `SELECT version.id FROM nf_training_routine_versions AS version INNER JOIN nf_training_routines AS routine ON routine.id = version.routine_id WHERE version.public_id = ? AND routine.public_id = ? AND routine.organization_id = ? AND routine.client_id = ? AND version.revision = ? AND version.state = 'published'`;
@@ -214,6 +219,9 @@ export class D1TrainingEditorRepository {
       this.database.prepare(`UPDATE nf_training_publications SET status = 'revoked', revoked_by_auth_user_id = ?, revoked_at = ?, revocation_reason = 'Substituída por nova versão publicada' WHERE organization_id = ? AND client_id = ? AND status = 'active' AND EXISTS (${publishedVersion})`).bind(input.actorAuthUserId, timestamp, input.organizationId, input.clientId, ...scope),
       this.database.prepare(`INSERT INTO nf_training_publications (public_id, organization_id, client_id, routine_id, routine_version_id, status, published_by_auth_user_id, published_at) SELECT ?, ?, ?, routine.id, version.id, 'active', ?, ? FROM nf_training_routines AS routine INNER JOIN nf_training_routine_versions AS version ON version.routine_id = routine.id WHERE version.id = (${publishedVersion})`).bind(publicationPublicId, input.organizationId, input.clientId, input.actorAuthUserId, timestamp, ...scope),
       this.database.prepare(`INSERT INTO nf_audit_entries (public_id, organization_id, actor_auth_user_id, actor_role, action, entity_type, entity_public_id, correlation_id, before_json, after_json, occurred_at) SELECT ?, ?, ?, ?, 'training.routine.published', 'training-publication', ?, ?, NULL, ?, ? WHERE EXISTS (${publishedVersion})`).bind(this.generatePublicId("audit"), input.organizationId, input.actorAuthUserId, input.actorRole, publicationPublicId, input.correlationId, JSON.stringify({ routineVersionPublicId: input.routineVersionPublicId, contentHash }), timestamp, ...scope),
+      this.database.prepare(`INSERT INTO nf_outbox_events (event_id, organization_id, event_type, event_version, aggregate_type, aggregate_public_id, aggregate_version, actor_auth_user_id, correlation_id, causation_id, occurred_at, payload_json, metadata_json, status, attempts, available_at)
+        SELECT ?, ?, ?, 1, 'training-routine', ?, ?, ?, ?, NULL, ?, ?, ?, 'pending', 0, ? WHERE EXISTS (${publishedVersion})`)
+        .bind(eventId, input.organizationId, TRAINING_ROUTINE_PUBLISHED, input.routinePublicId, finalRevision, input.actorAuthUserId, input.correlationId, timestamp, JSON.stringify({ clientId: input.clientId, publicationPublicId, routinePublicId: input.routinePublicId, routineVersionPublicId: input.routineVersionPublicId }), JSON.stringify({ organizationPublicId: organization.public_id, environment: process.env.NODE_ENV === "production" ? "production" : "development", source: "nutriflow-training-admin", actorRole: input.actorRole }), timestamp, ...scope),
     ];
     const result = await this.database.batch(statements);
     if (changes(result[0]) !== 1) throw new NutriFlowApplicationError(NUTRIFLOW_ERROR_CODES.VERSION_CONFLICT, "O rascunho foi atualizado em outra sessão.", 409);

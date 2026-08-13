@@ -2,7 +2,11 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   ACTIVATION_TEMPLATE_NAME,
+  PLAN_READY_TEMPLATE_NAME,
+  TRAINING_READY_TEMPLATE_NAME,
   activationTemplateDefinition,
+  planReadyTemplateDefinition,
+  trainingReadyTemplateDefinition,
   templateSummaries,
 } from "../app/meta-templates.ts";
 
@@ -18,6 +22,17 @@ test("modelo de ativação segue o contrato utilitário da Meta", () => {
     definition.components[1].buttons[0].url,
     "https://ludgerosangaletti.com.br/{{1}}",
   );
+});
+
+test("modelos operacionais de dieta e treino são utilitários e levam ao recurso correto", () => {
+  const plan = planReadyTemplateDefinition();
+  const training = trainingReadyTemplateDefinition();
+  assert.equal(plan.name, PLAN_READY_TEMPLATE_NAME);
+  assert.equal(training.name, TRAINING_READY_TEMPLATE_NAME);
+  assert.equal(plan.category, "UTILITY");
+  assert.match(plan.components[0].text, /\{\{1\}\}/);
+  assert.equal(plan.components[1].buttons[0].url, "https://ludgerosangaletti.com.br/plano-alimentar");
+  assert.equal(training.components[1].buttons[0].url, "https://ludgerosangaletti.com.br/treino");
 });
 
 test("resumo descarta campos extras e mantém somente estado operacional", () => {

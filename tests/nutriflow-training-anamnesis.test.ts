@@ -71,6 +71,7 @@ test("Training anamnesis is entitlement-gated, tenant-scoped and keeps submitted
   assert.equal((await repository.getSubmittedForAdmin({ organizationId: 1, clientId: 10 }))?.answers.likedExercises, "Supino reto", "unfinished updates must not replace the last submitted clinical view");
   await repository.saveForPatient({ organizationId: 1, clientId: 10, actorAuthUserId: "auth_patient_10", answers: { ...answers, likedExercises: "Remada baixa" }, submit: true, correlationId: "corr_update_submit" });
   assert.equal(db.sqlite.prepare("SELECT count(*) AS total FROM nf_training_anamnesis_revisions").get()!.total, 2);
+  assert.equal(db.sqlite.prepare("SELECT count(*) AS total FROM nf_outbox_events WHERE event_type = 'nutriflow.training-anamnesis-submitted.v1'").get()!.total, 1, "admin reminder is emitted only on the first submission");
   assert.equal((await repository.getSubmittedForAdmin({ organizationId: 1, clientId: 10 }))?.revision, 2);
   await assert.rejects(() => repository.getSubmittedForAdmin({ organizationId: 2, clientId: 10 }), (error) => error instanceof NutriFlowApplicationError && error.httpStatus === 403);
 });

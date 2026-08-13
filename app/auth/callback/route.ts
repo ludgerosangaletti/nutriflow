@@ -4,6 +4,7 @@ import { getDb } from "../../../db";
 import { clients, nfOrganizations } from "../../../db/schema";
 import { isPlanId } from "../../plans";
 import { createClient, isAdminEmail } from "../../supabase/server";
+import { WHATSAPP_ACTIVATION_CONSENT_TEXT, WHATSAPP_ACTIVATION_CONSENT_VERSION } from "../../whatsapp-activation-consent";
 
 function safeNext(value: string | null) {
   return value?.startsWith("/") && !value.startsWith("//")
@@ -31,6 +32,8 @@ export async function GET(request: Request) {
   const name = String(user.user_metadata.name ?? "").trim();
   const whatsapp = String(user.user_metadata.whatsapp ?? "").trim();
   const rawPlan = String(user.user_metadata.plan ?? "trimestral");
+  const whatsappOptIn = user.user_metadata.whatsapp_operational_opt_in === true;
+  const whatsappOptInAt = whatsappOptIn ? String(user.user_metadata.whatsapp_operational_opt_in_at || new Date().toISOString()) : null;
   const plan = isPlanId(rawPlan) ? rawPlan : "trimestral";
   const db = getDb();
   const [existing] = await db
@@ -46,6 +49,11 @@ export async function GET(request: Request) {
         authUserId: user.id,
         name: name || existing.name,
         whatsapp: whatsapp || existing.whatsapp,
+        whatsappActivationOptInAt: whatsappOptIn ? whatsappOptInAt : existing.whatsappActivationOptInAt,
+        whatsappActivationOptInPhone: whatsappOptIn ? whatsapp || existing.whatsapp : existing.whatsappActivationOptInPhone,
+        whatsappActivationOptInSource: whatsappOptIn ? "online_signup_checkbox" : existing.whatsappActivationOptInSource,
+        whatsappActivationOptInVersion: whatsappOptIn ? WHATSAPP_ACTIVATION_CONSENT_VERSION : existing.whatsappActivationOptInVersion,
+        whatsappActivationOptInText: whatsappOptIn ? WHATSAPP_ACTIVATION_CONSENT_TEXT : existing.whatsappActivationOptInText,
         plan: existing.modality === "in_person" ? existing.plan : plan,
         inviteStatus:
           existing.modality === "in_person" && !existing.profileCompletedAt
@@ -63,6 +71,11 @@ export async function GET(request: Request) {
       email: user.email,
       name: name || user.email.split("@")[0],
       whatsapp,
+      whatsappActivationOptInAt: whatsappOptInAt,
+      whatsappActivationOptInPhone: whatsappOptIn ? whatsapp : null,
+      whatsappActivationOptInSource: whatsappOptIn ? "online_signup_checkbox" : null,
+      whatsappActivationOptInVersion: whatsappOptIn ? WHATSAPP_ACTIVATION_CONSENT_VERSION : null,
+      whatsappActivationOptInText: whatsappOptIn ? WHATSAPP_ACTIVATION_CONSENT_TEXT : null,
       plan,
       paymentStatus: "awaiting_payment",
     });
