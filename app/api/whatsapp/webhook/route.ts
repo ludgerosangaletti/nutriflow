@@ -25,6 +25,9 @@ import {
   getGoogleCalendarSettings,
   listGoogleCalendarEvents,
 } from "../../../google-calendar";
+import {
+  extractWhatsAppInboundMessageBody,
+} from "../../../whatsapp-inbound-message";
 
 const GRAPH_API_VERSION = process.env.WHATSAPP_GRAPH_API_VERSION || "v23.0";
 
@@ -386,6 +389,7 @@ type WhatsAppWebhook = {
           from?: string;
           type?: string;
           text?: { body?: string };
+          button?: { payload?: string; text?: string };
           interactive?: {
             button_reply?: { id?: string; title?: string };
             list_reply?: { id?: string; title?: string };
@@ -2221,10 +2225,7 @@ export async function POST(request: Request) {
       if ((eventInsert.meta?.changes ?? 0) !== 1) continue;
     }
 
-    const messageBody =
-      message.text?.body ||
-      message.interactive?.list_reply?.id ||
-      message.interactive?.button_reply?.id;
+    const messageBody = extractWhatsAppInboundMessageBody(message);
 
     let previousLead: Awaited<ReturnType<typeof getWhatsappLeadContext>> = null;
     try {
