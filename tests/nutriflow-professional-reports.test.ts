@@ -14,7 +14,8 @@ const plan: PatientPortalPlanV1 = Object.freeze({
 const assessment = (id: string, capturedAt: string, weightKg: number, bodyFatPct: number, leanMassKg: number) => Object.freeze({ publicId: id, capturedAt, protocolCode: "pollock_7", protocolVersion: "1.0.0", weightKg, heightCm: 172, bmi: weightKg / (1.72 ** 2), bodyFatPct, fatMassKg: weightKg * bodyFatPct / 100, leanMassKg, sumSkinfoldsMm: 112, skinfoldsMm: Object.freeze({ triceps: 14, subscapular: 17, suprailiac: 15, abdominal: 20, midaxillary: 16, pectoral: 13, thigh: 17 }), circumferencesCm: Object.freeze({ arm: 36, waist: id === "a1" ? 92 : 87, abdomen: id === "a1" ? 96 : 90, hip: 101, thigh: 59 }), measurementSide: "right" as const });
 
 test("plano profissional gera um PDF A4 válido a partir do snapshot publicado", async () => {
-  const input = { patientName: "Paciente Exemplo", nutritionistName: "Ludgero Sangaletti", nutritionistRegistration: "CRN-8 11719", validFrom: "2026-08-08", validUntil: "2026-09-08", plan };
+  let timing = { assetsMs: -1, renderMs: -1, pdfMs: -1 };
+  const input = { patientName: "Paciente Exemplo", nutritionistName: "Ludgero Sangaletti", nutritionistRegistration: "CRN-8 11719", validFrom: "2026-08-08", validUntil: "2026-09-08", plan, onTiming: (measured: typeof timing) => { timing = measured; } };
   const bytes = await buildPlanReportPdf(input);
   assert.equal(new TextDecoder().decode(bytes.slice(0, 4)), "%PDF");
   const document = await PDFDocument.load(bytes);
@@ -23,6 +24,7 @@ test("plano profissional gera um PDF A4 válido a partir do snapshot publicado",
   assert.equal(reportFormatting.printablePlanMacros(plan)?.energyKcal, 2100);
   assert.equal(reportFormatting.printablePlanMacros({ ...plan, days: plan.days.map((day) => ({ ...day, meals: day.meals.map((meal) => ({ ...meal, nutritionComplete: false })) })) }), null);
   assert.deepEqual(reportFormatting.planGeneralNotes(plan), ["Mantenha uma boa hidratação ao longo do dia."]);
+  assert.ok(timing.assetsMs >= 0 && timing.renderMs >= 0 && timing.pdfMs >= 0);
   assert.deepEqual(bytes, await buildPlanReportPdf(input), "o mesmo snapshot deve reproduzir o mesmo documento oficial");
 });
 
@@ -71,7 +73,10 @@ test("cabeçalho dos relatórios usa a marca oficial e não recria o monograma g
   const source = readFileSync(new URL("../modules/nutriflow/reports/professional-pdf.ts", import.meta.url), "utf8");
   const embeddedLogo = readFileSync(new URL("../modules/nutriflow/reports/report-logo.ts", import.meta.url), "utf8");
   const reporting = readFileSync(new URL("../app/nutriflow/reporting.ts", import.meta.url), "utf8");
-  assert.match(reporting, /\/brand\/nutriflow-report-logo\.png/);
+  assert.doesNotMatch(reporting, /fetch\(new URL\("\/brand\/nutriflow-report-logo\.png"/);
+  assert.match(reporting, /return embeddedReportLogoBytes\(\)/);
+  assert.match(reporting, /server-timing/);
+  assert.match(reporting, /\.all<RecipeRow>\(\)/, "as receitas devem ser carregadas em uma consulta em lote");
   assert.doesNotMatch(source, /drawText\("NF"/);
   assert.match(source, /embeddedReportLogoBytes\(\)/);
   assert.match(embeddedLogo, /NUTRIFLOW_REPORT_LOGO_BASE64/);

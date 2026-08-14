@@ -48,6 +48,13 @@ export type PlanReportInput = Readonly<{
   plan: PatientPortalPlanV1;
   recipes?: Readonly<Record<string, ReportRecipeSnapshot>>;
   logoBytes?: Uint8Array | null;
+  onTiming?: (timing: PdfRenderTiming) => void;
+}>;
+
+export type PdfRenderTiming = Readonly<{
+  assetsMs: number;
+  renderMs: number;
+  pdfMs: number;
 }>;
 
 export type ClinicalAssessmentReportPoint = Readonly<{
@@ -84,6 +91,7 @@ export type ClinicalEvolutionReportInput = Readonly<{
   initialPhotos?: readonly ClinicalReportPhoto[];
   currentPhotos?: readonly ClinicalReportPhoto[];
   logoBytes?: Uint8Array | null;
+  onTiming?: (timing: PdfRenderTiming) => void;
 }>;
 
 export type ClinicalAssessmentReportInput = Readonly<{
@@ -94,6 +102,7 @@ export type ClinicalAssessmentReportInput = Readonly<{
   targetAssessmentPublicId: string;
   professionalReading?: string | null;
   logoBytes?: Uint8Array | null;
+  onTiming?: (timing: PdfRenderTiming) => void;
 }>;
 
 export function clinicalAssessmentPoint(row: Readonly<{
@@ -230,19 +239,22 @@ class ProfessionalPdf {
   readonly versionLabel: string;
   readonly issuedAt: string;
   readonly logo: PDFImage | null;
+  readonly assetsMs: number;
   page!: PDFPage;
   y = 0;
 
-  private constructor(input: { doc: PDFDocument; fonts: FontSet; reportName: string; versionLabel: string; issuedAt: string; logo: PDFImage | null }) {
+  private constructor(input: { doc: PDFDocument; fonts: FontSet; reportName: string; versionLabel: string; issuedAt: string; logo: PDFImage | null; assetsMs: number }) {
     this.doc = input.doc;
     this.fonts = input.fonts;
     this.reportName = input.reportName;
     this.versionLabel = input.versionLabel;
     this.issuedAt = input.issuedAt;
     this.logo = input.logo;
+    this.assetsMs = input.assetsMs;
   }
 
   static async create(input: { reportName: string; versionLabel: string; issuedAt: string; logoBytes?: Uint8Array | null }) {
+    const assetsStartedAt = performance.now();
     const doc = await PDFDocument.create();
     const immutableDate = new Date(input.issuedAt);
     doc.setTitle(`${input.reportName} - ${input.versionLabel}`);
@@ -265,7 +277,7 @@ class ProfessionalPdf {
         break;
       } catch { /* tenta a marca incorporada quando a imagem externa está indisponível */ }
     }
-    const report = new ProfessionalPdf({ doc, fonts, reportName: input.reportName, versionLabel: input.versionLabel, issuedAt: input.issuedAt, logo });
+    const report = new ProfessionalPdf({ doc, fonts, reportName: input.reportName, versionLabel: input.versionLabel, issuedAt: input.issuedAt, logo, assetsMs: performance.now() - assetsStartedAt });
     report.addPage();
     return report;
   }
@@ -365,7 +377,7 @@ class ProfessionalPdf {
     return { x: MARGIN + 14, top: top - 14, width: CONTENT_WIDTH - 28, bottom: top - height + 14 };
   }
 
-  finalize() {
+  prepareForSave() {
     const pages = this.doc.getPages();
     pages.forEach((page, index) => {
       page.drawLine({ start: { x: MARGIN, y: 39 }, end: { x: PAGE_WIDTH - MARGIN, y: 39 }, thickness: 0.55, color: BORDER });
@@ -373,8 +385,9 @@ class ProfessionalPdf {
       const pageLabel = `Página ${index + 1} de ${pages.length}`;
       page.drawText(pageLabel, { x: PAGE_WIDTH - MARGIN - this.fonts.regular.widthOfTextAtSize(pageLabel, 7.1), y: 24, size: 7.1, font: this.fonts.regular, color: MUTED });
     });
-    return this.doc.save();
   }
+
+  save() { return this.doc.save(); }
 }
 
 function printablePlanMacros(plan: PatientPortalPlanV1) {
@@ -611,6 +624,7 @@ function drawMealInstruction(report: ProfessionalPdf, layout: ReturnType<typeof 
 }
 
 export async function buildPlanReportPdf(input: PlanReportInput) {
+  const renderStartedAt = performance.now();
   const report = await ProfessionalPdf.create({ reportName: "Plano alimentar", versionLabel: `Plano v${input.plan.versionNumber}`, issuedAt: input.plan.publishedAt, logoBytes: input.logoBytes });
   drawPlanIntro(report, input);
 
@@ -680,7 +694,16 @@ export async function buildPlanReportPdf(input: PlanReportInput) {
       report.y = top - height - 5;
     }
   }
-  return report.finalize();
+  report.prepareForSave();
+  const renderFinishedAt = performance.now();
+  const pdfStartedAt = performance.now();
+  const bytes = await report.save();
+  input.onTiming?.(Object.freeze({
+    assetsMs: report.assetsMs,
+    renderMs: Math.max(0, renderFinishedAt - renderStartedAt - report.assetsMs),
+    pdfMs: performance.now() - pdfStartedAt,
+  }));
+  return bytes;
 }
 
 const circumferenceLabels: Readonly<Record<string, string>> = Object.freeze({ arm: "Braço", waist: "Cintura", abdomen: "Abdômen", hip: "Quadril", thigh: "Coxa" });
@@ -959,6 +982,7 @@ function drawSkinfoldGrid(report: ProfessionalPdf, current: ClinicalAssessmentRe
 }
 
 export async function buildClinicalAssessmentReportPdf(input: ClinicalAssessmentReportInput) {
+  const renderStartedAt = performance.now();
   const history = orderedAssessmentHistory(input.assessments, input.targetAssessmentPublicId);
   const current = history.at(-1)!;
   const baseline = history[0];
@@ -1009,7 +1033,16 @@ export async function buildClinicalAssessmentReportPdf(input: ClinicalAssessment
   const methodLines = wrap(report.fonts.regular, methodText, 7.2, CONTENT_WIDTH);
   methodLines.forEach((line, index) => report.page.drawText(line, { x: MARGIN, y: 66 - index * 9, size: 7.2, font: report.fonts.regular, color: MUTED }));
 
-  return report.finalize();
+  report.prepareForSave();
+  const renderFinishedAt = performance.now();
+  const pdfStartedAt = performance.now();
+  const bytes = await report.save();
+  input.onTiming?.(Object.freeze({
+    assetsMs: report.assetsMs,
+    renderMs: Math.max(0, renderFinishedAt - renderStartedAt - report.assetsMs),
+    pdfMs: performance.now() - pdfStartedAt,
+  }));
+  return bytes;
 }
 
 /** Compatibilidade interna para consumidores anteriores; o conteúdo oficial é único. */
@@ -1021,6 +1054,7 @@ export async function buildClinicalEvolutionReportPdf(input: ClinicalEvolutionRe
     assessments: input.trajectory.length ? input.trajectory : [input.initial, input.current],
     targetAssessmentPublicId: input.current.publicId,
     logoBytes: input.logoBytes,
+    onTiming: input.onTiming,
   });
 }
 

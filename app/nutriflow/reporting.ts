@@ -5,13 +5,23 @@ import type {
   ReportRecipeSnapshot,
 } from "../../modules/nutriflow/reports/professional-pdf.ts";
 import { clinicalAssessmentPoint } from "../../modules/nutriflow/reports/professional-pdf.ts";
+import { embeddedReportLogoBytes } from "../../modules/nutriflow/reports/report-logo.ts";
 
 export const NUTRITIONIST = Object.freeze({
   name: "Ludgero Sangaletti",
   registration: "CRN-8 11719",
 });
 
-type RecipeRow = Readonly<{ snapshot_json: string | null }>;
+type RecipeRow = Readonly<{ public_id: string; version_number: number; snapshot_json: string | null }>;
+
+export type PdfPipelineTimings = Readonly<{
+  dataMs: number;
+  assetsMs: number;
+  renderMs: number;
+  pdfMs: number;
+  responseMs: number;
+  totalMs: number;
+}>;
 
 function recipeReferences(plan: PatientPortalPlanV1) {
   const references = new Map<string, Readonly<{ publicId: string; versionNumber: number }>>();
@@ -26,32 +36,29 @@ function recipeReferences(plan: PatientPortalPlanV1) {
 
 export async function loadRecipeSnapshots(plan: PatientPortalPlanV1, organizationId: number) {
   const recipes: Record<string, ReportRecipeSnapshot> = {};
-  await Promise.all([...recipeReferences(plan)].map(async ([key, reference]) => {
-    const row = await env.DB.prepare(
-      `SELECT version.snapshot_json
-       FROM nf_recipe_versions AS version
-       INNER JOIN nf_recipes AS recipe ON recipe.id = version.recipe_id
-       WHERE recipe.public_id = ? AND version.version_number = ?
-         AND (recipe.scope = 'global' OR recipe.organization_id = ?)
-       LIMIT 1`,
-    ).bind(reference.publicId, reference.versionNumber, organizationId).first<RecipeRow>();
-    if (!row?.snapshot_json) return;
+  const references = [...recipeReferences(plan).values()];
+  if (!references.length) return Object.freeze(recipes);
+  const predicates = references.map(() => "(recipe.public_id = ? AND version.version_number = ?)").join(" OR ");
+  const bindings = references.flatMap((reference) => [reference.publicId, reference.versionNumber]);
+  const rows = await env.DB.prepare(
+    `SELECT recipe.public_id, version.version_number, version.snapshot_json
+     FROM nf_recipe_versions AS version
+     INNER JOIN nf_recipes AS recipe ON recipe.id = version.recipe_id
+     WHERE (${predicates})
+       AND (recipe.scope = 'global' OR recipe.organization_id = ?)`,
+  ).bind(...bindings, organizationId).all<RecipeRow>();
+  for (const row of rows.results) {
+    if (!row?.snapshot_json) continue;
     try {
       const parsed = JSON.parse(row.snapshot_json) as ReportRecipeSnapshot;
-      if (parsed?.name && Array.isArray(parsed.ingredients)) recipes[key] = parsed;
+      if (parsed?.name && Array.isArray(parsed.ingredients)) recipes[`${row.public_id}@${row.version_number}`] = parsed;
     } catch { /* a publicação continua válida mesmo se uma receita legada estiver incompleta */ }
-  }));
+  }
   return Object.freeze(recipes);
 }
 
-export async function loadReportLogo(request: Request) {
-  try {
-    const response = await fetch(new URL("/brand/nutriflow-report-logo.png", request.url));
-    if (!response.ok) return null;
-    return new Uint8Array(await response.arrayBuffer());
-  } catch {
-    return null;
-  }
+export async function loadReportLogo(_request?: Request) {
+  return embeddedReportLogoBytes();
 }
 
 export function pdfResponse(bytes: Uint8Array, filename: string) {
@@ -64,6 +71,19 @@ export function pdfResponse(bytes: Uint8Array, filename: string) {
       "x-content-type-options": "nosniff",
     },
   });
+}
+
+export function attachPdfTimings(response: Response, timings: PdfPipelineTimings) {
+  const metric = (name: string, value: number) => `${name};dur=${Math.max(0, value).toFixed(1)}`;
+  response.headers.set("server-timing", [
+    metric("data", timings.dataMs),
+    metric("assets", timings.assetsMs),
+    metric("render", timings.renderMs),
+    metric("pdf", timings.pdfMs),
+    metric("response", timings.responseMs),
+    metric("total", timings.totalMs),
+  ].join(", "));
+  return response;
 }
 
 export const assessmentPoint = clinicalAssessmentPoint;
