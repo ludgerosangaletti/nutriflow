@@ -62,3 +62,12 @@ test("downloads administrativo e paciente aplicam alvo, organização e acesso v
   assert.match(patientRoute, /eq\(nfClinicalAssessments\.organizationId, client\.organizationId\)/);
   assert.match(patientRoute, /searchParams\.get\("assessment"\)/);
 });
+
+test("cabeçalho dos relatórios usa a marca oficial e não recria o monograma genérico", () => {
+  const source = readFileSync(new URL("../modules/nutriflow/reports/professional-pdf.ts", import.meta.url), "utf8");
+  const reporting = readFileSync(new URL("../app/nutriflow/reporting.ts", import.meta.url), "utf8");
+  assert.match(reporting, /\/brand\/nutriflow-report-logo\.png/);
+  assert.doesNotMatch(source, /drawText\("NF"/);
+  assert.match(source, /const iconSize = 46/);
+  assert.match(source, /this\.versionLabel/);
+});

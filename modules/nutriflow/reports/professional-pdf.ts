@@ -265,20 +265,36 @@ class ProfessionalPdf {
 
   addPage() {
     this.page = this.doc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+    const iconSize = 46;
+    const iconY = PAGE_HEIGHT - MARGIN - iconSize;
     if (this.logo) {
-      const scale = Math.min(74 / this.logo.width, 58 / this.logo.height);
-      this.page.drawImage(this.logo, { x: MARGIN, y: PAGE_HEIGHT - MARGIN - this.logo.height * scale + 4, width: this.logo.width * scale, height: this.logo.height * scale });
+      const scale = Math.min(iconSize / this.logo.width, iconSize / this.logo.height);
+      const width = this.logo.width * scale;
+      const height = this.logo.height * scale;
+      this.page.drawImage(this.logo, {
+        x: MARGIN + (iconSize - width) / 2,
+        y: iconY + (iconSize - height) / 2,
+        width,
+        height,
+      });
     } else {
-      this.page.drawRectangle({ x: MARGIN, y: PAGE_HEIGHT - 78, width: 42, height: 42, color: INK });
-      this.page.drawText("NF", { x: MARGIN + 11, y: PAGE_HEIGHT - 63, size: 12, font: this.fonts.bold, color: BRAND_YELLOW });
+      this.page.drawRectangle({ x: MARGIN, y: iconY, width: 4, height: iconSize, color: BRAND_YELLOW });
     }
-    const brandX = this.logo ? MARGIN + 84 : MARGIN + 52;
-    this.page.drawText("NUTRIFLOW", { x: brandX, y: PAGE_HEIGHT - 54, size: 13, font: this.fonts.bold, color: INK });
-    this.page.drawText("LUDGERO SANGALETTI", { x: brandX, y: PAGE_HEIGHT - 69, size: 8.2, font: this.fonts.bold, color: MUTED });
-    const reportWidth = this.fonts.bold.widthOfTextAtSize(this.reportName.toUpperCase(), 8.2);
-    this.page.drawText(this.reportName.toUpperCase(), { x: PAGE_WIDTH - MARGIN - reportWidth, y: PAGE_HEIGHT - 58, size: 8.2, font: this.fonts.bold, color: MUTED });
-    this.page.drawRectangle({ x: MARGIN, y: PAGE_HEIGHT - 87, width: CONTENT_WIDTH, height: 2.5, color: BRAND_YELLOW });
-    this.y = PAGE_HEIGHT - 112;
+    const brandX = MARGIN + (this.logo ? iconSize + 14 : 14);
+    this.page.drawText("NUTRIFLOW", { x: brandX, y: PAGE_HEIGHT - 57, size: 13.4, font: this.fonts.bold, color: INK });
+    this.page.drawText("LUDGERO SANGALETTI", { x: brandX, y: PAGE_HEIGHT - 72, size: 7.6, font: this.fonts.bold, color: MUTED });
+
+    const reportLabel = this.reportName.toUpperCase();
+    const reportWidth = this.fonts.bold.widthOfTextAtSize(reportLabel, 8.4);
+    const reportX = PAGE_WIDTH - MARGIN - reportWidth;
+    this.page.drawText(reportLabel, { x: reportX, y: PAGE_HEIGHT - 56, size: 8.4, font: this.fonts.bold, color: INK });
+    const versionWidth = this.fonts.regular.widthOfTextAtSize(this.versionLabel, 7.2);
+    this.page.drawText(this.versionLabel, { x: PAGE_WIDTH - MARGIN - versionWidth, y: PAGE_HEIGHT - 71, size: 7.2, font: this.fonts.regular, color: MUTED });
+
+    const dividerY = PAGE_HEIGHT - 91;
+    this.page.drawRectangle({ x: MARGIN, y: dividerY, width: 42, height: 2.2, color: BRAND_YELLOW });
+    this.page.drawLine({ start: { x: MARGIN + 42, y: dividerY + 1.1 }, end: { x: PAGE_WIDTH - MARGIN, y: dividerY + 1.1 }, thickness: 0.55, color: BORDER });
+    this.y = PAGE_HEIGHT - 116;
   }
 
   ensure(height: number) {

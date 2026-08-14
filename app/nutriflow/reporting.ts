@@ -46,7 +46,7 @@ export async function loadRecipeSnapshots(plan: PatientPortalPlanV1, organizatio
 
 export async function loadReportLogo(request: Request) {
   try {
-    const response = await fetch(new URL("/logo-ludgero.png", request.url));
+    const response = await fetch(new URL("/brand/nutriflow-report-logo.png", request.url));
     if (!response.ok) return null;
     return new Uint8Array(await response.arrayBuffer());
   } catch {
