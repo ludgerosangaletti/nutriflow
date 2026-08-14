@@ -11,6 +11,7 @@ import type {
   PatientPortalPlanV1,
   PatientPortalSubstitutionV1,
 } from "../contracts/v1/patient-portal.ts";
+import { embeddedReportLogoBytes } from "./report-logo.ts";
 
 const PAGE_WIDTH = 595.28;
 const PAGE_HEIGHT = 841.89;
@@ -255,8 +256,13 @@ class ProfessionalPdf {
       oblique: await doc.embedFont(StandardFonts.HelveticaOblique),
     };
     let logo: PDFImage | null = null;
-    if (input.logoBytes?.length) {
-      try { logo = await doc.embedPng(input.logoBytes); } catch { logo = null; }
+    const logoCandidates = [input.logoBytes, embeddedReportLogoBytes()];
+    for (const candidate of logoCandidates) {
+      if (!candidate?.length) continue;
+      try {
+        logo = await doc.embedPng(candidate);
+        break;
+      } catch { /* tenta a marca incorporada quando a imagem externa está indisponível */ }
     }
     const report = new ProfessionalPdf({ doc, fonts, reportName: input.reportName, versionLabel: input.versionLabel, issuedAt: input.issuedAt, logo });
     report.addPage();

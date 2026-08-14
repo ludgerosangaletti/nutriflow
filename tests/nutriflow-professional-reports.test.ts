@@ -30,6 +30,7 @@ test("relatório físico oficial funciona desde o baseline e limita a evolução
   const input = { patientName: "Paciente Exemplo", nutritionistName: "Ludgero Sangaletti", nutritionistRegistration: "CRN-8 11719", assessments: [future, initial, second], targetAssessmentPublicId: initial.publicId };
   const baselineBytes = await buildClinicalAssessmentReportPdf(input);
   assert.equal(new TextDecoder().decode(baselineBytes.slice(0, 4)), "%PDF");
+  assert.match(new TextDecoder("latin1").decode(baselineBytes), /\/Subtype \/Image/, "a marca oficial deve estar incorporada mesmo sem carregamento externo");
   assert.equal((await PDFDocument.load(baselineBytes)).getPageCount(), 2);
   assert.deepEqual(reportFormatting.orderedAssessmentHistory(input.assessments, initial.publicId).map((item) => item.publicId), ["a1"]);
   assert.deepEqual(reportFormatting.orderedAssessmentHistory(input.assessments, second.publicId).map((item) => item.publicId), ["a1", "a2"]);
@@ -65,9 +66,12 @@ test("downloads administrativo e paciente aplicam alvo, organização e acesso v
 
 test("cabeçalho dos relatórios usa a marca oficial e não recria o monograma genérico", () => {
   const source = readFileSync(new URL("../modules/nutriflow/reports/professional-pdf.ts", import.meta.url), "utf8");
+  const embeddedLogo = readFileSync(new URL("../modules/nutriflow/reports/report-logo.ts", import.meta.url), "utf8");
   const reporting = readFileSync(new URL("../app/nutriflow/reporting.ts", import.meta.url), "utf8");
   assert.match(reporting, /\/brand\/nutriflow-report-logo\.png/);
   assert.doesNotMatch(source, /drawText\("NF"/);
+  assert.match(source, /embeddedReportLogoBytes\(\)/);
+  assert.match(embeddedLogo, /NUTRIFLOW_REPORT_LOGO_BASE64/);
   assert.match(source, /const iconSize = 46/);
   assert.match(source, /this\.versionLabel/);
 });
