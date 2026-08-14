@@ -8,6 +8,7 @@ import {
 } from "pdf-lib";
 import type {
   PatientPortalItemV1,
+  PatientPortalMealV1,
   PatientPortalPlanV1,
   PatientPortalSubstitutionV1,
 } from "../contracts/v1/patient-portal.ts";
@@ -378,6 +379,10 @@ class ProfessionalPdf {
 
 function printablePlanMacros(plan: PatientPortalPlanV1) {
   const meals = plan.days.flatMap((day) => day.meals);
+  const published = plan.macros;
+  if (meals.length && meals.every((meal) => meal.nutritionComplete) && published?.energyKcal != null && published.protein != null && published.carbohydrate != null && published.fat != null) {
+    return Object.freeze({ energyKcal: Math.round(published.energyKcal), protein: Math.round(published.protein), carbohydrate: Math.round(published.carbohydrate), fat: Math.round(published.fat) });
+  }
   const selections = meals.map((meal) => meal.options.length === 1 ? meal.options[0].items : null);
   if (!selections.length || selections.some((items) => items == null || items.some((item) => item.macros?.energyKcal == null || item.macros?.protein == null || item.macros?.carbohydrate == null || item.macros?.fat == null))) return null;
   const items = selections.flatMap((selection) => selection ?? []);
@@ -389,117 +394,290 @@ function printablePlanMacros(plan: PatientPortalPlanV1) {
   });
 }
 
-function macrosEnergy(plan: PatientPortalPlanV1) {
-  const macros = printablePlanMacros(plan);
-  return macros ? `${macros.energyKcal} kcal - P ${macros.protein} g - C ${macros.carbohydrate} g - G ${macros.fat} g` : "Cálculo nutricional em revisão";
+type PrintableOption = Readonly<{
+  publicId: string;
+  label: string;
+  items: readonly PatientPortalItemV1[];
+  substitutions: readonly PatientPortalSubstitutionV1[];
+}>;
+
+function printableOptions(meal: PatientPortalMealV1): readonly PrintableOption[] {
+  return meal.options.length ? meal.options : [Object.freeze({ publicId: `${meal.publicId}_option_1`, label: "Opção 1", items: meal.items, substitutions: meal.substitutions })];
+}
+
+function mealMacrosLabel(meal: PatientPortalMealV1) {
+  const macros = meal.macros;
+  if (!meal.nutritionComplete || macros?.energyKcal == null || macros.protein == null || macros.carbohydrate == null || macros.fat == null) return null;
+  return `${Math.round(macros.energyKcal)} kcal | P ${Math.round(macros.protein)} g | C ${Math.round(macros.carbohydrate)} g | G ${Math.round(macros.fat)} g`;
+}
+
+function planGeneralNotes(plan: PatientPortalPlanV1) {
+  const objective = objectiveFrom(plan).toLocaleLowerCase("pt-BR");
+  return [...plan.patientNotes, plan.notes].filter((value): value is string => Boolean(value)).map((note) => {
+    const explicit = note.match(/objetivo\s*:\s*([^.;\n]+)[.;]?/i);
+    if (!explicit || explicit[1].trim().toLocaleLowerCase("pt-BR") !== objective) return note.trim();
+    return note.replace(explicit[0], "").trim();
+  }).filter(Boolean);
+}
+
+function drawPlanIntro(report: ProfessionalPdf, input: PlanReportInput) {
+  report.label(`Plano alimentar | versão ${input.plan.versionNumber}`, { color: rgb(0.55, 0.5, 0) });
+  report.move(7);
+  const title = input.plan.title.trim() || "Plano alimentar";
+  report.text(title, { size: 24, lineHeight: 27, bold: true });
+  report.text(`Plano de ${input.patientName}`, { size: 11.5, lineHeight: 16, color: MUTED });
+  report.move(9);
+
+  const metaHeight = 52;
+  const metaTop = report.y;
+  const metaItems = [
+    { label: "Prescritor", value: `${input.nutritionistName} - ${input.nutritionistRegistration}` },
+    { label: "Publicado", value: `${ptDate(input.plan.publishedAt)} - v${input.plan.versionNumber}` },
+    { label: "Vigência", value: input.validFrom || input.validUntil ? `${ptDate(input.validFrom)} a ${ptDate(input.validUntil)}` : "Período de acompanhamento" },
+  ];
+  const metaWidths = [205, 128, CONTENT_WIDTH - 333];
+  report.page.drawRectangle({ x: MARGIN, y: metaTop - metaHeight, width: CONTENT_WIDTH, height: metaHeight, color: PAPER, borderColor: BORDER, borderWidth: 0.55 });
+  let metaX = MARGIN;
+  metaItems.forEach((item, index) => {
+    if (index) report.page.drawLine({ start: { x: metaX, y: metaTop - metaHeight }, end: { x: metaX, y: metaTop }, thickness: 0.45, color: BORDER });
+    report.page.drawText(item.label.toUpperCase(), { x: metaX + 11, y: metaTop - 15, size: 6.4, font: report.fonts.bold, color: MUTED });
+    wrap(report.fonts.bold, item.value, 8.7, metaWidths[index] - 22).slice(0, 2).forEach((line, lineIndex) => report.page.drawText(line, { x: metaX + 11, y: metaTop - 32 - lineIndex * 10, size: 8.7, font: report.fonts.bold, color: INK }));
+    metaX += metaWidths[index];
+  });
+  report.y = metaTop - metaHeight - 10;
+
+  const objective = objectiveFrom(input.plan);
+  const objectiveWidth = 338;
+  const objectiveLines = wrap(report.fonts.bold, objective, 10.2, objectiveWidth - 24).slice(0, 3);
+  const summaryHeight = Math.max(58, 34 + objectiveLines.length * 11);
+  const summaryTop = report.y;
+  report.page.drawRectangle({ x: MARGIN, y: summaryTop - summaryHeight, width: CONTENT_WIDTH, height: summaryHeight, color: rgb(1, 1, 1), borderColor: BORDER, borderWidth: 0.55 });
+  report.page.drawRectangle({ x: MARGIN, y: summaryTop - summaryHeight, width: 4, height: summaryHeight, color: BRAND_YELLOW });
+  report.page.drawText("OBJETIVO", { x: MARGIN + 15, y: summaryTop - 16, size: 6.5, font: report.fonts.bold, color: MUTED });
+  objectiveLines.forEach((line, index) => report.page.drawText(line, { x: MARGIN + 15, y: summaryTop - 34 - index * 11, size: 10.2, font: report.fonts.bold, color: INK }));
+  const splitX = MARGIN + objectiveWidth;
+  report.page.drawLine({ start: { x: splitX, y: summaryTop - summaryHeight }, end: { x: splitX, y: summaryTop }, thickness: 0.45, color: BORDER });
+  report.page.drawText("RESUMO NUTRICIONAL", { x: splitX + 13, y: summaryTop - 16, size: 6.5, font: report.fonts.bold, color: MUTED });
+  const macros = printablePlanMacros(input.plan);
+  report.page.drawText(macros ? `${macros.energyKcal} kcal` : "Cálculo em revisão", { x: splitX + 13, y: summaryTop - 36, size: macros ? 13.5 : 9.3, font: report.fonts.bold, color: INK });
+  if (macros) report.page.drawText(`P ${macros.protein} g | C ${macros.carbohydrate} g | G ${macros.fat} g`, { x: splitX + 13, y: summaryTop - 51, size: 7.2, font: report.fonts.regular, color: MUTED });
+  report.y = summaryTop - summaryHeight - 18;
+}
+
+function drawStrategyHeading(report: ProfessionalPdf, label: string) {
+  report.page.drawText("ESTRATÉGIA", { x: MARGIN, y: report.y, size: 6.8, font: report.fonts.bold, color: MUTED });
+  report.y -= 17;
+  const lines = wrap(report.fonts.bold, label, 16, CONTENT_WIDTH - 46).slice(0, 2);
+  lines.forEach((line, index) => report.page.drawText(line, { x: MARGIN, y: report.y - index * 19, size: 16, font: report.fonts.bold, color: INK }));
+  report.y -= lines.length * 19 + 7;
+  report.page.drawRectangle({ x: MARGIN, y: report.y, width: 36, height: 2.4, color: BRAND_YELLOW });
+  report.page.drawLine({ start: { x: MARGIN + 36, y: report.y + 1.2 }, end: { x: PAGE_WIDTH - MARGIN, y: report.y + 1.2 }, thickness: 0.45, color: BORDER });
+  report.y -= 17;
+}
+
+function drawMealHeading(report: ProfessionalPdf, meal: PatientPortalMealV1, continuation = false) {
+  const top = report.y;
+  const time = meal.scheduledTime || "Flexível";
+  const macros = mealMacrosLabel(meal);
+  const title = `${safeText(meal.title)}${continuation ? " - continuação" : ""}`;
+  const titleWidth = macros ? 275 : CONTENT_WIDTH - 78;
+  const titleLines = wrap(report.fonts.bold, title, continuation ? 12.2 : 14.2, titleWidth).slice(0, 2);
+  const headingHeight = Math.max(34, 15 + titleLines.length * 15);
+  report.page.drawRectangle({ x: MARGIN, y: top - 25, width: 58, height: 25, color: BRAND_YELLOW });
+  report.page.drawText(time, { x: MARGIN + 10, y: top - 17, size: time.length > 6 ? 7.5 : 9, font: report.fonts.bold, color: INK });
+  titleLines.forEach((line, index) => report.page.drawText(line, { x: MARGIN + 72, y: top - 17 - index * 15, size: continuation ? 12.2 : 14.2, font: report.fonts.bold, color: INK }));
+  if (macros) {
+    const width = report.fonts.regular.widthOfTextAtSize(macros, 6.8);
+    report.page.drawText(macros, { x: PAGE_WIDTH - MARGIN - width, y: top - 17, size: 6.8, font: report.fonts.regular, color: MUTED });
+  }
+  report.page.drawLine({ start: { x: MARGIN, y: top - headingHeight }, end: { x: PAGE_WIDTH - MARGIN, y: top - headingHeight }, thickness: 0.55, color: BORDER });
+  report.y = top - headingHeight - 13;
+}
+
+function drawOptionHeading(report: ProfessionalPdf, option: PrintableOption, continuation = false) {
+  const top = report.y;
+  report.page.drawRectangle({ x: MARGIN, y: top - 31, width: CONTENT_WIDTH, height: 31, color: PAPER });
+  report.page.drawRectangle({ x: MARGIN, y: top - 31, width: 5, height: 31, color: BRAND_YELLOW });
+  report.page.drawText(`${safeText(option.label)}${continuation ? " - continuação" : ""}`, { x: MARGIN + 15, y: top - 19, size: 9.4, font: report.fonts.bold, color: INK });
+  const hint = "Escolha uma das opções - elas se equivalem.";
+  const width = report.fonts.regular.widthOfTextAtSize(hint, 7.2);
+  report.page.drawText(hint, { x: PAGE_WIDTH - MARGIN - 12 - width, y: top - 18, size: 7.2, font: report.fonts.regular, color: MUTED });
+  report.y = top - 40;
+}
+
+function itemCoreLayout(report: ProfessionalPdf, item: PatientPortalItemV1) {
+  const nameLines = wrap(report.fonts.bold, item.displayName, 10, 350);
+  const detail = [item.preparation, item.notes].filter(Boolean).join(" - ");
+  const detailLines = detail ? wrap(report.fonts.regular, detail, 8, 400) : [];
+  const height = Math.max(28, 11 + nameLines.length * 12 + detailLines.length * 10 + (detailLines.length ? 4 : 0));
+  return { nameLines, detailLines, height };
+}
+
+function substitutionHeight(report: ProfessionalPdf, group: PatientPortalSubstitutionV1, item: PatientPortalItemV1) {
+  const titleLines = wrap(report.fonts.bold, group.title, 8.3, CONTENT_WIDTH - 52);
+  const noteLines = group.notes ? wrap(report.fonts.regular, group.notes, 7.6, CONTENT_WIDTH - 60) : [];
+  const optionLines = group.options.flatMap((candidate) => wrap(report.fonts.regular, `${candidate.displayName} - ${quantity(candidate.quantityMilli, candidate.unit)}${candidate.notes ? ` - ${candidate.notes}` : ""}`, 8, CONTENT_WIDTH - 82));
+  return 35 + titleLines.length * 10 + noteLines.length * 9 + optionLines.length * 11 + (item.displayName ? 0 : 0);
+}
+
+function drawItemCore(report: ProfessionalPdf, item: PatientPortalItemV1, layout: ReturnType<typeof itemCoreLayout>) {
+  const top = report.y;
+  layout.nameLines.forEach((line, index) => report.page.drawText(line, { x: MARGIN + 2, y: top - 12 - index * 12, size: 10, font: report.fonts.bold, color: INK }));
+  const amount = quantity(item.quantityMilli, item.unit);
+  report.page.drawText(amount, { x: PAGE_WIDTH - MARGIN - report.fonts.bold.widthOfTextAtSize(amount, 9.4), y: top - 12, size: 9.4, font: report.fonts.bold, color: INK });
+  if (layout.detailLines.length) {
+    report.page.drawText("PREPARO / OBSERVAÇÃO", { x: MARGIN + 2, y: top - 14 - layout.nameLines.length * 12, size: 6.2, font: report.fonts.bold, color: MUTED });
+    layout.detailLines.forEach((line, index) => report.page.drawText(line, { x: MARGIN + 105, y: top - 14 - layout.nameLines.length * 12 - index * 10, size: 8, font: report.fonts.regular, color: MUTED }));
+  }
+  report.page.drawLine({ start: { x: MARGIN, y: top - layout.height + 3 }, end: { x: PAGE_WIDTH - MARGIN, y: top - layout.height + 3 }, thickness: 0.4, color: BORDER });
+  report.y = top - layout.height;
+}
+
+function drawSubstitution(report: ProfessionalPdf, group: PatientPortalSubstitutionV1, item: PatientPortalItemV1) {
+  const height = substitutionHeight(report, group, item);
+  const top = report.y;
+  report.page.drawRectangle({ x: MARGIN + 15, y: top - height, width: CONTENT_WIDTH - 15, height, color: PALE_YELLOW });
+  report.page.drawRectangle({ x: MARGIN + 15, y: top - height, width: 3.5, height, color: BRAND_YELLOW });
+  const titleLines = wrap(report.fonts.bold, group.title, 8.3, CONTENT_WIDTH - 52);
+  titleLines.forEach((line, index) => report.page.drawText(line, { x: MARGIN + 29, y: top - 16 - index * 10, size: 8.3, font: report.fonts.bold, color: INK }));
+  let y = top - 18 - titleLines.length * 10;
+  report.page.drawText(`Alternativas para ${safeText(item.displayName)} - escolha uma:`, { x: MARGIN + 29, y, size: 7.2, font: report.fonts.regular, color: MUTED });
+  y -= 13;
+  for (const candidate of group.options) {
+    report.page.drawRectangle({ x: MARGIN + 30, y: y + 2, width: 4, height: 4, color: INK });
+    const lines = wrap(report.fonts.regular, `${candidate.displayName} - ${quantity(candidate.quantityMilli, candidate.unit)}${candidate.notes ? ` - ${candidate.notes}` : ""}`, 8, CONTENT_WIDTH - 82);
+    lines.forEach((line, index) => report.page.drawText(line, { x: MARGIN + 41, y: y - index * 11, size: 8, font: report.fonts.regular, color: INK }));
+    y -= lines.length * 11;
+  }
+  if (group.notes) {
+    const lines = wrap(report.fonts.regular, group.notes, 7.6, CONTENT_WIDTH - 60);
+    y -= 2;
+    lines.forEach((line, index) => report.page.drawText(line, { x: MARGIN + 29, y: y - index * 9, size: 7.6, font: report.fonts.oblique, color: MUTED }));
+  }
+  report.y = top - height - 7;
+}
+
+type RecipeRow = Readonly<{ text: string; bold: boolean; indent: number }>;
+
+function recipeRows(report: ProfessionalPdf, recipe: ReportRecipeSnapshot) {
+  const rows: RecipeRow[] = [{ text: "INGREDIENTES", bold: true, indent: 0 }];
+  for (const ingredient of recipe.ingredients) {
+    const text = `${ingredient.displayName} - ${quantity(ingredient.quantityMilli, ingredient.unit)}${ingredient.preparation ? ` (${ingredient.preparation})` : ""}`;
+    wrap(report.fonts.regular, text, 8, CONTENT_WIDTH - 72).forEach((line) => rows.push({ text: line, bold: false, indent: 10 }));
+  }
+  rows.push({ text: "MODO DE PREPARO", bold: true, indent: 0 });
+  wrap(report.fonts.regular, recipe.instructions || "Sem orientação de preparo registrada.", 8, CONTENT_WIDTH - 62).forEach((line) => rows.push({ text: line, bold: false, indent: 0 }));
+  return rows;
+}
+
+function drawRecipe(report: ProfessionalPdf, recipe: ReportRecipeSnapshot, continuation: () => void) {
+  const rows = recipeRows(report, recipe);
+  const completeHeight = 42 + rows.length * 10;
+  if (completeHeight <= 560 && report.y - completeHeight < 68) continuation();
+  let cursor = 0;
+  let segment = 0;
+  while (cursor < rows.length) {
+    if (report.y - 82 < 68) continuation();
+    const capacity = Math.max(3, Math.floor((report.y - 68 - 42) / 10));
+    const slice = rows.slice(cursor, cursor + capacity);
+    const boxHeight = 42 + slice.length * 10;
+    const top = report.y;
+    report.page.drawRectangle({ x: MARGIN + 15, y: top - boxHeight, width: CONTENT_WIDTH - 15, height: boxHeight, color: PAPER, borderColor: BORDER, borderWidth: 0.5 });
+    report.page.drawText(`RECEITA | ${safeText(recipe.name)}${segment ? " - continuação" : ""}`, { x: MARGIN + 29, y: top - 17, size: 8.2, font: report.fonts.bold, color: INK });
+    report.page.drawText(`versão ${recipe.versionNumber}`, { x: PAGE_WIDTH - MARGIN - 48, y: top - 17, size: 6.7, font: report.fonts.regular, color: MUTED });
+    let y = top - 34;
+    slice.forEach((row) => {
+      report.page.drawText(safeText(row.text), { x: MARGIN + 29 + row.indent, y, size: row.bold ? 6.7 : 8, font: row.bold ? report.fonts.bold : report.fonts.regular, color: row.bold ? MUTED : INK });
+      y -= 10;
+    });
+    report.y = top - boxHeight - 8;
+    cursor += slice.length;
+    segment += 1;
+  }
+}
+
+function mealInstructionLayout(report: ProfessionalPdf, text: string) {
+  const lines = wrap(report.fonts.regular, text, 8.4, CONTENT_WIDTH - 38);
+  return { lines, height: 31 + lines.length * 11 };
+}
+
+function drawMealInstruction(report: ProfessionalPdf, layout: ReturnType<typeof mealInstructionLayout>) {
+  const top = report.y;
+  report.page.drawRectangle({ x: MARGIN, y: top - layout.height, width: CONTENT_WIDTH, height: layout.height, color: PAPER });
+  report.page.drawRectangle({ x: MARGIN, y: top - layout.height, width: 3.5, height: layout.height, color: BRAND_YELLOW });
+  report.page.drawText("ORIENTAÇÃO DA REFEIÇÃO", { x: MARGIN + 14, y: top - 15, size: 6.5, font: report.fonts.bold, color: MUTED });
+  layout.lines.forEach((line, index) => report.page.drawText(line, { x: MARGIN + 14, y: top - 31 - index * 11, size: 8.4, font: report.fonts.regular, color: INK }));
+  report.y = top - layout.height - 14;
 }
 
 export async function buildPlanReportPdf(input: PlanReportInput) {
   const report = await ProfessionalPdf.create({ reportName: "Plano alimentar", versionLabel: `Plano v${input.plan.versionNumber}`, issuedAt: input.plan.publishedAt, logoBytes: input.logoBytes });
-  report.label("Prescrição nutricional", { color: rgb(0.55, 0.5, 0) });
-  report.move(12);
-  report.text("Plano alimentar", { size: 24, lineHeight: 27, bold: true });
-  report.text(input.patientName, { size: 13, lineHeight: 17, color: MUTED });
-  report.move(6);
-  report.infoGrid([
-    { label: "Paciente", value: input.patientName },
-    { label: "Nutricionista", value: `${input.nutritionistName} - ${input.nutritionistRegistration}` },
-    { label: "Publicação", value: `${ptDate(input.plan.publishedAt)} - versão ${input.plan.versionNumber}` },
-    { label: "Vigência", value: input.validFrom || input.validUntil ? `${ptDate(input.validFrom)} a ${ptDate(input.validUntil)}` : "Conforme período de acompanhamento" },
-  ]);
-  report.move(3);
-  report.label("Objetivo atual");
-  report.text(objectiveFrom(input.plan), { size: 9.2, lineHeight: 12, color: MUTED });
-  report.text(printablePlanMacros(input.plan) ? `Valor energético total: ${macrosEnergy(input.plan)}` : "Cálculo nutricional em revisão", { size: 8, lineHeight: 10, color: MUTED });
-  report.move(4);
+  drawPlanIntro(report, input);
 
   for (const strategy of input.plan.days) {
-    const firstMeal = strategy.meals[0];
-    const firstOptions = firstMeal ? (firstMeal.options.length ? firstMeal.options : [{ items: firstMeal.items, substitutions: firstMeal.substitutions }]) : [];
-    const firstEstimate = firstOptions.reduce((total, option) => total + option.items.length * 34 + option.substitutions.reduce((sum, group) => sum + 24 + group.options.length * 12, 0), 0);
-    report.ensure(125);
-    report.label("Estratégia alimentar");
-    report.text(strategy.label, { size: 17, lineHeight: 20, bold: true });
-    report.move(7);
+    report.ensure(150);
+    drawStrategyHeading(report, strategy.label);
     for (const meal of strategy.meals) {
-      const options = meal.options.length ? meal.options : [{ publicId: `${meal.publicId}_option_1`, label: "Opção 1", sortOrder: 0, items: meal.items, substitutions: meal.substitutions }];
-      const mealEstimate = 72 + options.reduce((total, option) => total + option.items.length * 34 + option.substitutions.reduce((sum, group) => sum + 24 + group.options.length * 12, 0), 0);
-      report.ensure(Math.min(mealEstimate, 150));
-      report.label(meal.scheduledTime || "Horário flexível");
-      report.text(meal.title, { size: 15, lineHeight: 18, bold: true });
-      report.move(4);
+      const options = printableOptions(meal);
+      report.ensure(options.length > 1 ? 124 : 94);
+      drawMealHeading(report, meal);
       for (const option of options) {
         if (options.length > 1) {
-          report.ensure(42);
-          report.page.drawRectangle({ x: MARGIN, y: report.y - 4, width: 7, height: 7, color: BRAND_YELLOW });
-          report.text(option.label, { x: MARGIN + 14, width: CONTENT_WIDTH - 14, size: 10, lineHeight: 14, bold: true });
-          report.text("Escolha uma das opções - elas se equivalem.", { x: MARGIN + 14, width: CONTENT_WIDTH - 14, size: 7.8, lineHeight: 10, color: MUTED });
-          report.move(3);
+          const firstItem = option.items[0];
+          const firstItemHeight = firstItem ? itemCoreLayout(report, firstItem).height + groupsForItem(option.substitutions, firstItem, 0, option.items.length).reduce((sum, group) => sum + substitutionHeight(report, group, firstItem) + 7, 0) : 28;
+          if (report.y - Math.min(190, 40 + firstItemHeight) < 68) {
+            report.addPage();
+            drawMealHeading(report, meal, true);
+          }
+          drawOptionHeading(report, option);
         }
         for (const [itemIndex, item] of option.items.entries()) {
           const substitutions = groupsForItem(option.substitutions, item, itemIndex, option.items.length);
           const recipe = item.recipe && input.recipes ? input.recipes[recipeKey(item)!] : undefined;
-          const preparation = [item.preparation, item.notes].filter(Boolean).join(" - ");
-          const estimated = 40 + Math.max(0, wrap(report.fonts.regular, preparation, 8, 225).length - 1) * 10 + substitutions.reduce((sum, group) => sum + 18 + group.options.length * 12, 0) + (recipe ? 34 + recipe.ingredients.length * 12 + wrap(report.fonts.regular, recipe.instructions || "", 8, 460).length * 10 : 0);
-          report.ensure(Math.min(estimated, 250));
-          const top = report.y;
-          report.page.drawLine({ start: { x: MARGIN, y: top + 4 }, end: { x: PAGE_WIDTH - MARGIN, y: top + 4 }, thickness: 0.45, color: BORDER });
-          const nameLines = wrap(report.fonts.bold, item.displayName, 9.6, 190);
-          nameLines.forEach((line, index) => report.page.drawText(line, { x: MARGIN, y: top - index * 12, size: 9.6, font: report.fonts.bold, color: INK }));
-          const qty = quantity(item.quantityMilli, item.unit);
-          report.page.drawText(qty, { x: MARGIN + 204, y: top, size: 9, font: report.fonts.bold, color: INK });
-          const prepLines = preparation ? wrap(report.fonts.regular, preparation, 8, 225) : [];
-          prepLines.forEach((line, index) => report.page.drawText(line, { x: MARGIN + 286, y: top - index * 10, size: 8, font: report.fonts.regular, color: MUTED }));
-          report.y = top - Math.max(nameLines.length * 12, prepLines.length * 10, 16) - 6;
-          for (const group of substitutions) {
-            report.ensure(26 + group.options.length * 12);
-            report.page.drawRectangle({ x: MARGIN + 12, y: report.y - (21 + group.options.length * 12), width: CONTENT_WIDTH - 12, height: 21 + group.options.length * 12, color: PALE_YELLOW });
-            report.page.drawText(safeText(group.title), { x: MARGIN + 22, y: report.y - 13, size: 7.7, font: report.fonts.bold, color: INK });
-            let sy = report.y - 25;
-            group.options.forEach((candidate) => {
-              report.page.drawText(`${safeText(candidate.displayName)} - ${safeText(quantity(candidate.quantityMilli, candidate.unit))}`, { x: MARGIN + 28, y: sy, size: 7.8, font: report.fonts.regular, color: MUTED });
-              sy -= 12;
-            });
-            report.y -= 27 + group.options.length * 12;
-            report.move(4);
+          const layout = itemCoreLayout(report, item);
+          const linkedHeight = substitutions.reduce((sum, group) => sum + substitutionHeight(report, group, item) + 7, 0);
+          if (report.y - Math.min(540, layout.height + linkedHeight) < 68) {
+            report.addPage();
+            drawMealHeading(report, meal, true);
+            if (options.length > 1) drawOptionHeading(report, option, true);
           }
-          if (recipe) {
-            const ingredientHeight = recipe.ingredients.length * 12;
-            const instructionLines = wrap(report.fonts.regular, recipe.instructions || "Sem orientação de preparo registrada.", 8, CONTENT_WIDTH - 48);
-            const boxHeight = 47 + ingredientHeight + instructionLines.length * 10;
-            report.ensure(boxHeight + 6);
-            const boxTop = report.y;
-            report.page.drawRectangle({ x: MARGIN + 12, y: boxTop - boxHeight, width: CONTENT_WIDTH - 12, height: boxHeight, color: PAPER, borderColor: BORDER, borderWidth: 0.5 });
-            report.page.drawText(`RECEITA - ${safeText(recipe.name)}`, { x: MARGIN + 24, y: boxTop - 16, size: 7.5, font: report.fonts.bold, color: INK });
-            let ry = boxTop - 31;
-            recipe.ingredients.forEach((ingredient) => {
-              report.page.drawText(`${safeText(ingredient.displayName)} - ${safeText(quantity(ingredient.quantityMilli, ingredient.unit))}${ingredient.preparation ? ` (${safeText(ingredient.preparation)})` : ""}`, { x: MARGIN + 28, y: ry, size: 7.8, font: report.fonts.regular, color: MUTED });
-              ry -= 12;
-            });
-            report.page.drawText("Modo de preparo", { x: MARGIN + 24, y: ry - 2, size: 7.4, font: report.fonts.bold, color: INK });
-            ry -= 14;
-            instructionLines.forEach((line) => { report.page.drawText(line, { x: MARGIN + 24, y: ry, size: 8, font: report.fonts.regular, color: MUTED }); ry -= 10; });
-            report.y = boxTop - boxHeight - 8;
-          }
+          drawItemCore(report, item, layout);
+          substitutions.forEach((group) => drawSubstitution(report, group, item));
+          if (recipe) drawRecipe(report, recipe, () => {
+            report.addPage();
+            drawMealHeading(report, meal, true);
+            if (options.length > 1) drawOptionHeading(report, option, true);
+          });
         }
-        report.move(6);
+        report.move(8);
       }
       if (meal.instructions) {
-        report.ensure(52);
-        report.label("Orientação da refeição");
-        report.text(meal.instructions, { size: 8.6, lineHeight: 12, color: MUTED });
-        report.move(8);
+        const instructionLayout = mealInstructionLayout(report, meal.instructions);
+        if (report.y - instructionLayout.height < 68) {
+          report.addPage();
+          drawMealHeading(report, meal, true);
+        }
+        drawMealInstruction(report, instructionLayout);
       }
     }
   }
 
-  if (input.plan.patientNotes.length || input.plan.notes) {
+  const notes = planGeneralNotes(input.plan);
+  if (notes.length) {
+    report.ensure(100);
     report.section("Orientações gerais", "Acompanhamento");
-    for (const note of [...input.plan.patientNotes, input.plan.notes].filter((value): value is string => Boolean(value))) {
-      report.ensure(30);
-      report.page.drawRectangle({ x: MARGIN, y: report.y - 5, width: 5, height: 5, color: BRAND_YELLOW });
-      report.text(note, { x: MARGIN + 14, width: CONTENT_WIDTH - 14, size: 9.2, lineHeight: 13, color: MUTED });
-      report.move(6);
+    for (const note of notes) {
+      const lines = wrap(report.fonts.regular, note, 8.8, CONTENT_WIDTH - 38);
+      const height = Math.max(25, 12 + lines.length * 12);
+      if (report.y - height < 68) {
+        report.addPage();
+        report.section("Orientações gerais - continuação", "Acompanhamento");
+      }
+      const top = report.y;
+      report.page.drawRectangle({ x: MARGIN, y: top - height, width: CONTENT_WIDTH, height, color: PAPER });
+      report.page.drawRectangle({ x: MARGIN + 13, y: top - 16, width: 5, height: 5, color: BRAND_YELLOW });
+      lines.forEach((line, index) => report.page.drawText(line, { x: MARGIN + 28, y: top - 18 - index * 12, size: 8.8, font: report.fonts.regular, color: INK }));
+      report.y = top - height - 5;
     }
   }
   return report.finalize();
@@ -846,4 +1024,4 @@ export async function buildClinicalEvolutionReportPdf(input: ClinicalEvolutionRe
   });
 }
 
-export const reportFormatting = Object.freeze({ ptDate, ptNumber, quantity, objectiveFrom, roundedDelta, changeLabel, orderedAssessmentHistory, professionalReading });
+export const reportFormatting = Object.freeze({ ptDate, ptNumber, quantity, objectiveFrom, printablePlanMacros, mealMacrosLabel, planGeneralNotes, roundedDelta, changeLabel, orderedAssessmentHistory, professionalReading });

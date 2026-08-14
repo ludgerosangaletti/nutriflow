@@ -22,9 +22,15 @@ test("nova leitura do plano restaura o gesto entre alternativas e não inventa p
 test("totais só aparecem com nutrição completa e a impressão usa a estratégia selecionada", () => {
   assert.match(viewer, /item\.macros\?\.energyKcal != null && item\.macros\?\.protein != null/);
   assert.match(viewer, /Cálculo nutricional em revisão/);
-  assert.match(pdf, /const prepLines = preparation \? wrap/);
+  assert.match(pdf, /meal\.nutritionComplete/);
+  assert.match(pdf, /\[item\.preparation, item\.notes\]\.filter\(Boolean\)/);
   assert.doesNotMatch(pdf, /preparation \|\| "Conforme orientação do plano"/);
   assert.match(pdf, /Escolha uma das opções - elas se equivalem/);
+  assert.match(pdf, /Alternativas para.*escolha uma/);
+  assert.match(pdf, /drawMealHeading\(report, meal, true\)/);
+  assert.match(pdf, /firstItemHeight/);
+  assert.match(pdf, /mealInstructionLayout/);
+  assert.match(pdf, /RECEITA \|/);
   assert.match(route, /new URL\(request\.url\)\.searchParams\.get\("strategy"\)/);
   assert.match(route, /portal\.plan\.days\.filter/);
 });

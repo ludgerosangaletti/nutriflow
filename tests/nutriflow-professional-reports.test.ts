@@ -20,6 +20,9 @@ test("plano profissional gera um PDF A4 válido a partir do snapshot publicado",
   const document = await PDFDocument.load(bytes);
   assert.ok(document.getPageCount() >= 1);
   assert.equal(reportFormatting.objectiveFrom(plan), "redução de gordura corporal");
+  assert.equal(reportFormatting.printablePlanMacros(plan)?.energyKcal, 2100);
+  assert.equal(reportFormatting.printablePlanMacros({ ...plan, days: plan.days.map((day) => ({ ...day, meals: day.meals.map((meal) => ({ ...meal, nutritionComplete: false })) })) }), null);
+  assert.deepEqual(reportFormatting.planGeneralNotes(plan), ["Mantenha uma boa hidratação ao longo do dia."]);
   assert.deepEqual(bytes, await buildPlanReportPdf(input), "o mesmo snapshot deve reproduzir o mesmo documento oficial");
 });
 
