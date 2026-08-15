@@ -3,8 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
-type PdfResource = Readonly<{ file: File; objectUrl: string }>;
-
 const iconProps = {
   viewBox: "0 0 24 24",
   fill: "none",
@@ -32,36 +30,17 @@ export default function GeneratedPdfViewer({ backHref, filename, pdfUrl, title }
 }>) {
   const router = useRouter();
   const frameRef = useRef<HTMLIFrameElement>(null);
-  const [resource, setResource] = useState<PdfResource | null>(null);
-  const [error, setError] = useState(false);
-  const [message, setMessage] = useState("Preparando documento…");
+  const [ready, setReady] = useState(false);
+  const [frameError, setFrameError] = useState(false);
+  const [sharing, setSharing] = useState(false);
+  const [message, setMessage] = useState("Abrindo documento…");
 
   useEffect(() => {
-    const controller = new AbortController();
-    let objectUrl = "";
     document.body.classList.add("nf-generated-pdf-open");
-
-    void fetch(pdfUrl, { cache: "no-store", credentials: "same-origin", signal: controller.signal })
-      .then(async (response) => {
-        if (!response.ok) throw new Error("PDF indisponível");
-        const blob = await response.blob();
-        const file = new File([blob], filename, { type: "application/pdf" });
-        objectUrl = URL.createObjectURL(file);
-        setResource(Object.freeze({ file, objectUrl }));
-        setMessage("Documento pronto");
-      })
-      .catch((reason) => {
-        if (reason instanceof DOMException && reason.name === "AbortError") return;
-        setError(true);
-        setMessage("Não foi possível abrir o documento.");
-      });
-
     return () => {
-      controller.abort();
       document.body.classList.remove("nf-generated-pdf-open");
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [filename, pdfUrl]);
+  }, []);
 
   function goBack() {
     if (window.history.length > 1) router.back();
@@ -69,26 +48,37 @@ export default function GeneratedPdfViewer({ backHref, filename, pdfUrl, title }
   }
 
   async function share() {
-    if (!resource) return;
+    if (sharing) return;
+    setSharing(true);
+    setMessage("Preparando para compartilhar…");
+    let objectUrl = "";
     try {
-      const shareData = { files: [resource.file], title };
+      const response = await fetch(pdfUrl, { cache: "no-store", credentials: "same-origin" });
+      if (!response.ok) throw new Error("PDF indisponível");
+      const file = new File([await response.blob()], filename, { type: "application/pdf" });
+      const shareData = { files: [file], title };
       if (typeof navigator.share === "function" && (!navigator.canShare || navigator.canShare(shareData))) {
         await navigator.share(shareData);
+        setMessage("Documento pronto");
         return;
       }
       const anchor = document.createElement("a");
-      anchor.href = resource.objectUrl;
+      objectUrl = URL.createObjectURL(file);
+      anchor.href = objectUrl;
       anchor.download = filename;
       anchor.click();
       setMessage("Arquivo baixado para você compartilhar.");
     } catch (reason) {
       if (reason instanceof DOMException && reason.name === "AbortError") return;
       setMessage("Não foi possível compartilhar agora.");
+    } finally {
+      if (objectUrl) window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+      setSharing(false);
     }
   }
 
   function print() {
-    if (!resource) return;
+    if (!ready) return;
     const frameWindow = frameRef.current?.contentWindow;
     if (frameWindow) {
       frameWindow.focus();
@@ -105,12 +95,19 @@ export default function GeneratedPdfViewer({ backHref, filename, pdfUrl, title }
     </header>
 
     <section className="nf-generated-pdf-canvas" aria-label={`Visualização: ${title}`}>
-      {resource ? <iframe ref={frameRef} src={resource.objectUrl} title={title} /> : <div className={error ? "is-error" : "is-loading"}><span aria-hidden="true" /> <p>{message}</p>{error ? <button onClick={goBack} type="button">Voltar</button> : null}</div>}
+      <iframe
+        onError={() => { setFrameError(true); setMessage("Não foi possível exibir o documento aqui."); }}
+        onLoad={() => { setReady(true); setFrameError(false); setMessage("Documento pronto"); }}
+        ref={frameRef}
+        src={pdfUrl}
+        title={title}
+      />
+      {!ready || frameError ? <div className={frameError ? "is-error" : "is-loading"}><span aria-hidden="true" /><p>{message}</p>{frameError ? <a href={pdfUrl} rel="noreferrer" target="_blank">Abrir arquivo diretamente</a> : null}</div> : null}
     </section>
 
     <footer className="nf-generated-pdf-actions" aria-label="Ações do documento">
-      <button disabled={!resource} onClick={() => void share()} type="button"><Icon name="share" /><span>Compartilhar</span></button>
-      <button disabled={!resource} onClick={print} type="button"><Icon name="print" /><span>Imprimir</span></button>
+      <button disabled={!ready || sharing} onClick={() => void share()} type="button"><Icon name="share" /><span>{sharing ? "Preparando…" : "Compartilhar"}</span></button>
+      <button disabled={!ready} onClick={print} type="button"><Icon name="print" /><span>Imprimir</span></button>
     </footer>
   </main>;
 }

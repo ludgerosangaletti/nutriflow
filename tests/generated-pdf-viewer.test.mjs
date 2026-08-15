@@ -16,15 +16,18 @@ test("plano e avaliação abrem no visualizador móvel protegido", () => {
   assert.match(page, /\/api\/evolucao\/relatorio\?assessment=/);
 });
 
-test("visualizador oferece voltar, compartilhar arquivo e imprimir sem regenerar o PDF", () => {
+test("visualizador abre o PDF diretamente e oferece voltar, compartilhar e imprimir", () => {
   const viewer = read("app/visualizar-documento/generated-pdf-viewer.tsx");
 
+  assert.match(viewer, /src=\{pdfUrl\}/);
   assert.match(viewer, /fetch\(pdfUrl/);
-  assert.match(viewer, /files: \[resource\.file\]/);
+  assert.match(viewer, /files: \[file\]/);
   assert.match(viewer, /navigator\.share\(shareData\)/);
   assert.match(viewer, /frameWindow\.print\(\)/);
   assert.match(viewer, /router\.back\(\)/);
-  assert.match(viewer, />Compartilhar</);
+  assert.match(viewer, /Abrir arquivo diretamente/);
+  assert.doesNotMatch(viewer, /src=\{resource\.objectUrl\}/);
+  assert.match(viewer, /"Compartilhar"/);
   assert.match(viewer, />Imprimir</);
 });
 

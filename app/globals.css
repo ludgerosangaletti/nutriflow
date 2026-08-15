@@ -8773,12 +8773,12 @@ body.nf-generated-pdf-open { overflow: hidden; background: #191919; }
 .nf-generated-pdf-header strong,.nf-generated-pdf-header span { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .nf-generated-pdf-header strong { font-size: 14px; line-height: 1.25; }
 .nf-generated-pdf-header span { margin-top: 2px; color: rgba(255,255,255,.58); font-size: 11px; }
-.nf-generated-pdf-canvas { min-width: 0; min-height: 0; overflow: hidden; background: #3a3a38; }
+.nf-generated-pdf-canvas { position: relative; min-width: 0; min-height: 0; overflow: hidden; background: #3a3a38; }
 .nf-generated-pdf-canvas iframe { display: block; width: 100%; height: 100%; border: 0; background: #fff; }
-.nf-generated-pdf-canvas > div { height: 100%; display: grid; place-content: center; justify-items: center; gap: 14px; padding: 24px; color: rgba(255,255,255,.72); text-align: center; }
+.nf-generated-pdf-canvas > div { position: absolute; inset: 0; z-index: 1; height: 100%; display: grid; place-content: center; justify-items: center; gap: 14px; padding: 24px; background: #3a3a38; color: rgba(255,255,255,.72); text-align: center; }
 .nf-generated-pdf-canvas .is-loading > span { width: 34px; height: 3px; border-radius: 3px; background: linear-gradient(90deg, transparent 0 18%, var(--lime) 42% 58%, transparent 82%); animation: app-login-loading 1s ease-in-out infinite; }
 .nf-generated-pdf-canvas p { margin: 0; font-size: 13px; }
-.nf-generated-pdf-canvas .is-error button { min-height: 42px; border: 0; border-radius: 12px; padding: 0 18px; background: var(--lime); color: var(--ink); font-weight: 800; }
+.nf-generated-pdf-canvas .is-error a { min-height: 42px; display: inline-flex; align-items: center; border: 0; border-radius: 12px; padding: 0 18px; background: var(--lime); color: var(--ink); font-weight: 800; text-decoration: none; }
 .nf-generated-pdf-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; padding: 10px max(14px, env(safe-area-inset-right)) calc(env(safe-area-inset-bottom) + 12px) max(14px, env(safe-area-inset-left)); background: rgba(10,10,10,.98); border-top: 1px solid rgba(255,255,255,.1); }
 .nf-generated-pdf-actions button { min-height: 46px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 1px solid rgba(255,255,255,.15); border-radius: 13px; background: rgba(255,255,255,.08); color: #fff; font: 750 14px/1 var(--font-geist-sans), Arial, sans-serif; cursor: pointer; }
 .nf-generated-pdf-actions button:last-child { border-color: var(--lime); background: var(--lime); color: var(--ink); }
