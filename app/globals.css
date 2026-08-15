@@ -5324,6 +5324,18 @@ button:disabled {
   align-items: start;
   gap: clamp(42px, 6vw, 88px);
   grid-template-columns: minmax(0, 1fr) minmax(460px, 0.82fr);
+  min-width: 0;
+  width: 100%;
+}
+
+.first-access-page,
+.first-access-grid > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.first-access-page {
+  overflow-x: clip;
 }
 
 .first-access-benefits {
@@ -5378,6 +5390,97 @@ button:disabled {
   max-width: 100%;
   min-width: 0;
   width: 100%;
+}
+
+body:has(.first-access-page) .mobile-app-banner,
+body:has(.activation-page) .mobile-app-banner {
+  display: none;
+}
+
+@media (max-width: 850px) {
+  .first-access-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 32px;
+    max-width: 620px;
+  }
+
+  .first-access-page .portal-copy,
+  .in-person-profile-form {
+    width: 100%;
+  }
+}
+
+@media (max-width: 620px) {
+  .first-access-page,
+  .activation-page {
+    min-height: 100dvh;
+    padding: max(18px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) calc(28px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  }
+
+  .first-access-page .portal-header,
+  .activation-page .portal-header {
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .first-access-page .portal-header > span,
+  .activation-page .portal-header > span {
+    max-width: 118px;
+    color: #686863;
+    font-size: 10px;
+    font-weight: 800;
+    line-height: 1.35;
+    text-align: right;
+  }
+
+  .first-access-page .portal-brand,
+  .activation-page .portal-brand {
+    min-width: 0;
+    margin-bottom: 30px;
+    font-size: 13px;
+    line-height: 1.2;
+  }
+
+  .first-access-page .portal-copy h1 {
+    max-width: 100%;
+    margin: 12px 0 16px;
+    font-size: clamp(2.35rem, 12vw, 3.25rem);
+    overflow-wrap: anywhere;
+  }
+
+  .first-access-page .portal-copy > p:not(.section-kicker) {
+    line-height: 1.55;
+  }
+
+  .first-access-benefits {
+    margin-top: 24px;
+  }
+
+  .in-person-profile-form {
+    gap: 16px;
+    border-radius: 20px;
+    padding: 22px 18px;
+  }
+
+  .profile-name-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .in-person-profile-form input:not([type="checkbox"]) {
+    min-height: 52px;
+    font-size: 16px;
+  }
+
+  .in-person-profile-form .checkout-button {
+    width: 100%;
+    min-height: 54px;
+  }
+
+  .activation-card {
+    width: 100%;
+    margin: 12px auto 0;
+    padding: 26px 20px;
+  }
 }
 
 .in-person-care-manager {
