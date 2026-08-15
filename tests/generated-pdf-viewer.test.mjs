@@ -4,13 +4,17 @@ import test from "node:test";
 
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 
-test("plano e avaliação abrem no visualizador móvel protegido", () => {
+test("plano e avaliação abrem o visualizador no local, sem navegar para uma rota intermediária", () => {
   const plan = read("app/plano-alimentar/patient-plan-viewer.tsx");
   const evolution = read("app/evolucao/page.tsx");
   const page = read("app/visualizar-documento/page.tsx");
 
-  assert.match(plan, /\/visualizar-documento\?type=plan&strategy=/);
-  assert.match(evolution, /\/visualizar-documento\?type=assessment&assessment=/);
+  assert.match(plan, /GeneratedPdfLauncher/);
+  assert.match(evolution, /GeneratedPdfLauncher/);
+  assert.doesNotMatch(plan, /\/visualizar-documento\?type=plan/);
+  assert.doesNotMatch(evolution, /\/visualizar-documento\?type=assessment/);
+  assert.match(plan, /\/api\/nutriflow\/v1\/plan-pdf\?strategy=/);
+  assert.match(evolution, /\/api\/evolucao\/relatorio\?assessment=/);
   assert.match(page, /await requirePatient\(currentHref\)/);
   assert.match(page, /\/api\/nutriflow\/v1\/plan-pdf/);
   assert.match(page, /\/api\/evolucao\/relatorio\?assessment=/);
@@ -25,6 +29,8 @@ test("visualizador abre o PDF diretamente e oferece voltar, compartilhar e impri
   assert.match(viewer, /navigator\.share\(shareData\)/);
   assert.match(viewer, /frameWindow\.print\(\)/);
   assert.match(viewer, /router\.back\(\)/);
+  assert.match(viewer, /if \(onClose\)/);
+  assert.match(viewer, /setOpen\(true\)/);
   assert.match(viewer, /Abrir arquivo diretamente/);
   assert.doesNotMatch(viewer, /src=\{resource\.objectUrl\}/);
   assert.match(viewer, /"Compartilhar"/);

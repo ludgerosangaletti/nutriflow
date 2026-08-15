@@ -9321,7 +9321,7 @@ body.nf-sheet-open{overflow:hidden}
 .nf-plan-chips-v5{position:relative;z-index:1;display:flex;gap:6px;flex-wrap:wrap;max-width:560px;margin-top:17px}
 .nf-plan-chips-v5>*{display:inline-flex;align-items:center;min-height:28px;padding:5px 9px;border:1px solid rgba(12,12,10,.16);border-radius:999px;background:rgba(255,255,255,.66);color:#37352f;font-size:.7rem;font-weight:800}
 .nf-plan-chips-v5 strong{border-color:#111;background:#111;color:#fff}
-.nf-plan-overview-v5>a{position:relative;z-index:1;display:inline-flex;align-items:center;justify-content:center;min-height:43px;margin-top:18px;padding:10px 13px;border-radius:12px;background:#111;color:#fff;font-size:.74rem;font-weight:850;text-decoration:none}
+.nf-plan-overview-v5>a,.nf-plan-overview-v5>button{position:relative;z-index:1;display:inline-flex;align-items:center;justify-content:center;min-height:43px;margin-top:18px;padding:10px 13px;border:0;border-radius:12px;background:#111;color:#fff;font:inherit;font-size:.74rem;font-weight:850;text-decoration:none;cursor:pointer}
 .nf-plan-strategies-v5{display:flex;gap:8px;overflow:auto;padding:1px 1px 5px;scrollbar-width:none}.nf-plan-strategies-v5::-webkit-scrollbar{display:none}
 .nf-plan-strategies-v5 button{display:grid;gap:3px;min-width:164px;min-height:62px;flex:0 0 auto;padding:11px 13px;border:1px solid #d9d6cd;border-radius:15px;background:#fff;color:#292823;text-align:left;cursor:pointer}.nf-plan-strategies-v5 button[aria-selected=true]{border-color:#111;background:#111;color:#fff}.nf-plan-strategies-v5 strong{font-size:.78rem;line-height:1.2}.nf-plan-strategies-v5 small{font-size:.65rem;opacity:.64}
 .nf-patient-meals-v5{display:grid;gap:10px}
@@ -9559,8 +9559,8 @@ body.nf-plan-overlay-open{overflow:hidden}.nf-plan-swap-backdrop{z-index:1100}.n
 .evolution-report-action h2 { margin: 4px 0 7px; }
 .evolution-report-action p { margin: 0; color: #605e58; }
 .evolution-report-list { grid-column: 1 / -1; display: grid; gap: 8px; padding-top: 14px; border-top: 1px solid #eceae3; }
-.evolution-report-list a { display: flex; align-items: center; justify-content: space-between; gap: 16px; color: #171713; font-size: 13px; text-decoration: none; }
-.evolution-report-list a strong { font-size: 11px; text-decoration: underline; text-underline-offset: 3px; }
+.evolution-report-list a,.evolution-report-list button { width:100%; display: flex; align-items: center; justify-content: space-between; gap: 16px; border:0; background:transparent; padding:0; color: #171713; font:inherit; font-size: 13px; text-align:left; text-decoration: none; cursor:pointer; }
+.evolution-report-list a strong,.evolution-report-list button strong { font-size: 11px; text-decoration: underline; text-underline-offset: 3px; }
 @media (max-width: 760px) {
   .clinical-report-form { grid-template-columns: 1fr; }
   .clinical-report-form .button { width: 100%; }

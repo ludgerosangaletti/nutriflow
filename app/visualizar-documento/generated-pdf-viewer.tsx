@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 
 const iconProps = {
@@ -22,9 +22,10 @@ function Icon({ name }: Readonly<{ name: "back" | "share" | "print" }>) {
   return <svg {...iconProps} height="21" width="21">{path}</svg>;
 }
 
-export default function GeneratedPdfViewer({ backHref, filename, pdfUrl, title }: Readonly<{
+export default function GeneratedPdfViewer({ backHref, filename, onClose, pdfUrl, title }: Readonly<{
   backHref: string;
   filename: string;
+  onClose?: () => void;
   pdfUrl: string;
   title: string;
 }>) {
@@ -43,6 +44,10 @@ export default function GeneratedPdfViewer({ backHref, filename, pdfUrl, title }
   }, []);
 
   function goBack() {
+    if (onClose) {
+      onClose();
+      return;
+    }
     if (window.history.length > 1) router.back();
     else router.replace(backHref);
   }
@@ -110,4 +115,19 @@ export default function GeneratedPdfViewer({ backHref, filename, pdfUrl, title }
       <button disabled={!ready} onClick={print} type="button"><Icon name="print" /><span>Imprimir</span></button>
     </footer>
   </main>;
+}
+
+export function GeneratedPdfLauncher({ backHref, children, className, filename, pdfUrl, title }: Readonly<{
+  backHref: string;
+  children: ReactNode;
+  className?: string;
+  filename: string;
+  pdfUrl: string;
+  title: string;
+}>) {
+  const [open, setOpen] = useState(false);
+  return <>
+    <button className={className} onClick={() => setOpen(true)} type="button">{children}</button>
+    {open ? <GeneratedPdfViewer backHref={backHref} filename={filename} onClose={() => setOpen(false)} pdfUrl={pdfUrl} title={title} /> : null}
+  </>;
 }
