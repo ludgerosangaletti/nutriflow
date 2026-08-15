@@ -8763,6 +8763,36 @@ body.nf-document-viewer-open { overflow: hidden; }
 .nf-document-viewer > footer button { min-height: 46px; flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 7px; border: 0; border-radius: 13px; font: 750 14px/1 var(--font-geist-sans), Arial, sans-serif; cursor: pointer; }
 .nf-document-viewer > footer .is-secondary { background: rgba(255,255,255,.12); color: #fff; }
 .nf-document-viewer > footer .is-primary { background: var(--lime); color: var(--ink); }
+
+body.nf-generated-pdf-open { overflow: hidden; background: #191919; }
+.nf-generated-pdf-viewer { position: fixed; inset: 0; z-index: 120; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; width: 100%; height: 100vh; height: 100dvh; overflow: hidden; background: #292927; color: #fff; }
+.nf-generated-pdf-header { display: flex; align-items: center; gap: 10px; min-height: 60px; padding: calc(env(safe-area-inset-top) + 8px) max(14px, env(safe-area-inset-right)) 8px max(10px, env(safe-area-inset-left)); background: rgba(10,10,10,.98); border-bottom: 1px solid rgba(255,255,255,.1); }
+.nf-generated-pdf-back { width: 44px; height: 44px; flex: 0 0 auto; display: grid; place-items: center; border: 0; border-radius: 50%; background: transparent; color: #fff; cursor: pointer; }
+.nf-generated-pdf-back:hover,.nf-generated-pdf-back:focus-visible { background: rgba(255,255,255,.1); outline: none; }
+.nf-generated-pdf-header > div { min-width: 0; }
+.nf-generated-pdf-header strong,.nf-generated-pdf-header span { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.nf-generated-pdf-header strong { font-size: 14px; line-height: 1.25; }
+.nf-generated-pdf-header span { margin-top: 2px; color: rgba(255,255,255,.58); font-size: 11px; }
+.nf-generated-pdf-canvas { min-width: 0; min-height: 0; overflow: hidden; background: #3a3a38; }
+.nf-generated-pdf-canvas iframe { display: block; width: 100%; height: 100%; border: 0; background: #fff; }
+.nf-generated-pdf-canvas > div { height: 100%; display: grid; place-content: center; justify-items: center; gap: 14px; padding: 24px; color: rgba(255,255,255,.72); text-align: center; }
+.nf-generated-pdf-canvas .is-loading > span { width: 34px; height: 3px; border-radius: 3px; background: linear-gradient(90deg, transparent 0 18%, var(--lime) 42% 58%, transparent 82%); animation: app-login-loading 1s ease-in-out infinite; }
+.nf-generated-pdf-canvas p { margin: 0; font-size: 13px; }
+.nf-generated-pdf-canvas .is-error button { min-height: 42px; border: 0; border-radius: 12px; padding: 0 18px; background: var(--lime); color: var(--ink); font-weight: 800; }
+.nf-generated-pdf-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; padding: 10px max(14px, env(safe-area-inset-right)) calc(env(safe-area-inset-bottom) + 12px) max(14px, env(safe-area-inset-left)); background: rgba(10,10,10,.98); border-top: 1px solid rgba(255,255,255,.1); }
+.nf-generated-pdf-actions button { min-height: 46px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 1px solid rgba(255,255,255,.15); border-radius: 13px; background: rgba(255,255,255,.08); color: #fff; font: 750 14px/1 var(--font-geist-sans), Arial, sans-serif; cursor: pointer; }
+.nf-generated-pdf-actions button:last-child { border-color: var(--lime); background: var(--lime); color: var(--ink); }
+.nf-generated-pdf-actions button:disabled { opacity: .42; cursor: wait; }
+.nf-generated-pdf-actions button:focus-visible { outline: 2px solid var(--lime); outline-offset: -2px; }
+@media (min-width: 800px) {
+  .nf-generated-pdf-header { padding-left: 22px; padding-right: 22px; }
+  .nf-generated-pdf-actions { grid-template-columns: repeat(2, 160px); justify-content: end; padding-left: 22px; padding-right: 22px; }
+}
+@media print {
+  .nf-generated-pdf-header,.nf-generated-pdf-actions { display: none; }
+  .nf-generated-pdf-viewer { position: static; display: block; height: auto; background: #fff; }
+  .nf-generated-pdf-canvas,.nf-generated-pdf-canvas iframe { width: 100%; height: 100vh; background: #fff; }
+}
 .nf-documents-empty-content { padding: 34px 20px; text-align: center; }
 .nf-documents-empty-content > span { width: 58px; height: 58px; display: grid; place-items: center; margin: 0 auto 16px; border-radius: 18px; background: var(--cream-deep); color: #6b6b68; }
 .nf-documents-empty-content > h3 { margin: 0 0 8px; font-size: 18px; letter-spacing: -.02em; }
