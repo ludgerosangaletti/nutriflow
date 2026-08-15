@@ -73,6 +73,25 @@
 .auth-page:has(.app-login-card) .portal-brand,
 .auth-page:has(.app-login-card) .portal-copy { display: none; }
 .auth-page:has(.app-login-card) .auth-layout { display: block; width: 100%; max-width: 430px; }
+.app-entry-page:has(.app-login-splash) {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background: #0a0a0a;
+}
+.app-entry-page:has(.app-login-splash) .app-login-splash {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  min-height: 100%;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
 .app-login-splash { min-height: 100dvh; background: #0a0a0a; display: grid; place-items: center; align-content: center; gap: 18px; color: #fff; }
 .app-login-splash img { width: 62px; height: 62px; object-fit: contain; border-radius: 18px; background: #ffea00; padding: 7px; }
 .app-login-loader { width: 36px; height: 3px; border-radius: 3px; background: linear-gradient(90deg, transparent 0 20%, #ffea00 40% 60%, transparent 80%); animation: app-login-loading 1s ease-in-out infinite; }
