@@ -19,3 +19,19 @@ test("WhatsApp and Resend webhook event stores reject duplicate provider IDs", (
   database.prepare("INSERT INTO resend_webhook_events (provider_event_id, event_type, received_at) VALUES (?, ?, ?)").run("msg_test", "email.delivered", "2026-01-01T00:00:00.000Z");
   assert.throws(() => database.prepare("INSERT INTO resend_webhook_events (provider_event_id, event_type, received_at) VALUES (?, ?, ?)").run("msg_test", "email.delivered", "2026-01-01T00:00:01.000Z"));
 });
+
+test("plan publication keeps push and email without a paid WhatsApp notification", () => {
+  const workflowSource = readFileSync(
+    new URL("../modules/nutriflow/application/events/handlers/send-workflow-notifications.ts", import.meta.url),
+    "utf8",
+  );
+  const cronSource = readFileSync(
+    new URL("../app/api/cron/process-outbox/route.ts", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(workflowSource, /emailHandler\(PLAN_VERSION_PUBLISHED, "diet"\)/);
+  assert.doesNotMatch(workflowSource, /whatsappHandler\(PLAN_VERSION_PUBLISHED, "diet"\)/);
+  assert.match(workflowSource, /whatsappHandler\(TRAINING_ROUTINE_PUBLISHED, "training"\)/);
+  assert.match(cronSource, /sendPushOnPlanPublished/);
+});

@@ -57,7 +57,6 @@ function whatsappHandler(eventType: string, kind: ContentReadyKind): NamedDomain
 
 export const workflowNotificationHandlers: readonly NamedDomainEventHandler[] = Object.freeze([
   emailHandler(PLAN_VERSION_PUBLISHED, "diet"),
-  whatsappHandler(PLAN_VERSION_PUBLISHED, "diet"),
   emailHandler(TRAINING_ROUTINE_PUBLISHED, "training"),
   whatsappHandler(TRAINING_ROUTINE_PUBLISHED, "training"),
   emailHandler(CLINICAL_ANAMNESIS_SUBMITTED, "clinical_anamnesis"),
