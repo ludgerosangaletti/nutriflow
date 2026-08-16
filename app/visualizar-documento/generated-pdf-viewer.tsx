@@ -22,6 +22,12 @@ function Icon({ name }: Readonly<{ name: "back" | "share" | "print" }>) {
   return <svg {...iconProps} height="21" width="21">{path}</svg>;
 }
 
+function prefersNativePdfViewer() {
+  const userAgent = navigator.userAgent;
+  const iPadOs = navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
+  return iPadOs || /Android|iPhone|iPad|iPod|Mobile/i.test(userAgent);
+}
+
 export default function GeneratedPdfViewer({ backHref, filename, onClose, pdfUrl, title }: Readonly<{
   backHref: string;
   filename: string;
@@ -126,8 +132,15 @@ export function GeneratedPdfLauncher({ backHref, children, className, filename, 
   title: string;
 }>) {
   const [open, setOpen] = useState(false);
+  function openPdf() {
+    if (prefersNativePdfViewer()) {
+      window.location.assign(pdfUrl);
+      return;
+    }
+    setOpen(true);
+  }
   return <>
-    <button className={className} onClick={() => setOpen(true)} type="button">{children}</button>
+    <button className={className} onClick={openPdf} type="button">{children}</button>
     {open ? <GeneratedPdfViewer backHref={backHref} filename={filename} onClose={() => setOpen(false)} pdfUrl={pdfUrl} title={title} /> : null}
   </>;
 }

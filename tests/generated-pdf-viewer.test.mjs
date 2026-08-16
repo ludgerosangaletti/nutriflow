@@ -31,6 +31,8 @@ test("visualizador abre o PDF diretamente e oferece voltar, compartilhar e impri
   assert.match(viewer, /router\.back\(\)/);
   assert.match(viewer, /if \(onClose\)/);
   assert.match(viewer, /setOpen\(true\)/);
+  assert.match(viewer, /Android\|iPhone\|iPad\|iPod\|Mobile/);
+  assert.match(viewer, /window\.location\.assign\(pdfUrl\)/);
   assert.match(viewer, /Abrir arquivo diretamente/);
   assert.doesNotMatch(viewer, /src=\{resource\.objectUrl\}/);
   assert.match(viewer, /"Compartilhar"/);
