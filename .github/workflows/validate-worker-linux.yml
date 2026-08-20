@@ -1,0 +1,56 @@
+name: Validate v208 Worker on Linux
+
+on:
+  push:
+    branches:
+      - validate-v208-linux
+
+permissions:
+  contents: read
+
+jobs:
+  dry-run:
+    name: Build and Wrangler dry-run
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout v208 validation branch
+        uses: actions/checkout@v4
+
+      - name: Confirm v208 source commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD^)" = "d454ea4742dc5f7e7eaf236c5f004942643c0b4e"
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Build standalone Worker
+        run: npm run build
+
+      - name: Verify Worker artifact and manifests
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s dist/server/index.js
+          test -s dist/.openai/hosting.json
+          test -s dist/server/wrangler.json
+          test -s .wrangler/deploy/config.json
+          node -e 'JSON.parse(require("node:fs").readFileSync("dist/.openai/hosting.json", "utf8"))'
+          node -e 'JSON.parse(require("node:fs").readFileSync("dist/server/wrangler.json", "utf8"))'
+
+      - name: Wrangler standalone dry-run
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx wrangler deploy --dry-run --config dist/server/wrangler.json 2>&1 | tee wrangler-dry-run.log
+          grep -Eq 'env\.DB|DB.*D1|D1.*DB' wrangler-dry-run.log
+          grep -Eq 'env\.BUCKET|BUCKET.*R2|R2.*BUCKET' wrangler-dry-run.log
