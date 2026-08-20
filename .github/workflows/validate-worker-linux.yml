@@ -15,16 +15,16 @@ jobs:
     timeout-minutes: 20
 
     steps:
-      - name: Checkout v208 validation branch
+      - name: Checkout exact v208 source
         uses: actions/checkout@v4
         with:
-          fetch-depth: 2
+          ref: d454ea4742dc5f7e7eaf236c5f004942643c0b4e
 
       - name: Confirm v208 source commit
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD^)" = "d454ea4742dc5f7e7eaf236c5f004942643c0b4e"
+          test "$(git rev-parse HEAD)" = "d454ea4742dc5f7e7eaf236c5f004942643c0b4e"
 
       - name: Use Node.js 22
         uses: actions/setup-node@v4
