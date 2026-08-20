@@ -17,6 +17,8 @@ jobs:
     steps:
       - name: Checkout v208 validation branch
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
 
       - name: Confirm v208 source commit
         shell: bash
