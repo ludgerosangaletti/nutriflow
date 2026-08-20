@@ -1,6 +1,9 @@
 name: NutriFlow production
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
     inputs:
       confirm_production:
@@ -18,7 +21,7 @@ concurrency:
 
 jobs:
   test-build-migrate-deploy-smoke:
-    if: github.ref == 'refs/heads/main' && inputs.confirm_production == true
+    if: vars.PRODUCTION_ENABLED == 'true' && (github.event_name == 'push' || inputs.confirm_production == true)
     name: Test, build, migrate, deploy and smoke
     runs-on: ubuntu-latest
     environment: nutriflow-production
@@ -31,6 +34,27 @@ jobs:
       R2_BUCKET_NAME: ${{ vars.R2_BUCKET_NAME }}
       WORKER_NAME: ${{ vars.WORKER_NAME }}
       PRODUCTION_SMOKE_URL: ${{ vars.PRODUCTION_SMOKE_URL }}
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_VAPID_PUBLIC_KEY: ${{ vars.NEXT_PUBLIC_VAPID_PUBLIC_KEY }}
+      NEXT_PUBLIC_WHATSAPP_ATENDIMENTO: ${{ vars.NEXT_PUBLIC_WHATSAPP_ATENDIMENTO }}
+      VAPID_SUBJECT: ${{ vars.VAPID_SUBJECT }}
+      WHATSAPP_ACTIVATION_TEMPLATE_NAME: ${{ vars.WHATSAPP_ACTIVATION_TEMPLATE_NAME }}
+      WHATSAPP_BUSINESS_ACCOUNT_ID: ${{ vars.WHATSAPP_BUSINESS_ACCOUNT_ID }}
+      WHATSAPP_GRAPH_API_VERSION: ${{ vars.WHATSAPP_GRAPH_API_VERSION }}
+      WHATSAPP_PLAN_READY_TEMPLATE_NAME: ${{ vars.WHATSAPP_PLAN_READY_TEMPLATE_NAME }}
+      WHATSAPP_RETURN_TEMPLATE_NAME: ${{ vars.WHATSAPP_RETURN_TEMPLATE_NAME }}
+      WHATSAPP_TRAINING_READY_TEMPLATE_NAME: ${{ vars.WHATSAPP_TRAINING_READY_TEMPLATE_NAME }}
+      ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
+      CHECKIN_REMINDER_SECRET: ${{ secrets.CHECKIN_REMINDER_SECRET }}
+      GOOGLE_CREDENTIALS_ENCRYPTION_KEY: ${{ secrets.GOOGLE_CREDENTIALS_ENCRYPTION_KEY }}
+      TRAINING_MEDIA_IMPORT_SECRET: ${{ secrets.TRAINING_MEDIA_IMPORT_SECRET }}
+      VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
+      VAPID_PUBLIC_KEY: ${{ secrets.VAPID_PUBLIC_KEY }}
+      WHATSAPP_ACCESS_TOKEN: ${{ secrets.WHATSAPP_ACCESS_TOKEN }}
+      WHATSAPP_APP_SECRET: ${{ secrets.WHATSAPP_APP_SECRET }}
+      WHATSAPP_PHONE_NUMBER_ID: ${{ secrets.WHATSAPP_PHONE_NUMBER_ID }}
+      WHATSAPP_VERIFY_TOKEN: ${{ secrets.WHATSAPP_VERIFY_TOKEN }}
 
     steps:
       - name: Checkout main
@@ -46,31 +70,55 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for value in D1_DATABASE_ID D1_DATABASE_NAME R2_BUCKET_NAME WORKER_NAME PRODUCTION_SMOKE_URL; do
-            test -n "${!value}" || { echo "Missing environment variable: $value" >&2; exit 1; }
+          required=(
+            D1_DATABASE_ID D1_DATABASE_NAME R2_BUCKET_NAME WORKER_NAME PRODUCTION_SMOKE_URL
+            NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY NEXT_PUBLIC_SUPABASE_URL
+            ADMIN_EMAIL CHECKIN_REMINDER_SECRET GOOGLE_CREDENTIALS_ENCRYPTION_KEY
+            TRAINING_MEDIA_IMPORT_SECRET VAPID_PRIVATE_KEY VAPID_PUBLIC_KEY
+            WHATSAPP_ACCESS_TOKEN WHATSAPP_APP_SECRET WHATSAPP_PHONE_NUMBER_ID WHATSAPP_VERIFY_TOKEN
+          )
+          for value in "${required[@]}"; do
+            test -n "${!value}" || { echo "Missing production setting: $value" >&2; exit 1; }
           done
 
       - name: Generate immutable production config
-        shell: bash
         run: |
-          jq -n \
-            --arg worker "$WORKER_NAME" \
-            --arg d1Name "$D1_DATABASE_NAME" \
-            --arg d1Id "$D1_DATABASE_ID" \
-            --arg r2 "$R2_BUCKET_NAME" \
-            '{
-              name: $worker,
-              main: "dist/server/index.js",
-              compatibility_date: "2026-08-20",
-              compatibility_flags: ["nodejs_compat"],
-              workers_dev: true,
-              assets: {directory: "dist/client", binding: "ASSETS", run_worker_first: true},
-              d1_databases: [{binding: "DB", database_name: $d1Name, database_id: $d1Id, migrations_dir: "drizzle", migrations_table: "d1_migrations"}],
-              r2_buckets: [{binding: "BUCKET", bucket_name: $r2}],
-              images: {binding: "IMAGES"},
-              vars: {DEPLOY_ENV: "production"},
-              observability: {enabled: true}
-            }' > .wrangler.production.generated.json
+          node --input-type=module <<'NODE'
+          import { writeFileSync } from "node:fs";
+          const config = {
+            name: process.env.WORKER_NAME,
+            main: "dist/server/index.js",
+            compatibility_date: "2026-08-20",
+            compatibility_flags: ["nodejs_compat"],
+            workers_dev: true,
+            assets: { directory: "dist/client", binding: "ASSETS", run_worker_first: true },
+            d1_databases: [{
+              binding: "DB",
+              database_name: process.env.D1_DATABASE_NAME,
+              database_id: process.env.D1_DATABASE_ID,
+              migrations_dir: "drizzle",
+              migrations_table: "d1_migrations",
+            }],
+            r2_buckets: [{ binding: "BUCKET", bucket_name: process.env.R2_BUCKET_NAME }],
+            images: { binding: "IMAGES" },
+            vars: {
+              DEPLOY_ENV: "production",
+              NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
+              NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
+              NEXT_PUBLIC_VAPID_PUBLIC_KEY: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
+              NEXT_PUBLIC_WHATSAPP_ATENDIMENTO: process.env.NEXT_PUBLIC_WHATSAPP_ATENDIMENTO,
+              VAPID_SUBJECT: process.env.VAPID_SUBJECT,
+              WHATSAPP_ACTIVATION_TEMPLATE_NAME: process.env.WHATSAPP_ACTIVATION_TEMPLATE_NAME,
+              WHATSAPP_BUSINESS_ACCOUNT_ID: process.env.WHATSAPP_BUSINESS_ACCOUNT_ID,
+              WHATSAPP_GRAPH_API_VERSION: process.env.WHATSAPP_GRAPH_API_VERSION,
+              WHATSAPP_PLAN_READY_TEMPLATE_NAME: process.env.WHATSAPP_PLAN_READY_TEMPLATE_NAME,
+              WHATSAPP_RETURN_TEMPLATE_NAME: process.env.WHATSAPP_RETURN_TEMPLATE_NAME,
+              WHATSAPP_TRAINING_READY_TEMPLATE_NAME: process.env.WHATSAPP_TRAINING_READY_TEMPLATE_NAME,
+            },
+            observability: { enabled: true },
+          };
+          writeFileSync(".wrangler.production.generated.json", JSON.stringify(config, null, 2));
+          NODE
 
       - name: Install locked dependencies
         run: npm ci
@@ -90,8 +138,36 @@ jobs:
       - name: Deploy production Worker
         run: npx wrangler deploy --config .wrangler.production.generated.json
 
+      - name: Install production runtime secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          trap 'rm -f .production-secrets.json' EXIT
+          node --input-type=module <<'NODE'
+          import { writeFileSync } from "node:fs";
+          const keys = [
+            "ADMIN_EMAIL",
+            "CHECKIN_REMINDER_SECRET",
+            "GOOGLE_CREDENTIALS_ENCRYPTION_KEY",
+            "TRAINING_MEDIA_IMPORT_SECRET",
+            "VAPID_PRIVATE_KEY",
+            "VAPID_PUBLIC_KEY",
+            "WHATSAPP_ACCESS_TOKEN",
+            "WHATSAPP_APP_SECRET",
+            "WHATSAPP_PHONE_NUMBER_ID",
+            "WHATSAPP_VERIFY_TOKEN",
+          ];
+          writeFileSync(
+            ".production-secrets.json",
+            JSON.stringify(Object.fromEntries(keys.map((key) => [key, process.env[key]]))),
+            { mode: 0o600 },
+          );
+          NODE
+          npx wrangler secret bulk .production-secrets.json --config .wrangler.production.generated.json
+
       - name: Smoke test production
         shell: bash
         run: |
           set -euo pipefail
-          curl --fail --silent --show-error --location --retry 12 --retry-all-errors --retry-delay 5 "$PRODUCTION_SMOKE_URL" >/dev/null
+          response="$(curl --fail --silent --show-error --location --retry 12 --retry-all-errors --retry-delay 5 "$PRODUCTION_SMOKE_URL")"
+          test "$response" = "nutriflow-staging-pipeline-v1"
