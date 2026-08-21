@@ -3,6 +3,8 @@ const source="https://ludgerosangaletti.com.br/api/internal/migration/v208-bridg
 const token=process.env.MIGRATION_OIDC_TOKEN;if(!token)throw new Error("missing-oidc-token");
 const sitesBypass=process.env.SITES_SIWC_BYPASS_TOKEN;if(!sitesBypass)throw new Error("missing-sites-bypass-token");
 const getSource=async(q,b=false)=>{const r=await fetch(source+"?"+q,{headers:{authorization:"Bearer "+token,"OAI-Sites-Authorization":"Bearer "+sitesBypass}});if(!r.ok)throw new Error("source "+q+" HTTP "+r.status);return b?r:r.json()};
+const sourceHeaders={authorization:"Bearer "+token,"OAI-Sites-Authorization":"Bearer "+sitesBypass};
+const foodProbe=[];for(const limit of [1,10,25,50,100,150,200,250]){const r=await fetch(source+"?resource=d1-table&table=nf_foods&offset=5750&limit="+limit,{headers:sourceHeaders});const bytes=(await r.arrayBuffer()).byteLength;foodProbe.push({limit,status:r.status,bytes})}console.log("nf_foods_probe="+JSON.stringify(foodProbe));
 const targetJson=async(path,body)=>{const r=await fetch(target+path,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body)});const j=await r.json();if(!r.ok)throw new Error(path+" "+JSON.stringify(j));return j};
 const quote=v=>'"'+v.replaceAll('"','""')+'"',same=(a,b)=>JSON.stringify(a||{})===JSON.stringify(b||{});
 const [manifest,schema,sourceIntegrity,r2Manifest]=await Promise.all([getSource("resource=d1-manifest"),getSource("resource=d1-schema"),getSource("resource=d1-integrity"),getSource("resource=r2-list&limit=500")]);
