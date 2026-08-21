@@ -6,7 +6,7 @@
   "d1_databases": [{
     "binding": "DB",
     "database_name": "nutriflow-production-final",
-    "database_id": "2c3f9be2-96b1-44ce-ae2e-c84228fd53c8",
+    "database_id": "464a9fde-8cd4-4c7f-bb18-e4a80653abe7",
     "remote": true
   }],
   "r2_buckets": [{
@@ -15,3 +15,4 @@
     "remote": true
   }]
 }
+
