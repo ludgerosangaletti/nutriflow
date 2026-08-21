@@ -1,0 +1,43 @@
+name: Migrate v208 production data
+on:
+  push:
+    branches: [migration-v208-data]
+permissions:
+  contents: read
+  id-token: write
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    environment: nutriflow-production
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: corepack enable && pnpm install --frozen-lockfile
+      - name: Obtain ephemeral GitHub OIDC identity
+        shell: bash
+        run: |
+          token="$(curl -fsS -H "Authorization: Bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=nutriflow-migration-v208" | node -pe 'JSON.parse(fs.readFileSync(0,"utf8")).value')"
+          echo "::add-mask::$token"
+          echo "MIGRATION_OIDC_TOKEN=$token" >> "$GITHUB_ENV"
+      - name: Start local bridge with remote production bindings
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          pnpm exec wrangler dev --remote --ip 127.0.0.1 --port 8799 --config wrangler.migration.jsonc > /tmp/migration-worker.log 2>&1 &
+          for i in $(seq 1 60); do curl -sS http://127.0.0.1:8799/r2/verify >/dev/null && exit 0; sleep 1; done
+          cat /tmp/migration-worker.log
+          exit 1
+      - name: Copy and validate D1 and R2
+        run: node scripts/migrate-v208-data.mjs
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: migration-v208-report
+          path: migration-report.json
+          if-no-files-found: ignore
+
