@@ -1,0 +1,96 @@
+name: NutriFlow production (assets fix - single run)
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_production:
+        description: Confirmar publicação em produção (assets fix, sem migrations)
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nutriflow-production
+  cancel-in-progress: false
+
+jobs:
+  build-deploy:
+    if: inputs.confirm_production == true
+    name: Test, build and deploy (no migrations, keep-vars)
+    runs-on: ubuntu-latest
+    environment: nutriflow-production
+    timeout-minutes: 30
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      D1_DATABASE_ID: ${{ vars.D1_DATABASE_ID }}
+      D1_DATABASE_NAME: ${{ vars.D1_DATABASE_NAME }}
+      R2_BUCKET_NAME: ${{ vars.R2_BUCKET_NAME }}
+      WORKER_NAME: ${{ vars.WORKER_NAME }}
+      PRODUCTION_SMOKE_URL: ${{ vars.PRODUCTION_SMOKE_URL }}
+
+    steps:
+      - name: Checkout known-good commit (v208)
+        uses: actions/checkout@v4
+        with:
+          ref: d454ea4742dc5f7e7eaf236c5f004942643c0b4e
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Validate production configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          for value in D1_DATABASE_ID D1_DATABASE_NAME R2_BUCKET_NAME WORKER_NAME PRODUCTION_SMOKE_URL; do
+            test -n "${!value}" || { echo "Missing environment variable: $value" >&2; exit 1; }
+          done
+
+      - name: Generate immutable production config
+        shell: bash
+        run: |
+          jq -n \
+            --arg worker "$WORKER_NAME" \
+            --arg d1Name "$D1_DATABASE_NAME" \
+            --arg d1Id "$D1_DATABASE_ID" \
+            --arg r2 "$R2_BUCKET_NAME" \
+            '{
+              name: $worker,
+              main: "dist/server/index.js",
+              compatibility_date: "2026-08-20",
+              compatibility_flags: ["nodejs_compat"],
+              workers_dev: true,
+              assets: {directory: "dist/client", binding: "ASSETS", run_worker_first: true},
+              d1_databases: [{binding: "DB", database_name: $d1Name, database_id: $d1Id, migrations_dir: "drizzle", migrations_table: "d1_migrations"}],
+              r2_buckets: [{binding: "BUCKET", bucket_name: $r2}],
+              images: {binding: "IMAGES"},
+              vars: {DEPLOY_ENV: "production"},
+              observability: {enabled: true}
+            }' > .wrangler.production.generated.json
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Unit tests
+        run: npm run test:unit
+
+      - name: Workflow tests
+        run: npm run test:workflow
+
+      - name: Type-check, lint and build
+        run: npm run build
+
+      - name: Deploy production Worker (keep existing vars/secrets)
+        run: npx wrangler deploy --config .wrangler.production.generated.json --keep-vars
+
+      - name: Smoke test production
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --location --retry 12 --retry-all-errors --retry-delay 5 "$PRODUCTION_SMOKE_URL" >/dev/null
