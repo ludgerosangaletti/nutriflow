@@ -133,6 +133,29 @@ jobs:
       - name: Type-check, lint and build
         run: npm run build
 
+      - name: Reconcile D1 migration history after verified restore
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > .d1-history-bootstrap.sql <<'SQL'
+          CREATE TABLE IF NOT EXISTS d1_migrations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT UNIQUE,
+            applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+          );
+          WITH expected(name) AS (VALUES ('0000_steady_pete_wisdom.sql'),('0001_mature_iron_man.sql'),('0002_fat_nightcrawler.sql'),('0003_gorgeous_hammerhead.sql'),('0004_aspiring_lilandra.sql'),('0005_natural_war_machine.sql'),('0006_lean_red_hulk.sql'),('0007_hard_shockwave.sql'),('0008_youthful_scarlet_spider.sql'),('0009_panoramic_revanche.sql'),('0010_noisy_lucky_pierre.sql'),('0011_blushing_richard_fisk.sql'),('0012_stiff_skaar.sql'),('0013_lying_legion.sql'),('0014_aspiring_vapor.sql'),('0015_empty_forge.sql'),('0016_fearless_puck.sql'),('0017_closed_infant_terrible.sql'),('0018_wise_black_tarantula.sql'),('0019_chilly_shriek.sql'),('0020_parallel_lucky_pierre.sql'),('0021_true_cerise.sql'),('0022_fantastic_martin_li.sql'),('0023_nutriflow_base_units.sql'),('0024_nutriflow_global_food_catalog.sql'),('0025_nutriflow_clinical_productivity.sql'),('0026_nutriflow_patient_portal.sql'),('0027_nutriflow_beverages_and_flexible_unit.sql'),('0028_patient_reset_archival.sql'),('0029_nutriflow_taco_catalog.sql'),('0030_patient_activation_whatsapp.sql'),('0031_clinical_backlog.sql'),('0032_clinical_backlog_flags.sql'),('0033_pwa_push_subscriptions.sql'),('0034_nutriflow_clinical_assessments.sql'),('0035_nutriflow_energy_expenditure.sql'),('0036_whatsapp_webhook_idempotency.sql'),('0037_resend_webhook_events.sql'),('0038_client_organization_context.sql'),('0039_enable_stable_nutriflow_by_organization.sql'),('0040_nutriflow_training_foundation.sql'),('0041_nutriflow_training_media.sql'),('0042_nutriflow_training_global_library.sql'),('0043_nutriflow_training_media_provenance.sql'),('0044_nutriflow_final_production_transition.sql'),('0045_nutriflow_training_anamnesis.sql'),('0046_nutriflow_training_abdomen_cardio.sql'),('0047_nutriflow_tbca_7_3.sql'),('0048_patient_whatsapp_activation_consent.sql'))
+          INSERT OR IGNORE INTO d1_migrations (name)
+          SELECT expected.name
+          FROM expected
+          WHERE (SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name <> 'd1_migrations') = 58
+            AND EXISTS (SELECT 1 FROM sqlite_master WHERE type='table' AND name='clients')
+            AND EXISTS (SELECT 1 FROM pragma_table_info('clients') WHERE name='whatsapp_activation_opt_in_recorded_by_email')
+            AND EXISTS (SELECT 1 FROM sqlite_master WHERE type='table' AND name='nf_training_publications')
+            AND EXISTS (SELECT 1 FROM sqlite_master WHERE type='table' AND name='nf_food_data_sources');
+          SQL
+          npx wrangler d1 execute "$D1_DATABASE_NAME" --remote --config .wrangler.production.generated.json --file .d1-history-bootstrap.sql
+          rm -f .d1-history-bootstrap.sql
+
       - name: Apply D1 production migrations
         run: npx wrangler d1 migrations apply "$D1_DATABASE_NAME" --remote --config .wrangler.production.generated.json
 
@@ -172,3 +195,4 @@ jobs:
           set -euo pipefail
           response="$(curl --fail --silent --show-error --location --retry 12 --retry-all-errors --retry-delay 5 "$PRODUCTION_SMOKE_URL")"
           test "$response" = "nutriflow-staging-pipeline-v1"
+
