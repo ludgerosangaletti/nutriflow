@@ -1,0 +1,18 @@
+{
+  "name": "nutriflow-migration-local",
+  "main": "scripts/migration-target-local.mjs",
+  "compatibility_date": "2026-08-20",
+  "compatibility_flags": ["nodejs_compat"],
+  "d1_databases": [{
+    "binding": "DB",
+    "database_name": "nutriflow-production",
+    "database_id": "0a05e555-9f0a-411a-b719-65aa14fc5b97",
+    "remote": true
+  }],
+  "r2_buckets": [{
+    "binding": "BUCKET",
+    "bucket_name": "nutriflow-production",
+    "remote": true
+  }]
+}
+
