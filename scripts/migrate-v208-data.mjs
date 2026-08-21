@@ -1,10 +1,10 @@
 import { writeFile } from "node:fs/promises";
 const source="https://ludgerosangaletti.com.br/api/internal/migration/v208-bridge",target="http://127.0.0.1:8799";
-const token=process.env.MIGRATION_OIDC_TOKEN;if(!token)throw new Error("missing-oidc-token");
+const token=process.env.MIGRATION_OIDC_TOKEN;if(!token)throw new Error("missing-oidc-token");let sourceToken=token;
 const sitesBypass=process.env.SITES_SIWC_BYPASS_TOKEN;if(!sitesBypass)throw new Error("missing-sites-bypass-token");
-const sourceHeaders={authorization:"Bearer "+token,"OAI-Sites-Authorization":"Bearer "+sitesBypass};
-const pageSize=100,sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
-const getSource=async(q,b=false)=>{for(let attempt=1;attempt<=3;attempt++){const r=await fetch(source+"?"+q,{headers:sourceHeaders});if(r.ok)return b?r:r.json();if(r.status<500||attempt===3)throw new Error("source "+q+" HTTP "+r.status);await r.arrayBuffer();await sleep(attempt*750)}};
+const pageSize=250,sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+const refreshOidc=async()=>{const requestToken=process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN,requestUrl=process.env.ACTIONS_ID_TOKEN_REQUEST_URL;if(!requestToken||!requestUrl)throw new Error("missing-oidc-refresh-context");const separator=requestUrl.includes("?")?"&":"?",r=await fetch(requestUrl+separator+"audience=nutriflow-migration-v208",{headers:{authorization:"Bearer "+requestToken}});if(!r.ok)throw new Error("oidc-refresh HTTP "+r.status);sourceToken=(await r.json()).value;if(!sourceToken)throw new Error("oidc-refresh-empty")};
+const getSource=async(q,b=false)=>{for(let attempt=1;attempt<=4;attempt++){const r=await fetch(source+"?"+q,{headers:{authorization:"Bearer "+sourceToken,"OAI-Sites-Authorization":"Bearer "+sitesBypass}});if(r.ok)return b?r:r.json();if((r.status===401||r.status===403)&&attempt<4){await r.arrayBuffer();await refreshOidc();continue}if(r.status<500||attempt===4)throw new Error("source "+q+" HTTP "+r.status);await r.arrayBuffer();await sleep(attempt*750)}};
 const targetJson=async(path,body)=>{const r=await fetch(target+path,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body)});const j=await r.json();if(!r.ok)throw new Error(path+" "+JSON.stringify(j));return j};
 const quote=v=>'"'+v.replaceAll('"','""')+'"',same=(a,b)=>JSON.stringify(a||{})===JSON.stringify(b||{});
 const [manifest,schema,sourceIntegrity,r2Manifest]=await Promise.all([getSource("resource=d1-manifest"),getSource("resource=d1-schema"),getSource("resource=d1-integrity"),getSource("resource=r2-list&limit=500")]);
