@@ -1,7 +1,8 @@
 import { writeFile } from "node:fs/promises";
 const source="https://ludgerosangaletti.com.br/api/internal/migration/v208-bridge",target="http://127.0.0.1:8799";
 const token=process.env.MIGRATION_OIDC_TOKEN;if(!token)throw new Error("missing-oidc-token");
-const getSource=async(q,b=false)=>{const r=await fetch(source+"?"+q,{headers:{authorization:"Bearer "+token}});if(!r.ok)throw new Error("source "+q+" HTTP "+r.status);return b?r:r.json()};
+const sitesBypass=process.env.SITES_SIWC_BYPASS_TOKEN;if(!sitesBypass)throw new Error("missing-sites-bypass-token");
+const getSource=async(q,b=false)=>{const r=await fetch(source+"?"+q,{headers:{authorization:"Bearer "+token,"OAI-Sites-Authorization":"Bearer "+sitesBypass}});if(!r.ok)throw new Error("source "+q+" HTTP "+r.status);return b?r:r.json()};
 const targetJson=async(path,body)=>{const r=await fetch(target+path,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body)});const j=await r.json();if(!r.ok)throw new Error(path+" "+JSON.stringify(j));return j};
 const quote=v=>'"'+v.replaceAll('"','""')+'"',same=(a,b)=>JSON.stringify(a||{})===JSON.stringify(b||{});
 const [manifest,schema,sourceIntegrity,r2Manifest]=await Promise.all([getSource("resource=d1-manifest"),getSource("resource=d1-schema"),getSource("resource=d1-integrity"),getSource("resource=r2-list&limit=500")]);
