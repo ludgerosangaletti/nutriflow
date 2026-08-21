@@ -5,14 +5,13 @@
   "compatibility_flags": ["nodejs_compat"],
   "d1_databases": [{
     "binding": "DB",
-    "database_name": "nutriflow-production",
-    "database_id": "0a05e555-9f0a-411a-b719-65aa14fc5b97",
+    "database_name": "nutriflow-production-final",
+    "database_id": "2c3f9be2-96b1-44ce-ae2e-c84228fd53c8",
     "remote": true
   }],
   "r2_buckets": [{
     "binding": "BUCKET",
-    "bucket_name": "nutriflow-production",
+    "bucket_name": "nutriflow-production-final",
     "remote": true
   }]
 }
-
